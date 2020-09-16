@@ -1,6 +1,8 @@
 import numpy as np
 
 ####################### Earth Environment #######################
+
+
 def atmDensity_below500km(f10, Ap, alt_meters):
     """
     Calculates atmospheric density
@@ -11,7 +13,7 @@ def atmDensity_below500km(f10, Ap, alt_meters):
     Ap: Geomagnetic A index (https://www.spaceweatherlive.com/en/help/the-ap-index. 0-400 according to Aussie paper sws.bom.gov)
     alt_meters: altitude in meters
     """
-    alt = alt_meters * 1e-3 #Convert to km
+    alt = alt_meters * 1e-3  # Convert to km
     SH = (900 + 2.5 * (f10 - 70) + 1.5 * Ap) / (27 - .012 * (alt - 200))
     density = 6e-10 * np.exp(-(alt - 175)/SH)
     return density
@@ -29,6 +31,7 @@ def dragForce(cd, rho, a, v):
     dForce = cd * a * rho * v**2/2
     return dForce
 
+
 def magField(r, m=7.98e15):
     """
     Calculates magnetic field strength at a certain radius from the center of the Earth (1st order)
@@ -37,12 +40,14 @@ def magField(r, m=7.98e15):
     m: magnetic moment of the earth times magnetic constant (tesla * m^3)
     """
 
-    B = 2*m/r**3 #Magnetic field
+    B = 2*m/r**3  # Magnetic field
     return B
 
 ####################### Delta V calculations #######################
 
 #####Inlination change#####
+
+
 def delV_circInc(v, i):
     """
     Calculates deltaV required for a circular orbit inclination change
@@ -56,7 +61,8 @@ def delV_circInc(v, i):
     delV = 2 * v * np.sin(i/2.)
     return delV
 
-def circ2elip_Hohmann(r1, r2, muPlanet = 3.986e14):
+
+def circ2elip_Hohmann(r1, r2, muPlanet=3.986e14):
     """
     Delta V required to go from circular orbit to elliptical
     circ2elip_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -67,7 +73,8 @@ def circ2elip_Hohmann(r1, r2, muPlanet = 3.986e14):
     v1 = np.sqrt(muPlanet/r1) * (np.sqrt(2*r2/(r1 + r2)) - 1)
     return np.abs(v1)
 
-def elip2circ_Hohmann(r1, r2, muPlanet = 3.986e14):
+
+def elip2circ_Hohmann(r1, r2, muPlanet=3.986e14):
     """
     Delta V required to go from elliptical orbit to circular orbit
     elip2circ_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -78,7 +85,8 @@ def elip2circ_Hohmann(r1, r2, muPlanet = 3.986e14):
     v2 = np.sqrt(muPlanet/r2) * (1 - np.sqrt(2*r1/(r1 + r2)))
     return np.abs(v2)
 
-def delV_Hohmann(r1, r2, muPlanet = 3.986e14):
+
+def delV_Hohmann(r1, r2, muPlanet=3.986e14):
     """
     Delta V required to conduct a Hohmann Transfer
     delV_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -91,7 +99,8 @@ def delV_Hohmann(r1, r2, muPlanet = 3.986e14):
     delV = v1 + v2
     return delV
 
-def t_Hohmann(r1, r2, muPlanet = 3.986e14):
+
+def t_Hohmann(r1, r2, muPlanet=3.986e14):
     """
     Time required to conduct a Hohmann Transfer
     t_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -102,7 +111,8 @@ def t_Hohmann(r1, r2, muPlanet = 3.986e14):
     t = np.pi * np.sqrt((r1 + r2)**3 / (8 * muPlanet))
     return t
 
-def delV_HohmannPlaneChange(r1, r2, theta, muPlanet = 3.986e14):
+
+def delV_HohmannPlaneChange(r1, r2, theta, muPlanet=3.986e14):
     """
     Calculates the delta-V value to conduct a combined plane change and Hohmann
     delV_HohmannPlaneChange(r1, r2, theta)
@@ -111,33 +121,36 @@ def delV_HohmannPlaneChange(r1, r2, theta, muPlanet = 3.986e14):
     theta: degrees of inclination change (rad)
     muPlanet: Gravitation parameter (Earth default)
     """
-    a = (r1 + r2) / 2 #semi major axis of transfer ellipse
+    a = (r1 + r2) / 2  # semi major axis of transfer ellipse
 
-    if r1 > r2: #Determine which orbit to conduct an inclination change at (larger radius)
+    # Determine which orbit to conduct an inclination change at (larger radius)
+    if r1 > r2:
         rIncChange = r1
         rInPlane = r2
-        #Maneuver to go from transfer elllipse to circular orbit (no plane change)
+        # Maneuver to go from transfer elllipse to circular orbit (no plane change)
         delV_NoPlaneChange = elip2circ_Hohmann(rIncChange, rInPlane)
 
     else:
         rIncChange = r2
         rInPlane = r1
-        #Maneuver to go from circular orbit to elliptical transfer orbit (no plane change)
+        # Maneuver to go from circular orbit to elliptical transfer orbit (no plane change)
         delV_NoPlaneChange = circ2elip_Hohmann(rInPlane, rIncChange)
         # #Combined plane change and Delta V maneuver
         # vi = np.sqrt(muPlanet * (2/rIncChange - 1/a)) #velocity of transfer ellipse
         # vf = vi = circVel_fromRad(rIncChange) #final circular velocity
 
-    #Combined plane change and Delta V maneuver
-    v1 = circVel_fromRad(rIncChange) #Initial velocity
-    v2 = np.sqrt(muPlanet * (2/rIncChange - 1/a)) #velocity of transfer ellipse
+    # Combined plane change and Delta V maneuver
+    v1 = circVel_fromRad(rIncChange)  # Initial velocity
+    # velocity of transfer ellipse
+    v2 = np.sqrt(muPlanet * (2/rIncChange - 1/a))
     delV_PlaneChange = np.sqrt(v1**2 + v2**2 - 2 * v1 * v2 * np.cos(theta))
     delV_Total = delV_NoPlaneChange + delV_PlaneChange
     return delV_Total
 
 ####################### Keplarian Orbital Mechanics #######################
 
-def precRate_RAAN(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3):
+
+def precRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
     """
     https://en.wikipedia.org/wiki/Nodal_precession
     Calculates right ascension nodal precession rate of a satellite around a body
@@ -155,10 +168,11 @@ def precRate_RAAN(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3):
     move in opposite directions
 
     """
-    wp = ( (-3/2) * rPlanet**2 * J2 * w * np.cos(i) ) / (a * (1 - e**2))**2
+    wp = ((-3/2) * rPlanet**2 * J2 * w * np.cos(i)) / (a * (1 - e**2))**2
     return wp
 
-def delPrecRate_RAAN(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3):
+
+def delPrecRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
     """
     Calculates differential right ascension nodal precession rate of a satellite around a body
     with respect to a change in inclination
@@ -175,10 +189,11 @@ def delPrecRate_RAAN(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3):
     move in opposite directions
 
     """
-    delWP = ( (-3/2) * rPlanet**2 * J2 * w * np.sin(i) ) / (a * (1 - e**2))**2
+    delWP = ((-3/2) * rPlanet**2 * J2 * w * np.sin(i)) / (a * (1 - e**2))**2
     return delWP
 
-def delPrecRateDelA_Raan(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3):
+
+def delPrecRateDelA_Raan(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
     """
     Calculates differential right ascension nodal precession rate of a satellite around a body
     with respect to a change in semi major axis
@@ -195,7 +210,8 @@ def delPrecRateDelA_Raan(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3):
     delWP_a = (3 * rPlanet ** 2 * J2 * w * np.cos(i)) / (a**3 * (1-e**2)**2)
     return delWP_a
 
-def orbitalPeriod_fromAlt(alt, rPlanet = 6378.1e3, muPlanet = 3.986e14):
+
+def orbitalPeriod_fromAlt(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
     """
     Get orbital period from altitude input
     Outputs orbital Period in seconds
@@ -208,7 +224,8 @@ def orbitalPeriod_fromAlt(alt, rPlanet = 6378.1e3, muPlanet = 3.986e14):
     t = 2*np.pi*np.sqrt(r**3/muPlanet)
     return t
 
-def circVel_fromAlt(alt, rPlanet = 6378.1e3, muPlanet = 3.986e14):
+
+def circVel_fromAlt(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
     """
     Inputs (altitude, radius of planet-Earth is default, Gravitation parameter of planet-Earth is default)
     alt unit is in meters
@@ -217,7 +234,8 @@ def circVel_fromAlt(alt, rPlanet = 6378.1e3, muPlanet = 3.986e14):
     v = np.sqrt(muPlanet/r)
     return v
 
-def circVel_fromRad(r, muPlanet = 3.986e14):
+
+def circVel_fromRad(r, muPlanet=3.986e14):
     """
     Inputs (orbit radius, Gravitation parameter of planet-Earth is default)
     alt unit is in meters
@@ -225,7 +243,8 @@ def circVel_fromRad(r, muPlanet = 3.986e14):
     v = np.sqrt(muPlanet/r)
     return v
 
-def orbitalPeriod_fromRad(r, muPlanet = 3.986e14):
+
+def orbitalPeriod_fromRad(r, muPlanet=3.986e14):
     """
     Get orbital period from radius of orbit input
     Outputs orbital Period in seconds
@@ -236,7 +255,8 @@ def orbitalPeriod_fromRad(r, muPlanet = 3.986e14):
     t = 2*np.pi*np.sqrt(r**3/muPlanet)
     return t
 
-def vis_viva(r, a, muPlanet = 3.986e14):
+
+def vis_viva(r, a, muPlanet=3.986e14):
     """
     Get velocity from vis-viva equation
     Outputs velocity of orbiting object
@@ -250,18 +270,20 @@ def vis_viva(r, a, muPlanet = 3.986e14):
 
 ####################### Eclipse Calculation #######################
 
-def worstCaseEclipse(alt, rPlanet = 6378.1e3, muPlanet = 3.986e14):
+
+def worstCaseEclipse(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
     """alt unit is in meters"""
-    rOrbit = alt + rPlanet #Radius of orbit (m)
-    alph = np.arccos(rPlanet/rOrbit) #Outer central angle
-    beta = np.pi - 2*alph #Central angle of eclipsed orbit
+    rOrbit = alt + rPlanet  # Radius of orbit (m)
+    alph = np.arccos(rPlanet/rOrbit)  # Outer central angle
+    beta = np.pi - 2*alph  # Central angle of eclipsed orbit
 
-    fracOrbitEcl = beta/(2*np.pi) #Fraction of orbit in eclipse
+    fracOrbitEcl = beta/(2*np.pi)  # Fraction of orbit in eclipse
     period = 2*np.pi*np.sqrt(rOrbit**3/muPlanet)
-    timeInEclipse = period * fracOrbitEcl #If period is input, get time in eclipse
-
+    timeInEclipse = period * fracOrbitEcl  # If period is input, get time in eclipse
 
     print("Central Angle of Eclipsed Orbit : ", beta*180/np.pi, "deg")
     print("Fraction of Orbit in Eclipse    : ", fracOrbitEcl)
-    print("Period                          :  {:.0f} s, {:.1f} min, {:.1f} hrs".format(period,period/60,period/60/60))
-    print("Time in Eclipse                 :  {:.0f} s, {:.1f} min, {:.1f} hrs".format(timeInEclipse,timeInEclipse/60,timeInEclipse/60/60))
+    print("Period                          :  {:.0f} s, {:.1f} min, {:.1f} hrs".format(
+        period, period/60, period/60/60))
+    print("Time in Eclipse                 :  {:.0f} s, {:.1f} min, {:.1f} hrs".format(
+        timeInEclipse, timeInEclipse/60, timeInEclipse/60/60))
