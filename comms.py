@@ -56,7 +56,7 @@ def ECA_fromNadirEle(nu, ele, angDef = 'r'):
 	lam = rightAng - nu - ele
 	return lam
 
-def footprintLength(nu, ele, alt, bw, unit = 'km', re = 6371e3):
+def footprintLength(nu, ele, alt, bw, unit = 'km', re = 6378.1e3):
     """
     Gets the length of the satellite footprint. SME SMAD eqn 10-1a
     Inputs:
@@ -87,3 +87,77 @@ def footprintLength(nu, ele, alt, bw, unit = 'km', re = 6371e3):
     return fpLength
 
 
+def slantRange_fromAltECA(alt, lam, re = 6378.1e3):
+	"""
+	Gets relevant slant range angles if given altitude and earth central angle (ECA). 
+	Section 8.3.1 from SME SMAD, starting from eqn 8-26
+
+	Inputs
+	alt : altitude in (m)
+	lam : Earth central angle of ground station (target). Usually latitude (rad)
+	re  : radius of planet. Default is earth. (m)
+
+	Outputs
+	nu  : nadir angle measured from spacecraft subsatellite point to ground target (rad)
+	ele : elevation angle measured at the target between spacecraft and local horizontal (rad)
+	D   : distance to the target from the ground station (m)
+	"""
+	sinrho = re / (re + alt)
+	tanNuNum = (sinrho * np.sin(lam)) #numerator
+	tanNuDen = (1 - sinrho * np.cos(lam))
+	nu = np.arctan2(tanNuNum, tanNuDen)
+	ele = np.pi/2 - nu - lam
+	D = re * (np.sin(lam) / np.sin(nu)) 
+	return nu, ele, D
+
+def slantRange_fromAltNu(alt, nu, re = 6378.1e3):
+	"""
+	Gets relevant slant range angles if given altitude and nadir angle (nu). 
+	Section 8.3.1 from SME SMAD, starting from eqn 8-26
+
+	Inputs
+	alt : altitude in (m)
+	nu  : nadir angle measured from spacecraft subsatellite point to ground target (rad)
+	re  : radius of planet. Default is earth. (m)
+
+	Outputs
+	lam : Earth central angle of ground station (target). Usually latitude (rad)
+	ele : elevation angle measured at the target between spacecraft and local horizontal (rad)
+	D   : distance to the target from the ground station (m)
+	"""
+	sinrho = re / (re + alt)
+
+	cosEle = np.sin(nu) / sinrho
+	ele = np.arccos(cosEle)
+
+	lam = np.pi/2 - nu - ele
+
+	D = re * (np.sin(lam) / np.sin(nu)) 
+
+	return lam, ele, D
+
+def slantRange_fromAltEle(alt, ele, re = 6378.1e3):
+	"""
+	Gets relevant slant range angles if given altitude and elevation angle (nu). 
+	Section 8.3.1 from SME SMAD, starting from eqn 8-26
+
+	Inputs
+	alt : altitude in (m)
+	ele : elevation angle measured at the target between spacecraft and local horizontal (rad)
+	re  : radius of planet. Default is earth. (m)
+
+	Outputs
+	lam : Earth central angle of ground station (target). Usually latitude (rad)
+	nu  : nadir angle measured from spacecraft subsatellite point to ground target (rad)
+	D   : distance to the target from the ground station (m)
+	"""
+	sinrho = re / (re + alt)
+
+	sinnu = np.cos(ele) * sinrho
+	nu = np.arcsin(sinnu)
+
+	lam = np.pi/2 - ele - nu
+
+	D = re * (np.sin(lam) / np.sin(nu)) 
+
+	return lam, nu, D
