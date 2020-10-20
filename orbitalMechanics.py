@@ -244,15 +244,15 @@ def circVel_fromRad(r, muPlanet=3.986e14):
     return v
 
 
-def orbitalPeriod_fromRad(r, muPlanet=3.986e14):
+def orbitalPeriod_fromA(a, muPlanet=3.986e14):
     """
     Get orbital period from radius of orbit input
     Outputs orbital Period in seconds
     inputs (r, muPlanet = 3.986e14)
-    alt: altitude in meters
+    a: semiMajor axis
     muPlanet: gravitation parameter of planet. Earth is default no input needed unless it's another body
     """
-    t = 2*np.pi*np.sqrt(r**3/muPlanet)
+    t = 2*np.pi*np.sqrt(a**3/muPlanet)
     return t
 
 
