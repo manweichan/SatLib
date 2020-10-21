@@ -147,6 +147,36 @@ def delV_HohmannPlaneChange(r1, r2, theta, muPlanet=3.986e14):
     delV_Total = delV_NoPlaneChange + delV_PlaneChange
     return delV_Total
 
+#Plan is to make a graph (x: altitude, y: deltaV)
+def highAltIncManeuver(rStart, rIncChange, rEnd, deli):
+    """
+    Calculates Delta V for a maneuver where you conduct a Hohmann transfer to a higher altitude
+    in order to complete an inclination change that may save deltaV at a lower velocity. The maneuver
+    ends with a hohmann transfer back down to the desired end orbit.
+    
+    Inputs
+    rStart: Starting circular orbit radius (m)
+    rIncChange: Radius that you make the inclination change (m)
+    rEnd: Final radius orbit (m)
+    deli: Inclination change (i)
+
+    Outputs
+    delVtot: Total delta V for all maneuvers (m/s)
+    delVHoh1: Delta V of first Hohmann transfer (m/s)
+    delVInc: Delta V for inclination change (m/s)
+    delHoh2: DeltaV for second Hohmann transfer (m/s)
+    """
+
+    ## First Hohmann transfer
+    delVHoh1 = delV_Hohmann(rStart, rIncChange)
+    #Change altitude at new altitude
+    vAtAlt = circVel_fromRad(rIncChange)
+    delVInc = delV_circInc(vAtAlt, deli)
+    ## Second Hohmann back to final orbit
+    delHoh2 = delV_Hohmann(rIncChange, rEnd)
+    delVtot = delVHoh1 + delVInc + delHoh2
+    return delVtot, delVHoh1, delVInc, delHoh2
+
 ####################### Keplarian Orbital Mechanics #######################
 
 
