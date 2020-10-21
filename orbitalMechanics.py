@@ -213,7 +213,7 @@ def delPrecRateDelA_Raan(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
 
 def orbitalPeriod_fromAlt(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
     """
-    Get orbital period from altitude input
+    Get orbital period from altitude input for circular orbit
     Outputs orbital Period in seconds
     inputs (alt, rPlanet = 6378.1e3, muPlanet = 3.986e14)
     alt: altitude in meters
