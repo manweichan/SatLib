@@ -1,5 +1,6 @@
 import numpy as np
-
+from poliastro import constants
+from astropy import units as u
 ####################### Earth Environment #######################
 
 
@@ -297,6 +298,73 @@ def vis_viva(r, a, muPlanet=3.986e14):
     """
     v = np.sqrt(muPlanet * (2/r - 1/a))
     return v
+
+def getSSOE_fromAI(a, i, dRAAN = 1.991063853e-7, re = constants.R_earth.to(u.m).value, mu = constants.GM_earth.value, J2 = constants.J2_earth.value):
+    """
+    Gets the eccentricity of a Sun Synchronous Orbit (SSO) given altitude and inclination
+    From Vallado (2013) eqn 11-16
+
+    Inputs
+    a : semi-major axis of orbit (m)
+    i : inclination (radians)
+    dRAAN: Desired rate of change of Right angle of the ascending node (RAAN). Default is Earth (rad/s)
+    re : radius of the planet. Default is Earth (m)
+    mu : Gravitation parameter. Default is Earth (m^3 / s^2)
+    J2 : J2 gravitational term. Default is Earth
+
+    Outputs
+    e : eccentricity
+    """
+    num = -3 * re**2 * J2 * np.sqrt(mu) * np.cos(i)
+    den = 2 * a**(7/2)  * dRAAN
+    innerSqrt = np.sqrt(num/den)
+    e = np.sqrt(1 - innerSqrt)
+    return e
+
+def getSSOI_fromAE(a, e, dRAAN = 1.991063853e-7, re = constants.R_earth.to(u.m).value, mu = constants.GM_earth.value, J2 = constants.J2_earth.value):
+    """
+    Gets the altitude of a Sun Synchronous Orbit (SSO) given altitude and eccentricity
+    From Vallado (2013) eqn 11-15
+
+    Inputs
+    a : semi-major axis of orbit (m)
+    e : eccentricity
+    dRAAN: Desired rate of change of Right angle of the ascending node (RAAN). Default is Earth (rad/s)
+    re : radius of the planet. Default is Earth (m)
+    mu : Gravitation parameter. Default is Earth (m^3 / s^2)
+    J2 : J2 gravitational term. Default is Earth
+
+    Outputs
+    i : inclination (radians)
+    """
+    num = -2 * a**(7/2)  * dRAAN * (1 - e**2)**2
+    den = 3 * re**2 * J2 * np.sqrt(mu)
+    # breakpoint()
+    cosi = num / den
+    i = np.arccos(cosi)
+    return i
+
+def getSSOA_fromEI(e, i, dRAAN = 1.991063853e-7, re = constants.R_earth.to(u.m).value, mu = constants.GM_earth.value, J2 = constants.J2_earth.value):
+    """
+    Gets the altitude of a Sun Synchronous Orbit (SSO) given eccentricity and inclination
+    From Vallado (2013) eqn 11-14
+
+    Inputs
+    e : eccentricity
+    i : inclination (radians)
+    dRAAN: Desired rate of change of Right angle of the ascending node (RAAN). Default is Earth (rad/s)
+    re : radius of the planet. Default is Earth (m)
+    mu : Gravitation parameter. Default is Earth (m^3 / s^2)
+    J2 : J2 gravitational term. Default is Earth
+
+    Outputs
+    a : semi-major axis of orbit (m)
+    """
+    num = -3 * re**2 * J2 * np.sqrt(mu) * np.cos(i)
+    den = 2 * dRAAN * (1 - e**2) ** 2
+    a72 = num / den
+    a = a72 ** (2/7)
+    return a
 
 ####################### Eclipse Calculation #######################
 
