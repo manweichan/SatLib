@@ -1,4 +1,5 @@
 import numpy as np
+import poliastro
 from poliastro import constants
 from astropy import units as u
 ####################### Earth Environment #######################
@@ -60,7 +61,7 @@ def delV_circInc(v, i):
     return delV
 
 
-def circ2elip_Hohmann(r1, r2, muPlanet=3.986e14):
+def circ2elip_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Delta V required to go from circular orbit to elliptical
     circ2elip_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -72,7 +73,7 @@ def circ2elip_Hohmann(r1, r2, muPlanet=3.986e14):
     return np.abs(v1)
 
 
-def elip2circ_Hohmann(r1, r2, muPlanet=3.986e14):
+def elip2circ_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Delta V required to go from elliptical orbit to circular orbit
     elip2circ_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -84,7 +85,7 @@ def elip2circ_Hohmann(r1, r2, muPlanet=3.986e14):
     return np.abs(v2)
 
 
-def delV_Hohmann(r1, r2, muPlanet=3.986e14):
+def delV_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Delta V required to conduct a Hohmann Transfer
     delV_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -98,7 +99,7 @@ def delV_Hohmann(r1, r2, muPlanet=3.986e14):
     return delV
 
 
-def t_Hohmann(r1, r2, muPlanet=3.986e14):
+def t_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Time required to conduct a Hohmann Transfer
     t_Hohmann(r1, r2, muPlanet = 3.986e14)
@@ -110,7 +111,7 @@ def t_Hohmann(r1, r2, muPlanet=3.986e14):
     return t
 
 
-def delV_HohmannPlaneChange(r1, r2, theta, muPlanet=3.986e14):
+def delV_HohmannPlaneChange(r1, r2, theta, muPlanet=poliastro.constants.GM_earth.value):
     """
     Calculates the delta-V value to conduct a combined plane change and Hohmann
     delV_HohmannPlaneChange(r1, r2, theta)
@@ -203,7 +204,7 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
 ####################### Keplarian Orbital Mechanics #######################
 
 
-def precRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
+def precRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(u.m).value):
     """
     https://en.wikipedia.org/wiki/Nodal_precession
     Calculates right ascension nodal precession rate of a satellite around a body
@@ -225,7 +226,7 @@ def precRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
     return wp
 
 
-def delPrecRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
+def delPrecRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(u.m).value):
     """
     Calculates differential right ascension nodal precession rate of a satellite around a body
     with respect to a change in inclination
@@ -246,7 +247,7 @@ def delPrecRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
     return delWP
 
 
-def delPrecRateDelA_Raan(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
+def delPrecRateDelA_Raan(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(u.m).value):
     """
     Calculates differential right ascension nodal precession rate of a satellite around a body
     with respect to a change in semi major axis
@@ -264,7 +265,7 @@ def delPrecRateDelA_Raan(a, e, w, i, J2=1.08262668e-3, rPlanet=6378.1e3):
     return delWP_a
 
 
-def orbitalPeriod_fromAlt(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
+def orbitalPeriod_fromAlt(alt, rPlanet=constants.R_earth.to(u.m).value, muPlanet=poliastro.constants.GM_earth.value):
     """
     Get orbital period from altitude input for circular orbit
     Outputs orbital Period in seconds
@@ -278,7 +279,7 @@ def orbitalPeriod_fromAlt(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
     return t
 
 
-def circVel_fromAlt(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
+def circVel_fromAlt(alt, rPlanet=constants.R_earth.to(u.m).value, muPlanet=poliastro.constants.GM_earth.value):
     """
     Inputs (altitude, radius of planet-Earth is default, Gravitation parameter of planet-Earth is default)
     alt unit is in meters
@@ -288,7 +289,7 @@ def circVel_fromAlt(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
     return v
 
 
-def circVel_fromRad(r, muPlanet=3.986e14):
+def circVel_fromRad(r, muPlanet=poliastro.constants.GM_earth.value):
     """
     Inputs (orbit radius, Gravitation parameter of planet-Earth is default)
     alt unit is in meters
@@ -297,7 +298,7 @@ def circVel_fromRad(r, muPlanet=3.986e14):
     return v
 
 
-def orbitalPeriod_fromA(a, muPlanet=3.986e14):
+def orbitalPeriod_fromA(a, muPlanet=poliastro.constants.GM_earth.value):
     """
     Get orbital period from radius of orbit input
     Outputs orbital Period in seconds
@@ -309,7 +310,7 @@ def orbitalPeriod_fromA(a, muPlanet=3.986e14):
     return t
 
 
-def vis_viva(r, a, muPlanet=3.986e14):
+def vis_viva(r, a, muPlanet=poliastro.constants.GM_earth.value):
     """
     Get velocity from vis-viva equation
     Outputs velocity of orbiting object
@@ -391,7 +392,7 @@ def getSSOA_fromEI(e, i, dRAAN = 1.991063853e-7, re = constants.R_earth.to(u.m).
 ####################### Eclipse Calculation #######################
 
 
-def worstCaseEclipse(alt, rPlanet=6378.1e3, muPlanet=3.986e14):
+def worstCaseEclipse(alt, rPlanet=constants.R_earth.to(u.m).value, muPlanet=poliastro.constants.GM_earth.value):
     """alt unit is in meters"""
     rOrbit = alt + rPlanet  # Radius of orbit (m)
     alph = np.arccos(rPlanet/rOrbit)  # Outer central angle
