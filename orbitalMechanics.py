@@ -44,10 +44,7 @@ def magField(r, m=7.98e15):
     B = 2*m/r**3  # Magnetic field
     return B
 
-####################### Delta V calculations #######################
-
-#####Inlination change#####
-
+####################### Delta V calculations (Maneuvers) #######################
 
 def delV_circInc(v, i):
     """
@@ -177,6 +174,31 @@ def highAltIncManeuver(rStart, rIncChange, rEnd, deli):
     delHoh2 = delV_Hohmann(rIncChange, rEnd)
     delVtot = delVHoh1 + delVInc + delHoh2
     return delVtot, delVHoh1, delVInc, delHoh2
+
+## Vallado coplanar phasing (6.6.1)
+def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_earth.value):
+    """
+    Get time to phase, deltaV and semi-major axis of phasing orbit in a coplanar phasing maneuver
+    From Vallado section 6.6.1 Circular Coplanar Phasing. Algorithm 44
+
+    Inputs:
+    a_tgt (m) : semi-major axis of target orbit
+    theta (rad): phase angle measured from target to the interceptor. Positive in direction of target motion.
+    k_tgt : integer that corresponds to number of target satellite revolutions before rendezvous
+    k_int : integer that corresponds to number of interceptor satellite revolutions before rendezvous
+    mu (m^3 / s^2) : Gravitational constant of central body. Default is Earth
+
+    Outputs:
+    t_phase (s) : time to complete phasing maneuver
+    deltaV (m/s) : Delta V required to complete maneuver
+    a_phase (m) : Semi-major axis of phasing orbit
+    """
+    w_tgt = np.sqrt(mu/a_tgt**3)
+    print(w_tgt)
+    t_phase = (2 * np.pi * k_tgt + theta) / w_tgt
+    a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
+    deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
+    return t_phase, deltaV, a_phase
 
 ####################### Keplarian Orbital Mechanics #######################
 
