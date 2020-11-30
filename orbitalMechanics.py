@@ -79,8 +79,8 @@ def elip2circ_Hohmann(r1, r2, muPlanet=3.986e14):
     """
     Delta V required to go from elliptical orbit to circular orbit
     elip2circ_Hohmann(r1, r2, muPlanet = 3.986e14)
-    r1: semi major axis of circular orbit (m)
-    r2: semi major axis of larger ellipse (m)
+    r1: radii of departure circular orbit (m)
+    r2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
     muPlanet: Gravitation parameter (Earth default)
     """
     v2 = np.sqrt(muPlanet/r2) * (1 - np.sqrt(2*r1/(r1 + r2)))
@@ -91,8 +91,8 @@ def delV_Hohmann(r1, r2, muPlanet=3.986e14):
     """
     Delta V required to conduct a Hohmann Transfer
     delV_Hohmann(r1, r2, muPlanet = 3.986e14)
-    r1: semi major axis of initial circular orbit (m)
-    r2: semi major axis of desired circular orbit (m)
+    r1: radii of departure initial circular orbit (m)
+    r2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
     muPlanet: Gravitation parameter (Earth default)
     """
     v1 = circ2elip_Hohmann(r1, r2)
