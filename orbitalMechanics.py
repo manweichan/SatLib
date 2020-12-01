@@ -61,77 +61,77 @@ def delV_circInc(v, i):
     return delV
 
 
-def circ2elip_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
+def circ2elip_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Delta V required to go from circular orbit to elliptical
-    circ2elip_Hohmann(r1, r2, muPlanet = 3.986e14)
-    r1: semi major axis of circular orbit (m)
-    r2: semi major axis of larger ellipse (m) 
+    circ2elip_Hohmann(a1, a2, muPlanet = 3.986e14)
+    a1: semi major axis of circular orbit (m)
+    a2: semi major axis of larger ellipse (m) 
     muPlanet: Gravitation parameter (Earth default)
     """
-    v1 = np.sqrt(muPlanet/r1) * (np.sqrt(2*r2/(r1 + r2)) - 1)
+    v1 = np.sqrt(muPlanet/a1) * (np.sqrt(2*a2/(a1 + a2)) - 1)
     return np.abs(v1)
 
 
-def elip2circ_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
+def elip2circ_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Delta V required to go from elliptical orbit to circular orbit
-    elip2circ_Hohmann(r1, r2, muPlanet = 3.986e14)
-    r1: radii of departure circular orbit (m)
-    r2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
+    elip2circ_Hohmann(a1, a2, muPlanet = 3.986e14)
+    a1: radii of departure circular orbit (m)
+    a2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
     muPlanet: Gravitation parameter (Earth default)
     """
-    v2 = np.sqrt(muPlanet/r2) * (1 - np.sqrt(2*r1/(r1 + r2)))
+    v2 = np.sqrt(muPlanet/a2) * (1 - np.sqrt(2*a1/(a1 + a2)))
     return np.abs(v2)
 
 
-def delV_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
+def delV_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Delta V required to conduct a Hohmann Transfer
-    delV_Hohmann(r1, r2, muPlanet = 3.986e14)
-    r1: radii of departure initial circular orbit (m)
-    r2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
+    delV_Hohmann(a1, a2, muPlanet = 3.986e14)
+    a1: radii of departure initial circular orbit (m)
+    a2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
     muPlanet: Gravitation parameter (Earth default)
     """
-    v1 = circ2elip_Hohmann(r1, r2)
-    v2 = elip2circ_Hohmann(r1, r2)
+    v1 = circ2elip_Hohmann(a1, r2)
+    v2 = elip2circ_Hohmann(a1, r2)
     delV = v1 + v2
     return delV
 
 
-def t_Hohmann(r1, r2, muPlanet=poliastro.constants.GM_earth.value):
+def t_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     """
     Time required to conduct a Hohmann Transfer
-    t_Hohmann(r1, r2, muPlanet = 3.986e14)
-    r1: semi major axis of circular orbit (m)
-    r2: semi major axis of desired circular orbit (m)
+    t_Hohmann(a1, a2, muPlanet = 3.986e14)
+    a1: semi major axis of circular orbit (m)
+    a2: semi major axis of desired circular orbit (m)
     muPlanet: Gravitation parameter (Earth default)
     """
-    t = np.pi * np.sqrt((r1 + r2)**3 / (8 * muPlanet))
+    t = np.pi * np.sqrt((a1 + a2)**3 / (8 * muPlanet))
     return t
 
 
-def delV_HohmannPlaneChange(r1, r2, theta, muPlanet=poliastro.constants.GM_earth.value):
+def delV_HohmannPlaneChange(a1, a2, theta, muPlanet=poliastro.constants.GM_earth.value):
     """
     Calculates the delta-V value to conduct a combined plane change and Hohmann
-    delV_HohmannPlaneChange(r1, r2, theta)
-    r1: semi major axis of circular orbit (m)
-    r2: semi major axis of desired circular orbit (m)
+    delV_HohmannPlaneChange(a1, a2, theta)
+    a1: semi major axis of circular orbit (m)
+    a2: semi major axis of desired circular orbit (m)
     theta: degrees of inclination change (rad)
     muPlanet: Gravitation parameter (Earth default)
     """
-    a = (r1 + r2) / 2  # semi major axis of transfer ellipse
+    a = (a1 + a2) / 2  # semi major axis of transfer ellipse
 
     # Determine which orbit to conduct an inclination change at (larger radius)
-    if r1 > r2:
-        rIncChange = r1
-        rInPlane = r2
+    if a1 > a2:
+        rIncChange = a1
+        rInPlane = a2
         # Maneuver to go from transfer elllipse to circular orbit (no plane change)
         delV_NoPlaneChange = elip2circ_Hohmann(rIncChange, rInPlane)
 
     else:
-        rIncChange = r2
-        rInPlane = r1
+        rIncChange = a2
+        rInPlane = a1
         # Maneuver to go from circular orbit to elliptical transfer orbit (no plane change)
         delV_NoPlaneChange = circ2elip_Hohmann(rInPlane, rIncChange)
         # #Combined plane change and Delta V maneuver
@@ -195,7 +195,6 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     a_phase (m) : Semi-major axis of phasing orbit
     """
     w_tgt = np.sqrt(mu/a_tgt**3)
-    print(w_tgt)
     t_phase = (2 * np.pi * k_tgt + theta) / w_tgt
     a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
