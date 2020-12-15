@@ -388,6 +388,49 @@ def getSSOA_fromEI(e, i, dRAAN = 1.991063853e-7, re = constants.R_earth.to(u.m).
     a = a72 ** (2/7)
     return a
 
+def getRGTOrbit(k_r, k_d, e, i, detectThresh=10, maxIters=100):
+    """
+    Gets Repeat Ground Track (RGT) orbit semi-major axis for a specified eccentricity, inclination,
+    and repeat track parameters.
+
+    Inputs
+    k_r (integer): Number of revolutions until repeat ground track
+    k_d (integer): Number of days to repeat ground track
+    e : eccentricity
+    i (radians) : inclination
+    detectThresh (m) : Difference between current and previous semi-major axis guess that will stop search loop
+    maxIters (integer) : Maximum number of iterations before loop ends if no solution is found
+    
+    Outputs
+    a_new (m) : semi-major axis of RGT
+    alt (m) : altitude of RGT
+    """
+
+    # Constants
+    periodEarth = poliastro.constants.rotational_period_earth
+    w_earth = 2 * np.pi / periodEarth.to(u.s).value
+    mu = poliastro.constants.GM_earth.value
+    j2 = poliastro.constants.J2_earth.value
+    r_earth = poliastro.constants.R_earth.to(u.m).value
+    
+    k_revPerDay = k_r / k_d
+    n = k_revPerDay * w_earth
+    a_new = (mu * (1/n0)**2)**(1/3)
+    delLam = 2 * np.pi * k_d / k_r #Change in successive node arrivals (radians)
+    for idx in range(maxIters):
+        a = a_new
+        p = a * (1 - e**2)
+        OmegaDot = - 3 * n * j2 * np.cos(i) / 2 * (r_earth / p)**2 #Change in RAAN due to perturbations
+        delLamPeriod = 2 * np.pi * OmegaDot / n #Change in lambda by period
+        delLon = delLam + delLamPeriod
+        n = 2 * np.pi * w_earth / delLon
+        a_new = (mu * (1/n)**2)**(1/3)
+        diff = np.abs(a - a_new)
+        if diff < detectThresh:
+            break
+    alt = a_new - r_earth #altitude
+    return a_new, alt
+
 ####################### Eclipse Calculation #######################
 
 
