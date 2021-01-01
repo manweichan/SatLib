@@ -179,7 +179,7 @@ def highAltIncManeuver(rStart, rIncChange, rEnd, deli):
 ## Vallado coplanar phasing (6.6.1)
 def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_earth.value):
     """
-    Get time to phase, deltaV and semi-major axis of phasing orbit in a coplanar phasing maneuver
+    Get time to phase, deltaV and semi-major axis of phasing orbit in a coplanar phasing maneuver (same altitude)
     From Vallado section 6.6.1 Circular Coplanar Phasing. Algorithm 44
 
     Inputs:
@@ -192,13 +192,21 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     Outputs:
     t_phase (s) : time to complete phasing maneuver
     deltaV (m/s) : Delta V required to complete maneuver
+    delV1 (m/s) : Delta V of first burn (positive in direction of orbital velocity)
+    delV2 (m/s) : Delta V of second burn which recircularies (positive in direction of orbital velocity)
     a_phase (m) : Semi-major axis of phasing orbit
     """
     w_tgt = np.sqrt(mu/a_tgt**3)
     t_phase = (2 * np.pi * k_tgt + theta) / w_tgt
     a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
-    return t_phase, deltaV, a_phase
+    if theta >=0: #If theta > 0, interceptor in front of target, first burn is to increase semi-major axis to slow down (positive direction for burn in direction of velocity)
+        delV1 = np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+        delV2 = -np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+    elif theta < 0: #If theta < 0, interceptor behind target, first burn decreases semi-major axis to catch up (negative indicates burn opposite direction of orbital velocity)
+        delV1 = -np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+        delV2 = np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+    return t_phase, deltaV, delV1, delV2, a_phase
 
 ####################### Keplarian Orbital Mechanics #######################
 
