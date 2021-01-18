@@ -73,35 +73,50 @@ class Satellite(Orbit):
         self.rxRFPayload = []
         self.txRFPayload = []
 
-    def calc_RxLinkBudgetTx(self, RxObject, L_atm = 0, L_pointing = 0, L_pol = 0, txID = 0, rxID = 0): 
+    def calc_LinkBudgetAsTx(self, RxObject, L_atm = 0, L_pointing = 0, L_pol = 0, txID = 0, rxID = 0): 
         """
         Calculate link budget with self as transmitter
-
+        
+        Inputs
         RxObject: Satellite or GroundStation Object
         L_atm (dB): Atmospheric loss
         L_pointint (dB): pointing loss
         L_pol (dB): Polarization loss
         txID: Which Tx payload to use. Default to 0 since we will most likely just have 1 payload
         rxID: Which Rx payload to use. Default to 0 since we will most likely just have 1 payload
+
+        Outputs
+        P_rx (dBW): Received power
+        ConN0 (dBHz): Signal to noise ratio
+
         """
         # try: 
         assert hasattr(self, 'txRfPayload'), "Need to add txRFPayload to Transmitting Satellite"
+        assert hasattr(RxObject, 'rxRfPayload'), "Need to add rxRFPayload to RxObject Satellite"
+
+        #Get tx payload
         txPL = self.txRfPayload[txID]
         EIRP_dB = txPL.get_EIRP()
         wl = txPL.wavelength #wavelength
+
+        #Get rx payload
+        rxPL = RxObject.rxRfPayload[rxID]
+        G_rx = rxPL.G_r
+
+        posVecTx = self.r #position of tx satellite (ECI)
+
         if RxObject.__class__.__name__ == 'Satellite':
-            assert hasattr(RxObject, 'rxRfPayload'), "Need to add rxRFPayload to Transmitting Satellite"
-            rxPL = RxObject.rxRfPayload[rxID]
-            G_rx = rxPL.G_r
-            posVecTx = self.r
-            posVecRx = RxObject.r
-
-            posVecDiff = astropy.coordinates.CartesianRepresentation(posVecTx - posVecRx)
-            dist = posVecDiff.norm().to(u.m)
-
-            GonT_dB = rxPL.get_GonT()
+            posVecRx = RxObject.r #Position of rx satellite (ECI)
+        elif RxObject.__class__.__name__ == 'GroundStation':
+            posVecRx = RxObject.propagate_to_ECI(self.epoch).data.without_differentials().xyz
+        else:
+            print("RxObject Class not recognized")
 
 
+        posVecDiff = astropy.coordinates.CartesianRepresentation(posVecTx - posVecRx)
+        dist = posVecDiff.norm().to(u.m)
+
+        GonT_dB = rxPL.get_GonT()
         L_fs = (4 * np.pi * dist / wl) ** 2 #Free space path loss
         L_fs_dB = 10 * np.log10(L_fs.value)
 
@@ -115,16 +130,17 @@ class Satellite(Orbit):
         k_dB = 228.6 #Boltzmann constant in dB
 
         #Signal to noise ratio
+        print("L_fs", L_fs_dB)
         print("EIRP", EIRP_dB)
         print("L_u", L_u)
         print("L_other", L_other_dB)
         print("Gont", GonT_dB)
         print("K", k_dB)
-        ConN = EIRP_dB - L_u - L_other_dB + GonT_dB + k_dB
+        ConN0 = EIRP_dB - L_u - L_other_dB + GonT_dB + k_dB
 
 
 
-        return P_rx, ConN
+        return P_rx, ConN0
         # except AttributeError:
         #     print("Need to add txRFPayload to Transmitting Satellite")
 
