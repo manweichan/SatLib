@@ -67,7 +67,13 @@ class Satellite(Orbit):
     def add_rxRfPayload(self, rxRfPL): #Add an rx optical payload
         self.rxRfPayload.append(rxRfPL)
 
-    def calc_RxLinkBudgetTx(self, RxObject, L_atm = 0, L_pointing = 0, L_pol, txID = 0, rxID = 0): 
+    def resetPayloads(self):
+        self.rxOpticalPayload = []
+        self.txOpticalPayload = []
+        self.rxRFPayload = []
+        self.txRFPayload = []
+
+    def calc_RxLinkBudgetTx(self, RxObject, L_atm = 0, L_pointing = 0, L_pol = 0, txID = 0, rxID = 0): 
         """
         Calculate link budget with self as transmitter
 
@@ -93,12 +99,32 @@ class Satellite(Orbit):
             posVecDiff = astropy.coordinates.CartesianRepresentation(posVecTx - posVecRx)
             dist = posVecDiff.norm().to(u.m)
 
+            GonT_dB = rxPL.get_GonT()
 
-            L_fs = (4 * np.pi * dist / wl) ** 2 #Free space path loss
-            L_fs_dB = 10 * np.log10(L_fs.value)
-            P_rx = EIRP_dB - L_fs_dB + G_rx - L_atm - L_pointing - L_pol
 
-        return P_rx
+        L_fs = (4 * np.pi * dist / wl) ** 2 #Free space path loss
+        L_fs_dB = 10 * np.log10(L_fs.value)
+
+        L_other_dB = L_pointing + L_pol
+
+        L_u = L_fs_dB + L_atm
+
+
+        P_rx = EIRP_dB - L_fs_dB + G_rx - L_other_dB
+
+        k_dB = 228.6 #Boltzmann constant in dB
+
+        #Signal to noise ratio
+        print("EIRP", EIRP_dB)
+        print("L_u", L_u)
+        print("L_other", L_other_dB)
+        print("Gont", GonT_dB)
+        print("K", k_dB)
+        ConN = EIRP_dB - L_u - L_other_dB + GonT_dB + k_dB
+
+
+
+        return P_rx, ConN
         # except AttributeError:
         #     print("Need to add txRFPayload to Transmitting Satellite")
 
@@ -138,7 +164,7 @@ class TxRfPayload(): #Define EIRP of the txRFPayload
         P_tx (W): Transmit power
         G_tx (dB): Gain of the transmitter
         wavelength (m): wavelength in meters
-        L_tx (dB): System loss
+        L_tx (dB): System loss like line loss
         """
         self.P_tx = P_tx
         self.G_tx = G_tx
@@ -152,7 +178,7 @@ class TxRfPayload(): #Define EIRP of the txRFPayload
         L_tx_dB = self.L_tx
         G_tx_dB = self.G_tx
 
-        EIRP_dB = P_tx_dB + L_tx_dB + G_tx_dB
+        EIRP_dB = P_tx_dB - L_tx_dB + G_tx_dB
         return EIRP_dB
 
 class RxRfPayload(): #Define RF receiver
@@ -166,6 +192,33 @@ class RxRfPayload(): #Define RF receiver
         self.G_r = G_r
         self.T_sys = T_sys
         self.L_line = L_line
+
+    def set_sysTemp(self, T_ant, T_feeder, T_receiver, L_feeder):
+        """
+        Calculate system temperature. 
+        Reference: Section 5.5.5 of Maral "Satellite Communication Systems" pg 186
+
+        Inputs
+        T_ant (K) : Temperature of antenna
+        T_feeder (K) : Temperature of feeder
+        T_receiver (K) : Temperature of receiver
+        L_feeder (dB) : Feeder loss
+        """
+        feederTerm = 10**(L_feeder/10) #Convert from dB
+        term1 = T_ant / feederTerm
+        term2 = T_feeder * (1 - 1/feederTerm)
+        term3 = T_receiver
+        Tsys = term1 + term2 + term3
+        self.T_sys = Tsys
+
+    def get_GonT(self):
+        # GonT = self.G_r / self.T_sys
+        # GonT_dB = 10 * np.log10(GonT)
+        T_dB = 10 * np.log10(self.T_sys)
+        print(T_dB)
+        GonT_dB = self.G_r - T_dB - self.L_line
+        return GonT_dB
+
 
 class Data():
     def __init__(self, tStamp, dSize):
