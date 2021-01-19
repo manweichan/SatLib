@@ -73,7 +73,7 @@ class Satellite(Orbit):
         self.rxRFPayload = []
         self.txRFPayload = []
 
-    def calc_LinkBudgetAsTx(self, RxObject, L_atm = 0, L_pointing = 0, L_pol = 0, txID = 0, rxID = 0): 
+    def calc_rfLinkBudgetAsTx(self, RxObject, L_atm = 0, L_pointing = 0, L_pol = 0, txID = 0, rxID = 0, verbose = False): 
         """
         Calculate link budget with self as transmitter
         
@@ -84,6 +84,7 @@ class Satellite(Orbit):
         L_pol (dB): Polarization loss
         txID: Which Tx payload to use. Default to 0 since we will most likely just have 1 payload
         rxID: Which Rx payload to use. Default to 0 since we will most likely just have 1 payload
+        verbose (Bool): If True, print components of link budget
 
         Outputs
         P_rx (dBW): Received power
@@ -129,13 +130,15 @@ class Satellite(Orbit):
 
         k_dB = 228.6 #Boltzmann constant in dB
 
+        if verbose:
+            print("L_fs:    ", L_fs_dB)
+            print("EIRP:    ", EIRP_dB)
+            print("L_u:     ", L_u)
+            print("L_other: ", L_other_dB)
+            print("Gont:    ", GonT_dB)
+            print("K:       ", k_dB)
+
         #Signal to noise ratio
-        print("L_fs", L_fs_dB)
-        print("EIRP", EIRP_dB)
-        print("L_u", L_u)
-        print("L_other", L_other_dB)
-        print("Gont", GonT_dB)
-        print("K", k_dB)
         ConN0 = EIRP_dB - L_u - L_other_dB + GonT_dB + k_dB
 
 
@@ -144,7 +147,13 @@ class Satellite(Orbit):
         # except AttributeError:
         #     print("Need to add txRFPayload to Transmitting Satellite")
 
+    def calc_optLinkBudgetAsTx(self, RxObject):
+        """
+        Calculate optical link budget with self as transmitter
 
+        Inputs
+        RxObject: Satellite or GroundStation Object
+        """
 
 
 class TxOpticalPayload(): #Defines tx optical payload
@@ -170,7 +179,7 @@ class RxOpticalPayload(): #Defines tx optical payload
         aperture (m): aperture diameter
         sysLoss (dB): System loss
         """
-        self.aperature = aperture
+        self.aperture = aperture
         self.sysLoss = sysLoss
 
 class TxRfPayload(): #Define EIRP of the txRFPayload
