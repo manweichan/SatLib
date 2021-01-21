@@ -9,6 +9,7 @@ from poliastro import constants
 from poliastro.earth import Orbit
 from poliastro.bodies import Earth
 from poliastro.frames.equatorial import GCRS
+import OpticalLinkBudget.OLBtools as olb
 
 class Satellite(Orbit):
     def __init__(self, state, epoch, dataMem = None, schedule = None, txOpticalPayload = None, rxOpticalPayload = None,
@@ -147,13 +148,70 @@ class Satellite(Orbit):
         # except AttributeError:
         #     print("Need to add txRFPayload to Transmitting Satellite")
 
-    def calc_optLinkBudgetAsTx(self, RxObject):
+    def calc_optLinkBudgetAsTx(self, RxObject, txID = 0, rxID = 0, verbose = False):
         """
         Calculate optical link budget with self as transmitter
 
         Inputs
         RxObject: Satellite or GroundStation Object
+        txID: Which Tx payload to use. Default to 0 since we will most likely just have 1 payload
+        rxID: Which Rx payload to use. Default to 0 since we will most likely just have 1 payload
         """
+
+        txPL = self.txOpticalPayload[txID]
+
+        #Get TxPayload parameters
+        P_tx = txPL.P_tx
+        beam_width = txPL.beam_width
+        lambda_gl = txPL.wavelength
+        pointing_error = txPL.pointingErr
+        tx_system_loss = txPL.sysLoss
+
+        #Get rx payload
+        rxPL = RxObject.rxOpticalPayload[rxID]
+        rx_system_loss = rxPL.sysLoss
+        aperture = rxPL.aperture
+
+        #Get position vectors
+        posVecTx = self.r #position of tx satellite (ECI)
+
+        if RxObject.__class__.__name__ == 'Satellite':
+            posVecRx = RxObject.r #Position of rx satellite (ECI)
+        elif RxObject.__class__.__name__ == 'GroundStation':
+            posVecRx = RxObject.propagate_to_ECI(self.epoch).data.without_differentials().xyz
+        else:
+            print("RxObject Class not recognized")
+
+        posVecDiff = astropy.coordinates.CartesianRepresentation(posVecTx - posVecRx)
+        dist = posVecDiff.norm().to(u.m)
+
+        #Position error at receiver
+        r = np.tan(txPL.pointingErr)*dist
+
+        # beam waist
+        W_0 = olb.fwhm_to_radius(beam_width,lambda_gl)
+
+        # Angular wave number, = 2*pi/lambda
+        k = olb.angular_wave_number(lambda_gl)
+
+        range_loss = olb.path_loss_gaussian(W_0, lambda_gl, dist.value, aperture, pointing_error)
+
+        all_losses = range_loss - tx_system_loss - rx_system_loss
+
+        P_rx_dB = P_tx + all_losses
+
+        P_rx = P_tx*10**(all_losses/10)
+
+        if verbose:
+            print("Distance: ", dist)
+            print("Position error at receiver",  r)
+            print("Beam waist: ",W_0)
+            print("Wave number: ", k)
+            print("range loss: ",range_loss)
+            print("All losses: ", all_losses)
+            print("P_rx_dB: ",P_rx_dB)
+
+        return P_rx_dB, P_rx
 
 
 class TxOpticalPayload(): #Defines tx optical payload
@@ -169,7 +227,7 @@ class TxOpticalPayload(): #Defines tx optical payload
         self.P_tx = P_tx
         self.wavelength = wavelength
         self.beam_width = beam_width
-        self.pointintErr = pointingErr
+        self.pointingErr = pointingErr
         self.sysLoss = sysLoss
 
 class RxOpticalPayload(): #Defines tx optical payload
