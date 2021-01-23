@@ -46,6 +46,11 @@ class Satellite(Orbit):
         else:
             self.rxRfPayload = rxRfPayload
     
+    # # @classmethod
+    # def propagate(self, value, method=farnocchia, rtol=1e-10, **kwargs):
+    #     # print("godo")
+    #     super().propagate(self, value, method=farnocchia, rtol=1e-10, **kwargs)
+
     def add_data(self, data): #Add data object to Satellite
         self.dataMem.append(data)
     
@@ -121,6 +126,8 @@ class Satellite(Orbit):
         GonT_dB = rxPL.get_GonT()
         L_fs = (4 * np.pi * dist / wl) ** 2 #Free space path loss
         L_fs_dB = 10 * np.log10(L_fs.value)
+        if L_fs_dB == float("inf") or L_fs_dB == float("-inf"):
+            L_fs_dB = 0
 
         L_other_dB = L_pointing + L_pol
 
@@ -198,11 +205,14 @@ class Satellite(Orbit):
 
         all_losses = range_loss - tx_system_loss - rx_system_loss
 
-        P_rx_dB = P_tx + all_losses
+        P_tx_dB = 10 * np.log10(P_tx)
+
+        P_rx_dB = P_tx_dB + all_losses
 
         P_rx = P_tx*10**(all_losses/10)
 
         if verbose:
+            print("P_tx: ", P_tx)
             print("Distance: ", dist)
             print("Position error at receiver",  r)
             print("Beam waist: ",W_0)
@@ -298,7 +308,7 @@ class RxRfPayload(): #Define RF receiver
         # GonT = self.G_r / self.T_sys
         # GonT_dB = 10 * np.log10(GonT)
         T_dB = 10 * np.log10(self.T_sys)
-        print(T_dB)
+        # print(T_dB)
         GonT_dB = self.G_r - T_dB - self.L_line
         return GonT_dB
 
