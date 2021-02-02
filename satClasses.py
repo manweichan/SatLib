@@ -426,12 +426,20 @@ class GroundStation():
         h (m): height above ellipsoid
         loc (astropy object) : location in getdetic coordinates
         data (data obj): Data transferred to ground station
+
+        Methods
+        propagate_to_ECI(self, obstime)
+        get_ECEF(self)
+        add_txOptical(self, txOpticalPL)
+        add_rxOptical(self, rxOpticalPL)
+        add_txRf(self, txRfPL): #Add a tx optical payload
+        add_rxRf(self, rxRfPL): #Add an rx optical payload
         """
 #         super().__init__()
         self.lon = lon
         self.lat = lat
         self.h = h
-        self.loc = EarthLocation.from_geodetic(lon, lat, h, ellipsoid='WGS84')
+        self.loc = EarthLocation.from_geodetic(lon, lat, height=h, ellipsoid='WGS84')
         
         if data is None: #keep track of downloaded data
             self.data = []
