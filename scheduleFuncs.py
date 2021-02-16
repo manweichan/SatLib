@@ -1,4 +1,5 @@
 from orbitalMechanics import *
+from satClasses import *
 
 import numpy as np
 from numpy.linalg import norm
@@ -6,6 +7,7 @@ from poliastro import constants
 from poliastro.earth import Orbit
 from poliastro.bodies import Earth
 from poliastro.maneuver import Maneuver
+import astropy
 import astropy.units as u
 from astropy import time
 
@@ -152,3 +154,120 @@ def scheduleISL(intOrb, tarOrb, numIntOrbs, numTarOrbs):
         burnSched_f = BurnSchedule(tAtFinMan, delVVec2) #Second burn
         sched.append([burnSched_i, burnSched_f])
     return sched
+
+def get_pass_times_anomalies(orb, gs, dates,
+                             refVernalEquinox = astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
+    """
+    Given an orbit and ground site, gets the pass time and true anomaly 
+    required to complete a pass. This is a rough estimate of the time and good
+    for quick but not perfectly accurate scheduling. 
+    Loosely based on Legge's thesis section 3.1.2
+
+    Inputs:
+    orb (Satellite object from satClasses): orbit of satellite
+    gs (GroundStation orbject from satClasses): Ground site for overpass
+    dates (astropy time object): Days for which pass times are provided
+    refVernalEquinox (astropy time object): Date of vernal equinox. Default is for 2021
+
+    Outputs:
+    times (array of astropy time objects): Times of overhead passes
+    anoms (deg): True anomalies required to complete pass. First is for ascending pass, second is for descending pass
+    """
+
+    ## Extract relevant orbit and ground station parameters
+    i = orb.inc
+    lon = gs.lon
+    lat = gs.lat
+    raan = orb.raan
+    delLam = np.arcsin(np.tan(lat) / np.tan(i)) #Longitudinal offset
+    theta_GMST_a = raan + delLam - lon #ascending sidereal angle of pass
+    theta_GMST_d = raan - delLam - lon - np.pi * u.rad #deescending sidereal angle of pass
+    
+    
+    delDDates = [day - refVernalEquinox for day in dates] #Gets difference in time from vernal equinox
+    delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
+    delDDateDecimalYr = np.array(delDDateDecimalYrList)
+    
+    #Get solar time values for ascending and descending pass
+    theta_GMT_a = theta_GMST_a - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+    theta_GMT_d = theta_GMST_d - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+
+    angleToHrs_a = astropy.coordinates.Angle(theta_GMT_a).hour
+    angleToHrs_d = astropy.coordinates.Angle(theta_GMT_d).hour
+
+    tPass_a = [day + angleToHrs_a[idx] * u.hr for idx, day in enumerate(dates)]
+    tPass_d = [day + angleToHrs_d[idx] * u.hr for idx, day in enumerate(dates)]
+    
+    times = [tPass_a, tPass_d]
+    raans, anoms = desiredRAAN_FromPassTime(tPass_a[0], gs, i.value)
+
+    return times, anoms
+
+def desiredRAAN_FromPassTime(tPass, gs, i):
+    """
+    Gets the desired orbit specifications from a desired pass time and groundstation
+    Based on equations in section 3.1.2 in Legge's thesis (2014)
+    
+    Inputs
+    tPass (astropy time object): Desired time of pass. Local UTC time preferred
+    gs (GroundStation object): Ground station/location of pass
+    i (astropy u.rad): Inclination of orbit
+    
+    Outputs
+    raans [List]: 2 element list where 1st element corresponding to RAAN in the ascending case
+                    and the 2nd element correspond to RAAN in the descending case
+    Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)
+                    of the ascending case and descending case respectively
+    """
+    tPass.location = gs.loc #Make sure location is tied to time object
+    theta_GMST = tPass.sidereal_time('mean', 'greenwich') #Greenwich mean sidereal time
+    
+    ## Check if astropy class. Make astropy class if not
+    if not isinstance(gs.lat, astropy.units.quantity.Quantity):
+        gs.lat = gs.lat * u.deg
+    if not isinstance(gs.lon, astropy.units.quantity.Quantity):
+        gs.lon = gs.lon * u.deg
+    if not isinstance(i, astropy.units.quantity.Quantity):
+        i = i * u.rad
+    
+    dLam = np.arcsin(np.tan(np.deg2rad(gs.lat)) / np.tan(i))
+
+    #From Legge eqn 3.10 pg.69
+    raan_ascending = theta_GMST - dLam + np.deg2rad(gs.lon)
+    raan_descending = theta_GMST + dLam + np.deg2rad(gs.lon) + np.pi * u.rad
+    
+    
+    #Get mean anomaly (assuming circular earth): https://en.wikipedia.org/wiki/Great-circle_distance
+    n1_ascending = np.array([np.cos(raan_ascending),np.sin(raan_ascending),0]) #RAAN for ascending case in ECI norm
+    n1_descending = np.array([np.cos(raan_descending),np.sin(raan_descending),0]) #RAAN for descending case in ECI norm
+    
+    n2Raw = gs.loc.get_gcrs(tPass).data.without_differentials() / gs.loc.get_gcrs(tPass).data.norm() #norm of ground station vector in ECI
+    n2 = n2Raw.xyz
+    
+    n1_ascendingXn2 = np.cross(n1_ascending, n2) #Cross product
+    n1_descendingXn2 = np.cross(n1_descending, n2)
+
+    n1_ascendingDn2 = np.dot(n1_ascending, n2) #Dot product
+    n1_descendingDn2 = np.dot(n1_descending, n2)
+
+    n1a_X_n2_norm = np.linalg.norm(n1_ascendingXn2)
+    n1d_X_n2_norm = np.linalg.norm(n1_descendingXn2)
+    if gs.lat > 0 * u.deg and gs.lat < 90 * u.deg: #Northern Hemisphere case
+        ca_a = np.arctan2(n1a_X_n2_norm, n1_ascendingDn2) #Central angle ascending
+        ca_d = np.arctan2(n1d_X_n2_norm, n1_descendingDn2) #Central angle descending
+    elif gs.lat < 0 * u.deg and gs.lat > -90 * u.deg: #Southern Hemisphere case
+        ca_a = 2 * np.pi * u.rad - np.arctan2(n1a_X_n2_norm, n1_ascendingDn2) 
+        ca_d = 2 * np.pi * u.rad - np.arctan2(n1d_X_n2_norm, n1_descendingDn2)
+    elif gs.lat == 0 * u.deg: #Equatorial case
+        ca_a = 0 * u.rad
+        ca_d = np.pi * u.rad
+    elif gs.lat == 90 * u.deg or gs.lat == -90 * u.deg: #polar cases
+        ca_a = np.pi * u.rad
+        ca_d = 3 * np.pi / 2 * u.rad
+    else:
+        print("non valid latitude")
+    raans = [raan_ascending, raan_descending]
+    Anoms = [ca_a, ca_d]
+    
+    return raans, Anoms
+
