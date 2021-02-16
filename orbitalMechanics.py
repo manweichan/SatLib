@@ -93,8 +93,8 @@ def delV_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     a2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
     muPlanet: Gravitation parameter (Earth default)
     """
-    v1 = circ2elip_Hohmann(a1, r2)
-    v2 = elip2circ_Hohmann(a1, r2)
+    v1 = circ2elip_Hohmann(a1, a2)
+    v2 = elip2circ_Hohmann(a1, a2)
     delV = v1 + v2
     return delV
 
