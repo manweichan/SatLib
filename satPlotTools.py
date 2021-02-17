@@ -12,6 +12,8 @@ from poliastro.twobody.propagation import propagate
 from poliastro.twobody.propagation import cowell
 from poliastro.core.perturbations import J2_perturbation
 from poliastro.bodies import Earth
+from poliastro.czml.extract_czml import CZMLExtractor
+
 import matplotlib.pyplot as plt
 
 def getLonLat(orb, timeInts, pts, J2 = True):
@@ -49,7 +51,7 @@ def getLonLat(orb, timeInts, pts, J2 = True):
                    representation_type=CartesianRepresentation)
     itrs_xyz = gcrsXYZ.transform_to(ITRS(obstime=time_rangePlot))
     loc = EarthLocation.from_geocentric(itrs_xyz.x,itrs_xyz.y,itrs_xyz.z)
-    
+
     lat = loc.lat
     lon = loc.lon
     height = loc.height
@@ -77,3 +79,46 @@ def plotGroundTrack(lon, lat, style):
     ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
 #     plt.show()
     return fig, ax
+
+
+def writeCZMLFile_constellation(constellation, dirPath, periods = 1, sample_points = 80, singleSat = False,
+	groundtrack = False, orbitPath = True):
+	"""
+	Writes a CZML file for plotting in Cesium
+
+	Input
+	constellation (List): list of Satellite objects (SatClasses) grouped by planes
+	dirPath (str): directory path to save file
+	periods (float): Number of periods to propagate visualization for
+	sample_points (int): Number of sample points for visualization
+	singleSat (Bool): indicate if generating file for only a single satellite as opposed to a constelllation
+	groundtrack (Bool): True to show groundtrack
+	orbitPath (Bool): True to show orbit path
+
+	Program writes to dirPath
+	"""
+	if singleSat: #Single satellite constellation
+		seedSat = constellation
+	else:
+		seedSat = constellation[0][0]
+	start_epoch = seedSat.epoch #iss.epoch
+	end_epoch = start_epoch + seedSat.period * periods
+	earth_uv = "https://earthobservatory.nasa.gov/ContentFeature/BlueMarble/Images/land_shallow_topo_2048.jpg"
+	extractor = CZMLExtractor(start_epoch, end_epoch, sample_points,
+                          attractor=Earth, pr_map=earth_uv)
+
+	if singleSat:
+		extractor.add_orbit(constellation, groundtrack_show=groundtrack,
+	                    groundtrack_trail_time=0, path_show=orbitPath)
+	else:
+		for plane in constellation: #Loop through each plane
+		    for sat in plane: #Loop through each satellite in a plane
+		        extractor.add_orbit(sat, groundtrack_show=groundtrack,
+		                    groundtrack_trail_time=0, path_show=orbitPath)
+
+	testL = [str(x) for x in extractor.packets]
+	joinedStr = ','.join(testL)
+	toPrint = '[' + joinedStr + ']'
+	f = open(dirPath, "w")
+	f.write(toPrint)
+	f.close()
