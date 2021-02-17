@@ -174,6 +174,8 @@ def get_pass_times_anomalies(orb, gs, dates,
     anoms (deg): True anomalies required to complete pass. First is for ascending pass, second is for descending pass
     """
 
+    ## TODO: Doesn't yet account for RAAN drift due to J2 perturbation
+
     ## Extract relevant orbit and ground station parameters
     i = orb.inc
     lon = gs.lon
