@@ -217,6 +217,29 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     # }
     return t_phase, deltaV, delV1, delV2, a_phase
 
+def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
+    """
+    Get semi-major axis of phasing orbit given time to phase and
+    target orbit altitude. 
+    THIS FUNCITION ASSUMES both satellites start at the same altitude
+    
+    Inputs
+    t_phase (s): time to complete phasing maneuver
+    alt (m): altitude of target orbit, should be same as interceptor orbit
+    """
+    if not isinstance(t_phase, astropy.units.quantity.Quantity):
+        t_phase = t_phase * u.s
+    if not isinstance(alt, astropy.units.quantity.Quantity):
+        alt = alt * u.m
+    
+    t_tgt = orbitalPeriod_fromAlt(alt)
+    kint = np.floor((t_phase / t_tgt).to(u.one)) #Scale intercept orbits to match target orbit period
+
+    toSquare = t_phase / (kint * 2 * np.pi)
+    to13 = mu * toSquare**2
+    a_phase = (to13)**(1/3)
+    return a_phase.to(u.km)
+    
 ####################### Keplarian Orbital Mechanics #######################
 
 
@@ -281,15 +304,21 @@ def delPrecRateDelA_Raan(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth
     return delWP_a
 
 
-def orbitalPeriod_fromAlt(alt, rPlanet=constants.R_earth.to(u.m).value, muPlanet=poliastro.constants.GM_earth.value):
+def orbitalPeriod_fromAlt(alt, rPlanet=constants.R_earth, muPlanet=poliastro.constants.GM_earth):
     """
     Get orbital period from altitude input for circular orbit
     Outputs orbital Period in seconds
-    inputs (alt, rPlanet = 6378.1e3, muPlanet = 3.986e14)
-    alt: altitude in meters
-    rPlanet: radius of planet. Earth is default no input needed unless it's another body
-    muPlanet: gravitation parameter of planet. Earth is default no input needed unless it's another body
+    Inputs (alt, rPlanet = 6378.1e3, muPlanet = 3.986e14)
+    alt (m): altitude. If not an astropy unit, defaults to m
+    rPlanet (m): radius of planet. Earth is default no input needed unless it's another body
+    muPlanet (m^3 / s^2): gravitation parameter of planet. Earth is default no input needed unless it's another body
+
+    Outputs
+    t : Orbital period
     """
+    if not isinstance(alt, u.quantity.Quantity):
+        alt = alt * u.m
+    elif alt.unit
     r = rPlanet + alt
     t = 2*np.pi*np.sqrt(r**3/muPlanet)
     return t
@@ -314,14 +343,19 @@ def circVel_fromRad(r, muPlanet=poliastro.constants.GM_earth.value):
     return v
 
 
-def orbitalPeriod_fromA(a, muPlanet=poliastro.constants.GM_earth.value):
+def orbitalPeriod_fromA(a, muPlanet=poliastro.constants.GM_earth):
     """
     Get orbital period from radius of orbit input
     Outputs orbital Period in seconds
     inputs (r, muPlanet = 3.986e14)
-    a: semiMajor axis
+    a (m): semiMajor axis. if no astropy units are assigned, will default to meters
     muPlanet: gravitation parameter of planet. Earth is default no input needed unless it's another body
+
+    Output
+    t : Orbital period
     """
+    if not isinstance(a, u.quantity.Quantity):
+        a = a * u.m
     t = 2*np.pi*np.sqrt(a**3/muPlanet)
     return t
 
