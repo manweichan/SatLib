@@ -206,6 +206,15 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     elif theta < 0: #If theta < 0, interceptor behind target, first burn decreases semi-major axis to catch up (negative indicates burn opposite direction of orbital velocity)
         delV1 = -np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
         delV2 = np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+
+    # IF NEEDED, output variables in a dictionary
+    # outputDict = {
+    #     "t_phase": t_phase,
+    #     "deltaV" : deltaV,
+    #     "delV1"  : delV1,
+    #     "delV2"  : delV2,
+    #     "a_phase": a_phase
+    # }
     return t_phase, deltaV, delV1, delV2, a_phase
 
 ####################### Keplarian Orbital Mechanics #######################
