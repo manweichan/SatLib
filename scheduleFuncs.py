@@ -191,17 +191,19 @@ def get_pass_times_anomalies(orb, gs, dates,
     delDDateDecimalYr = np.array(delDDateDecimalYrList)
     
     #Get solar time values for ascending and descending pass
-    theta_GMT_a = theta_GMST_a - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
-    theta_GMT_d = theta_GMST_d - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+    theta_GMT_a_raw = theta_GMST_a - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+    theta_GMT_d_raw = theta_GMST_d - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+
+    theta_GMT_a = np.mod(theta_GMT_a_raw, 360 * u.deg)
+    theta_GMT_d = np.mod(theta_GMT_d_raw, 360 * u.deg)
 
     angleToHrs_a = astropy.coordinates.Angle(theta_GMT_a).hour
     angleToHrs_d = astropy.coordinates.Angle(theta_GMT_d).hour
 
     tPass_a = [day + angleToHrs_a[idx] * u.hr for idx, day in enumerate(dates)]
     tPass_d = [day + angleToHrs_d[idx] * u.hr for idx, day in enumerate(dates)]
-    
     times = [tPass_a, tPass_d]
-    raans, anoms = desiredRAAN_FromPassTime(tPass_a[0], gs, i.value)
+    raans, anoms = desiredRAAN_FromPassTime(tPass_a[0], gs, i)
 
     return times, anoms
 
@@ -221,9 +223,11 @@ def desiredRAAN_FromPassTime(tPass, gs, i):
     Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)
                     of the ascending case and descending case respectively
     """
+
     tPass.location = gs.loc #Make sure location is tied to time object
     theta_GMST = tPass.sidereal_time('mean', 'greenwich') #Greenwich mean sidereal time
-    
+    # import ipdb; ipdb.set_trace()
+
     ## Check if astropy class. Make astropy class if not
     if not isinstance(gs.lat, astropy.units.quantity.Quantity):
         gs.lat = gs.lat * u.deg
@@ -232,7 +236,7 @@ def desiredRAAN_FromPassTime(tPass, gs, i):
     if not isinstance(i, astropy.units.quantity.Quantity):
         i = i * u.rad
     
-    dLam = np.arcsin(np.tan(np.deg2rad(gs.lat)) / np.tan(i))
+    dLam = np.arcsin(np.tan(gs.lat.to(u.rad)) / np.tan(i.to(u.rad)))
 
     #From Legge eqn 3.10 pg.69
     raan_ascending = theta_GMST - dLam + np.deg2rad(gs.lon)

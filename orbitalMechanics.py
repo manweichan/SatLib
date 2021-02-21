@@ -227,9 +227,9 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
     t_phase (s): time to complete phasing maneuver
     alt (m): altitude of target orbit, should be same as interceptor orbit
     """
-    if not isinstance(t_phase, astropy.units.quantity.Quantity):
+    if not isinstance(t_phase, u.quantity.Quantity):
         t_phase = t_phase * u.s
-    if not isinstance(alt, astropy.units.quantity.Quantity):
+    if not isinstance(alt, u.quantity.Quantity):
         alt = alt * u.m
     
     t_tgt = orbitalPeriod_fromAlt(alt)
@@ -239,7 +239,7 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
     to13 = mu * toSquare**2
     a_phase = (to13)**(1/3)
     return a_phase.to(u.km)
-    
+
 ####################### Keplarian Orbital Mechanics #######################
 
 
@@ -318,7 +318,6 @@ def orbitalPeriod_fromAlt(alt, rPlanet=constants.R_earth, muPlanet=poliastro.con
     """
     if not isinstance(alt, u.quantity.Quantity):
         alt = alt * u.m
-    elif alt.unit
     r = rPlanet + alt
     t = 2*np.pi*np.sqrt(r**3/muPlanet)
     return t

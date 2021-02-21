@@ -2,7 +2,7 @@ import astropy
 import astropy.units as u
 from satClasses import *
 
-def genWalker(i, t, p, f, alt):
+def genWalker(i, t, p, f, alt, epoch = False):
     """
     Generate a walker constellation
     Outputs a set of satellite orbits 
@@ -13,6 +13,7 @@ def genWalker(i, t, p, f, alt):
     p (int)                  : total number of planes
     f (int between 0 and p-1): determines relative spacing between satellites in adjacent planes
     alt (km)                 : altitude of orbit
+    epoch (astropy time)     : epoch to initiate satellites. Default of False defines satellites at J2000
     
     Outputs:
     sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
@@ -42,8 +43,12 @@ def genWalker(i, t, p, f, alt):
         for sat in range(0,int(s)): #Loop through each satellite in a plane
             omega0 = plane * phaseDiff
             omega = omega0 + sat * interPlaneSpacing
-            orbLoop = Satellite.circular(Earth, alt = alt,
-                 inc = i, raan = raan, arglat = omega)
+            if epoch:
+                orbLoop = Satellite.circular(Earth, alt = alt,
+                     inc = i, raan = raan, arglat = omega, epoch = epoch)
+            else:
+                orbLoop = Satellite.circular(Earth, alt = alt,
+                     inc = i, raan = raan, arglat = omega)
             planeSats.append(orbLoop)
         sats.append(planeSats)
         
