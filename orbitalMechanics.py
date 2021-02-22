@@ -1,6 +1,7 @@
 import numpy as np
 import poliastro
 from poliastro import constants
+import astropy
 from astropy import units as u
 ####################### Earth Environment #######################
 
@@ -177,7 +178,7 @@ def highAltIncManeuver(rStart, rIncChange, rEnd, deli):
     return delVtot, delVHoh1, delVInc, delHoh2
 
 ## Vallado coplanar phasing (6.6.1)
-def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_earth.value):
+def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_earth):
     """
     Get time to phase, deltaV and semi-major axis of phasing orbit in a coplanar phasing maneuver (same altitude)
     From Vallado section 6.6.1 Circular Coplanar Phasing. Algorithm 44
@@ -196,16 +197,32 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     delV2 (m/s) : Delta V of second burn which recircularies (positive in direction of orbital velocity)
     a_phase (m) : Semi-major axis of phasing orbit
     """
+    if not isinstance(a_tgt, u.quantity.Quantity):
+        a_tgt = a_tgt * u.m
+    if not isinstance(theta, u.quantity.Quantity):
+        theta = theta * u.rad
     w_tgt = np.sqrt(mu/a_tgt**3)
-    t_phase = (2 * np.pi * k_tgt + theta) / w_tgt
+    t_phase = (2 * np.pi * k_tgt + theta.to(u.rad).value) / w_tgt
     a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
-    if theta >=0: #If theta > 0, interceptor in front of target, first burn is to increase semi-major axis to slow down (positive direction for burn in direction of velocity)
-        delV1 = np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
-        delV2 = -np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
-    elif theta < 0: #If theta < 0, interceptor behind target, first burn decreases semi-major axis to catch up (negative indicates burn opposite direction of orbital velocity)
-        delV1 = -np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
-        delV2 = np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+
+    #Get individual burn values
+    delV1Raw = deltaV / 2
+
+    #If theta > 0, interceptor in front of target, first burn is to increase semi-major axis to slow down (positive direction for burn in direction of velocity)
+    thetaMask = theta >= 0 
+    thetaMaskPosNeg = thetaMask * 2 - 1 #Create mask to determine first burn is in direction of velocity if theta > 0, negative if not
+
+    delV1 = delV1Raw * thetaMaskPosNeg #Apply mask to delV1Raw
+    delV2 = -delV1 # Second burn is negative of first burn
+
+    # ## Save this code in case the above didn't work (this works for individual runs but not with np arrays)
+    # if theta >=0: #If theta > 0, interceptor in front of target, first burn is to increase semi-major axis to slow down (positive direction for burn in direction of velocity)
+    #     delV1 = np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+    #     delV2 = -np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+    # elif theta < 0: #If theta < 0, interceptor behind target, first burn decreases semi-major axis to catch up (negative indicates burn opposite direction of orbital velocity)
+    #     delV1 = -np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
+    #     delV2 = np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt))
 
     # IF NEEDED, output variables in a dictionary
     # outputDict = {
@@ -215,7 +232,7 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     #     "delV2"  : delV2,
     #     "a_phase": a_phase
     # }
-    return t_phase, deltaV, delV1, delV2, a_phase
+    return t_phase.to(u.s), deltaV.to(u.m/u.s), delV1.to(u.m/u.s), delV2.to(u.m/u.s), a_phase
 
 def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
     """
@@ -231,6 +248,10 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
         t_phase = t_phase * u.s
     if not isinstance(alt, u.quantity.Quantity):
         alt = alt * u.m
+    if not isinstance(mu, astropy.units.quantity.Quantity):
+        mu = mu * u.m * u.m * u.m / (u.s * u.s)
+    if not isinstance(rPlanet, astropy.units.quantity.Quantity):
+        rPlanet = rPlanet * u.m
     
     t_tgt = orbitalPeriod_fromAlt(alt)
     kint = np.floor((t_phase / t_tgt).to(u.one)) #Scale intercept orbits to match target orbit period
@@ -238,7 +259,10 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
     toSquare = t_phase / (kint * 2 * np.pi)
     to13 = mu * toSquare**2
     a_phase = (to13)**(1/3)
-    return a_phase.to(u.km)
+
+    a_tgt = alt + rPlanet
+    deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
+    return a_phase.to(u.km), deltaV.to(u.m / u.s), kint
 
 ####################### Keplarian Orbital Mechanics #######################
 
