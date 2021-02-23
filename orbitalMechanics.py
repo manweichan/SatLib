@@ -196,6 +196,7 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     delV1 (m/s) : Delta V of first burn (positive in direction of orbital velocity)
     delV2 (m/s) : Delta V of second burn which recircularies (positive in direction of orbital velocity)
     a_phase (m) : Semi-major axis of phasing orbit
+    passFlag (bool) : True if orbit is valid i.e. rp > rPlanet so satellite won't crash into Earth
     """
     if not isinstance(a_tgt, u.quantity.Quantity):
         a_tgt = a_tgt * u.m
@@ -204,6 +205,10 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     w_tgt = np.sqrt(mu/a_tgt**3)
     t_phase = (2 * np.pi * k_tgt + theta.to(u.rad).value) / w_tgt
     a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
+
+    rp = 2 * a_phase - a_tgt #radius of perigee
+    passFlag = rp > poliastro.constants.R_earth #Check which orbits are non-feasible due to Earth's radius
+
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
 
     #Get individual burn values
@@ -232,9 +237,10 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     #     "delV2"  : delV2,
     #     "a_phase": a_phase
     # }
-    return t_phase.to(u.s), deltaV.to(u.m/u.s), delV1.to(u.m/u.s), delV2.to(u.m/u.s), a_phase
+    return t_phase.to(u.s), deltaV.to(u.m/u.s), delV1.to(u.m/u.s), delV2.to(u.m/u.s), a_phase.to(u.km), passFlag
 
-def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
+def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth, 
+                         rPlanet = poliastro.constants.R_earth):
     """
     Get semi-major axis of phasing orbit given time to phase and
     target orbit altitude. 
@@ -243,10 +249,12 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
     Inputs
     t_phase (s): time to complete phasing maneuver
     alt (m): altitude of target orbit, should be same as interceptor orbit
+    mu (m^3 / s^2): gravitational parameter (default is Earth)
+    rPlanet (m): radius of planet (default is Earth)
     """
-    if not isinstance(t_phase, u.quantity.Quantity):
+    if not isinstance(t_phase, astropy.units.quantity.Quantity):
         t_phase = t_phase * u.s
-    if not isinstance(alt, u.quantity.Quantity):
+    if not isinstance(alt, astropy.units.quantity.Quantity):
         alt = alt * u.m
     if not isinstance(mu, astropy.units.quantity.Quantity):
         mu = mu * u.m * u.m * u.m / (u.s * u.s)
@@ -257,9 +265,9 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth):
     kint = np.floor((t_phase / t_tgt).to(u.one)) #Scale intercept orbits to match target orbit period
 
     toSquare = t_phase / (kint * 2 * np.pi)
-    to13 = mu * toSquare**2
+    to13 = mu * toSquare**2 #term to the 1/3
     a_phase = (to13)**(1/3)
-
+    
     a_tgt = alt + rPlanet
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
     return a_phase.to(u.km), deltaV.to(u.m / u.s), kint
