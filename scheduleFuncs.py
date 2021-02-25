@@ -393,7 +393,6 @@ def findNonDominated(timesPassFlat, delVFlat):
     is_efficient = np.arange(timesSorted.shape[0])
     n_points = timesSorted.shape[0]
     next_pt_idx = 0
-    # import ipdb; ipdb.set_trace()
     while next_pt_idx < len(timesInLoop):
         # Find delta Vs that took less fuel, but more time
         #     import ipdb; ipdb.set_trace()
@@ -425,8 +424,6 @@ def findParetoIds(delVEff, timesEff, t_a, t_d, delv_a, delv_d):
     paretoIdx = []
     tags = []
     for paretoID, teff in enumerate(timesEff):
-        # import ipdb; ipdb.set_trace()
-#         set_trace()
         idx = np.argwhere(t_a == teff)
         tag = 'a'
         if idx.size == 0:
@@ -486,24 +483,17 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
     for plane in constellation:
         passTimesPlane = []
         anomaliesPlane = []
-#         altPlane = []
         incPlane = []
         for sat in plane:
             passTime, anom = get_pass_times_anomalies(
                 sat, gs, days2Investigate)
-#             altSat = sat.a - poliastro.constants.R_earth
-#             incSat = sat.inc
             
             #Append to each list representing each plane
             passTimesPlane.append(passTime)
             anomaliesPlane.append(anom)
-#             altPlane.append(altSat)
-#             incPlane.append(incSat)
             
         passTimes.append(passTimesPlane)
         anoms.append(anomaliesPlane)
-#         alts.append(altPlane)
-#         incs.append(incPlane)
 
     passOrbits_a, passOrbits_d = getDesiredPassOrbits(constellation, 
                                                       passTimes, 
@@ -511,74 +501,6 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
                                                       alts, 
                                                       incs, 
                                                       anoms)
-#     passOrbits_a = []  # Index is passOrbits_a[plane][sat][day]
-#     passOrbits_d = []
-#     for idxPlane, plane in enumerate(passTimes):
-#         planeSats_a = []
-#         planeSats_d = []
-#         for idxSat, sat in enumerate(plane):
-#             satTimes_a = []
-#             satTimes_d = []
-
-#             sat0 = constellation[idxPlane][idxSat] #Get current satellite
-#             sat0Epoch = sat0.epoch
-#             sat0Nu = sat0.nu
-#             for idxTime, times_a in enumerate(sat[0]):
-#                 orbit_back_a = Satellite.circular(Earth, 
-#                                                   alt=alts[idxPlane][idxSat],
-#                                                   inc=incs[idxPlane][idxSat],
-#                                                   raan=constellation[idxPlane][idxSat].raan,
-#                                                   arglat=anoms[idxPlane][idxSat][0],
-#                                                   epoch=times_a)
-
-#                 # Back propagate orbits as well
-#                 orbit_back0_a = orbit_back_a.propagate(tInit)
-#                 nu = orbit_back0_a.nu
-
-#                 # Find nu difference
-#                 phaseAng = sat0Nu - nu
-
-#                 # Find time to pass
-#                 t2Pass = times_a - sat0Epoch
-
-#                 backDict = {
-#                     "orbPass": orbit_back_a,
-#                     "orbBack": orbit_back0_a,
-#                     "nuBack": nu,
-#                     "phaseAng": phaseAng,
-#                     "t2Pass": t2Pass
-#                 }
-#                 satTimes_a.append(backDict)
-
-#             for idxTime, times_d in enumerate(sat[1]):
-#                 orbit_back_d = Satellite.circular(Earth, alt=alt,
-#                                                   inc=i, raan=constellation[idxPlane][idxSat].raan,
-#                                                   arglat=anoms[satNum][idxSat][1],
-#                                                   epoch=times_d)
-
-#                 # Back propagate orbits as well
-#                 orbit_back0_d = orbit_back_d.propagate(tInit)
-#                 nu = orbit_back0_d.nu
-
-#                 # Find nu difference
-#                 phaseAng = sat0Nu - nu
-
-#                 # Find time to pass
-#                 t2Pass = times_d - sat0Epoch
-
-#                 backDict = {
-#                     "orbPass": orbit_back_d,
-#                     "orb": orbit_back0_d,
-#                     "nuBack": nu,
-#                     "phaseAng": phaseAng,
-#                     "t2Pass": t2Pass
-#                 }
-#                 satTimes_d.append(backDict)
-
-#             planeSats_a.append(satTimes_a)
-#             planeSats_d.append(satTimes_d)
-#         passOrbits_a.append(planeSats_a)
-#         passOrbits_d.append(planeSats_d)
 
     # Extract nus and times
     phaseAngs_a_raw = [[[satID["phaseAng"] for satID in sat]
@@ -645,29 +567,6 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
     timesPassFlat = np.append(timesPassFlat_a, timesPassFlat_d)
     delVFlat = np.append(delVFlat_a, delVFlat_d)
 
-#     idSort = np.argsort(timesPassFlat)
-
-#     timesSorted = timesPassFlat[idSort]
-#     delVSorted = delVFlat[idSort]
-
-#     timesInLoop = np.copy(timesSorted)
-#     delVInLoop = np.copy(delVSorted)
-
-#     is_efficient = np.arange(timesSorted.shape[0])
-#     n_points = timesSorted.shape[0]
-#     next_pt_idx = 0
-#     while next_pt_idx < len(timesInLoop):
-#         # Find delta Vs that took less fuel, but more time
-#         #     import ipdb; ipdb.set_trace()
-#         # Already starting with 'fastest' time because times werre sorted
-#         nondominated_point_mask = delVInLoop < delVInLoop[next_pt_idx]
-#         nondominated_point_mask[:next_pt_idx+1] = True
-#         is_efficient = is_efficient[nondominated_point_mask]
-#         timesInLoop = timesInLoop[nondominated_point_mask]
-#         delVInLoop = delVInLoop[nondominated_point_mask]
-#         next_pt_idx += 1
-#     timesEff = timesSorted[is_efficient]
-#     delVEff = delVSorted[is_efficient]
     timesEff, delVEff = findNonDominated(timesPassFlat, delVFlat)
     ids, tags = findParetoIds(delVEff, timesEff, timesArr_a, timesArr_d, delv_a, delv_d)
 
