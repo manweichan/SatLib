@@ -451,7 +451,7 @@ def findParetoIds(delVEff, timesEff, t_a, t_d, delv_a, delv_d):
         paretoIdx.append(idxFinal)
     return paretoIdx, tags
 
-def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
+def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = False):
     """
     Given a constellation, ground station, initial time, and how many days ahead to plan, the function returns
     which ids and which orbits are the optimal in terms of deltaV and timing
@@ -461,6 +461,8 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
     gs (groundStation object): Ground station object to predict passes
     tInit (astropy time object): Time to initialize planner
     daysAhead (int): Amount of days ahead to for the scheduler to plan for
+    plot (Bool): Plots if True
+    pltLgd (Bool): Plots legend if True
 
     Outputs
     ids (List): List of indices corresponding to which satellite in the constellation are optimally positioned to make a maneuver
@@ -570,6 +572,15 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
     timesEff, delVEff = findNonDominated(timesPassFlat, delVFlat)
     ids, tags = findParetoIds(delVEff, timesEff, timesArr_a, timesArr_d, delv_a, delv_d)
 
+    # ids_a = []
+    # ids_d = []
+    # for tagId, tag in enumerate(tags):
+    #     if tag == 'a':
+    #         ids_a.append(ids[tagId])
+    #     elif tag == 'd':
+    #         ids_d.append(ids[tagId])
+    #     else:
+    #         print("Non valid tag when splitting ids")    
     if plot:
         plt.figure()
         ax = plt.gca()
@@ -580,20 +591,27 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
                 satStr = str(satIdx + 1)
                 mask_a = flag_a[planeIdx][satIdx]
                 mask_d = flag_d[planeIdx][satIdx]
+                if pltLgd:
+                    myLabel = f'Plane: {planeStr} | Sat: {satStr} '
+                else:
+                    myLabel = None
                 plt.plot(timesArr_a[planeIdx][satIdx][mask_a]/60/60, delv_a[planeIdx][satIdx][mask_a], 'o', color=color,
-                         label=f'Plane: {planeStr} | Sat: {satStr} ')
+                         label=myLabel)
                 plt.plot(timesArr_d[planeIdx][satIdx][mask_d]/60/60,
                          delv_d[planeIdx][satIdx][mask_d], 'x', color=color)
         #         plt.plot(timesArr_a[planeIdx][satIdx]/60/60, delv_a[planeIdx][satIdx], 'o', color = color,
         #                  label = f'Plane: {planeStr} | Sat: {satStr} ')
         #         plt.plot(timesArr_d[planeIdx][satIdx]/60/60, delv_d[planeIdx][satIdx], 'x', color = color)
+        plt.plot(timesEff/60/60, delVEff, 'r-', label='Pareto Front')
+        plt.plot(0,0,'g^',label='Utopia Point')
         plt.xlabel('Time (Hours)')
         plt.ylabel('Delta V (m/s)')
         plt.title(
             'Propellant and Time cost to first pass \n \'x\' for descending passes | \'o\' for ascending passes')
-        ax.set_xlim(left=0)
-        ax.set_ylim(bottom=0)
-        plt.legend()
+        # ax.set_xlim(left=0)
+        # ax.set_ylim(bottom=0)
+
+        plt.legend(loc='upper right')
 
     return ids, tags
 
