@@ -11,6 +11,7 @@ import astropy
 import astropy.units as u
 from astropy import time
 
+import matplotlib.pyplot as plt
 
 def getNuIntersect(orb1, orb2):
     """Given two orbits, determine true anomaly (argument of latitude)
@@ -277,3 +278,468 @@ def desiredRAAN_FromPassTime(tPass, gs, i):
     
     return raans, Anoms
 
+def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
+    """
+    For a constellation and ground station, returns a set of desired Satellite objects that will
+    pass the ground station at the requested pass times
+
+    Inputs:
+    Constellation (List): Constellation list where satellites are organized in the by planes then satellites. Ex indices: Walker[planeIdx][satIdx]
+    passTimes (List): Desired pass times for each satellite in the constellation. Similar structure as Constellation
+    tInit (astropy time object): Initialization time. This is the time that objects are back propagated to in order to find the initial difference in mean anomaly
+    alts (List): Altitudes for the corresponding satellites. Similar structure as Constellation
+    incs (List): Inclinations for the corresopnding satellites. Similar structure as Constellation
+    anoms (List): Anomalies (Keplar orbital property) for each satellite during the pass. Retrieved through a function such as get_pass_times_anomalies
+
+    Outputs:
+    passOrbits_a (List): List of orbits that will pass the ground station at the desired passTime on the ascending portion of orbit
+    passOrbits_d (List): List of orbits that will pass the ground station at the desired passTime on the descending portion of orbit
+    """
+    passOrbits_a = []  # Index is passOrbits_a[plane][sat][day]
+    passOrbits_d = []
+    for idxPlane, plane in enumerate(passTimes):
+        planeSats_a = []
+        planeSats_d = []
+        for idxSat, sat in enumerate(plane):
+            satTimes_a = []
+            satTimes_d = []
+
+            sat0 = constellation[idxPlane][idxSat] #Get current satellite
+            sat0Epoch = sat0.epoch
+            sat0Nu = sat0.nu
+            for idxTime, times_a in enumerate(sat[0]):
+                orbit_back_a = Satellite.circular(Earth, 
+                                                  alt=alts[idxPlane][idxSat],
+                                                  inc=incs[idxPlane][idxSat],
+                                                  raan=constellation[idxPlane][idxSat].raan,
+                                                  arglat=anoms[idxPlane][idxSat][0],
+                                                  epoch=times_a)
+
+                # Back propagate orbits as well
+                orbit_back0_a = orbit_back_a.propagate(tInit)
+                nu = orbit_back0_a.nu
+
+                # Find nu difference
+                phaseAng = sat0Nu - nu
+
+                # Find time to pass
+                t2Pass = times_a - sat0Epoch
+
+                backDict = {
+                    "orbPass": orbit_back_a,
+                    "orbBack": orbit_back0_a,
+                    "nuBack": nu,
+                    "phaseAng": phaseAng,
+                    "t2Pass": t2Pass
+                }
+                satTimes_a.append(backDict)
+
+            for idxTime, times_d in enumerate(sat[1]):
+                orbit_back_d = Satellite.circular(Earth,
+                                                  alt=alts[idxPlane][idxSat],
+                                                  inc=incs[idxPlane][idxSat], 
+                                                  raan=constellation[idxPlane][idxSat].raan,
+                                                  arglat=anoms[idxPlane][idxSat][1],
+                                                  epoch=times_d)
+
+                # Back propagate orbits as well
+                orbit_back0_d = orbit_back_d.propagate(tInit)
+                nu = orbit_back0_d.nu
+
+                # Find nu difference
+                phaseAng = sat0Nu - nu
+
+                # Find time to pass
+                t2Pass = times_d - sat0Epoch
+
+                backDict = {
+                    "orbPass": orbit_back_d,
+                    "orb": orbit_back0_d,
+                    "nuBack": nu,
+                    "phaseAng": phaseAng,
+                    "t2Pass": t2Pass
+                }
+                satTimes_d.append(backDict)
+
+            planeSats_a.append(satTimes_a)
+            planeSats_d.append(satTimes_d)
+        passOrbits_a.append(planeSats_a)
+        passOrbits_d.append(planeSats_d)
+    return passOrbits_a, passOrbits_d
+
+
+def findNonDominated(timesPassFlat, delVFlat):
+    """
+    Finds the non-dominated points in a set of points. The utopia point is the minimum in this case (0,0)
+    First time making this function, it takes in times and deltaV, so we want the results that are the 
+    fastest and cost the least deltaV
+
+    Inputs
+    timesPassFlat (np.array): flat array ; can use np.array.flatten()
+    delVFlat (np.arrray): flat array ; can use np.array.flatten()
+
+    Outputs
+    timesEff (np.array): array of the most efficient values from timesPassFlat
+    delVEff (np.array): array of the most efficient valuees from delVFlat
+    """
+    idSort = np.argsort(timesPassFlat)
+
+    timesSorted = timesPassFlat[idSort]
+    delVSorted = delVFlat[idSort]
+
+    timesInLoop = np.copy(timesSorted)
+    delVInLoop = np.copy(delVSorted)
+
+    is_efficient = np.arange(timesSorted.shape[0])
+    n_points = timesSorted.shape[0]
+    next_pt_idx = 0
+    # import ipdb; ipdb.set_trace()
+    while next_pt_idx < len(timesInLoop):
+        # Find delta Vs that took less fuel, but more time
+        #     import ipdb; ipdb.set_trace()
+        # Already starting with 'fastest' time because times werre sorted
+        nondominated_point_mask = delVInLoop < delVInLoop[next_pt_idx]
+        nondominated_point_mask[:next_pt_idx+1] = True
+        is_efficient = is_efficient[nondominated_point_mask]
+        timesInLoop = timesInLoop[nondominated_point_mask]
+        delVInLoop = delVInLoop[nondominated_point_mask]
+        next_pt_idx += 1
+    timesEff = timesSorted[is_efficient]
+    delVEff = delVSorted[is_efficient]
+    return timesEff, delVEff
+
+def findParetoIds(delVEff, timesEff, t_a, t_d, delv_a, delv_d):
+    """
+    Given a set of efficient pareto values (timesEff), return the indices that they correspond to in the larger arrays: t_a, t_d
+    TODO: Make more robust. How can we figure out if there are more than 1 time that satisfies the matching criteria?
+
+    Inputs
+    timeseEff (np.array): array of efficient values from larger set
+    t_a (List): List of all times (ascending orbits) in original data structure 
+    t_d (List): List of all times (descending orbits) in original data structure
+
+    Outputs
+    paretoIdx (List): List of indices corresponding to the larger array (t_a/t_d)
+    tags (List of strings): List of which array (t_a or t_d, to 'a' and 'd' respectively) that was matched
+    """
+    paretoIdx = []
+    tags = []
+    for paretoID, teff in enumerate(timesEff):
+        # import ipdb; ipdb.set_trace()
+#         set_trace()
+        idx = np.argwhere(t_a == teff)
+        tag = 'a'
+        if idx.size == 0:
+            idx = np.argwhere(t_d == teff)
+            tag = 'd'
+        tags.append(tag)
+        if tag == 'a':
+            for index in idx:
+                delVCheck = delv_a[tuple(index)]
+                if delVCheck == delVEff[paretoID]:
+                    idxFinal = index
+                    break
+        elif tag == 'd':
+            for index in idx:
+                delVCheck = delv_d[tuple(index)]
+                if delVCheck == delVEff[paretoID]:
+                    idxFinal = index
+                    break
+        else:
+            raise Exception("tag not defined correctly")
+        #Check if there is more than one solution
+        # if idx.shape[0] > 1:
+        #     raise Exception("More than one time satisfies criteria")
+
+        paretoIdx.append(idxFinal)
+    return paretoIdx, tags
+
+def getPassSats(constellation, gs, tInit, daysAhead, plot=False):
+    """
+    Given a constellation, ground station, initial time, and how many days ahead to plan, the function returns
+    which ids and which orbits are the optimal in terms of deltaV and timing
+
+    Inputs
+    Constellation (List): Constellation list where satellites are organized in the by planes then satellites. Ex indices: Walker[planeIdx][satIdx]
+    gs (groundStation object): Ground station object to predict passes
+    tInit (astropy time object): Time to initialize planner
+    daysAhead (int): Amount of days ahead to for the scheduler to plan for
+
+    Outputs
+    ids (List): List of indices corresponding to which satellite in the constellation are optimally positioned to make a maneuver
+    tags (List of strings): List of which array (t_a or t_d, to 'a' and 'd' respectively) that correspond to if the desired pass corresponds to the ascending or descending pass
+    """
+    # Get times of interest
+    tInitMJDRaw = tInit.mjd
+    tInitMJD = int(tInitMJDRaw)
+    
+    dayArray = np.arange(0, daysAhead + 1)
+    days2InvestigateMJD = list(tInitMJD + dayArray) #Which days to plan over
+    days2Investigate = [time.Time(dayMJD, format='mjd', scale='utc')
+                        for dayMJD in days2InvestigateMJD]
+
+    passTimes = []  # First layer down depicts satellites in a plane. Second layer depicts individual satellites in a plane
+    anoms = []
+    aSats = getSatValues_const(constellation, 'a') #Semi Major axes
+    alts = [[sat.a - poliastro.constants.R_earth for sat in plane] for plane in constellation]
+    incs = getSatValues_const(constellation, 'inc')
+    for plane in constellation:
+        passTimesPlane = []
+        anomaliesPlane = []
+#         altPlane = []
+        incPlane = []
+        for sat in plane:
+            passTime, anom = get_pass_times_anomalies(
+                sat, gs, days2Investigate)
+#             altSat = sat.a - poliastro.constants.R_earth
+#             incSat = sat.inc
+            
+            #Append to each list representing each plane
+            passTimesPlane.append(passTime)
+            anomaliesPlane.append(anom)
+#             altPlane.append(altSat)
+#             incPlane.append(incSat)
+            
+        passTimes.append(passTimesPlane)
+        anoms.append(anomaliesPlane)
+#         alts.append(altPlane)
+#         incs.append(incPlane)
+
+    passOrbits_a, passOrbits_d = getDesiredPassOrbits(constellation, 
+                                                      passTimes, 
+                                                      tInit,
+                                                      alts, 
+                                                      incs, 
+                                                      anoms)
+#     passOrbits_a = []  # Index is passOrbits_a[plane][sat][day]
+#     passOrbits_d = []
+#     for idxPlane, plane in enumerate(passTimes):
+#         planeSats_a = []
+#         planeSats_d = []
+#         for idxSat, sat in enumerate(plane):
+#             satTimes_a = []
+#             satTimes_d = []
+
+#             sat0 = constellation[idxPlane][idxSat] #Get current satellite
+#             sat0Epoch = sat0.epoch
+#             sat0Nu = sat0.nu
+#             for idxTime, times_a in enumerate(sat[0]):
+#                 orbit_back_a = Satellite.circular(Earth, 
+#                                                   alt=alts[idxPlane][idxSat],
+#                                                   inc=incs[idxPlane][idxSat],
+#                                                   raan=constellation[idxPlane][idxSat].raan,
+#                                                   arglat=anoms[idxPlane][idxSat][0],
+#                                                   epoch=times_a)
+
+#                 # Back propagate orbits as well
+#                 orbit_back0_a = orbit_back_a.propagate(tInit)
+#                 nu = orbit_back0_a.nu
+
+#                 # Find nu difference
+#                 phaseAng = sat0Nu - nu
+
+#                 # Find time to pass
+#                 t2Pass = times_a - sat0Epoch
+
+#                 backDict = {
+#                     "orbPass": orbit_back_a,
+#                     "orbBack": orbit_back0_a,
+#                     "nuBack": nu,
+#                     "phaseAng": phaseAng,
+#                     "t2Pass": t2Pass
+#                 }
+#                 satTimes_a.append(backDict)
+
+#             for idxTime, times_d in enumerate(sat[1]):
+#                 orbit_back_d = Satellite.circular(Earth, alt=alt,
+#                                                   inc=i, raan=constellation[idxPlane][idxSat].raan,
+#                                                   arglat=anoms[satNum][idxSat][1],
+#                                                   epoch=times_d)
+
+#                 # Back propagate orbits as well
+#                 orbit_back0_d = orbit_back_d.propagate(tInit)
+#                 nu = orbit_back0_d.nu
+
+#                 # Find nu difference
+#                 phaseAng = sat0Nu - nu
+
+#                 # Find time to pass
+#                 t2Pass = times_d - sat0Epoch
+
+#                 backDict = {
+#                     "orbPass": orbit_back_d,
+#                     "orb": orbit_back0_d,
+#                     "nuBack": nu,
+#                     "phaseAng": phaseAng,
+#                     "t2Pass": t2Pass
+#                 }
+#                 satTimes_d.append(backDict)
+
+#             planeSats_a.append(satTimes_a)
+#             planeSats_d.append(satTimes_d)
+#         passOrbits_a.append(planeSats_a)
+#         passOrbits_d.append(planeSats_d)
+
+    # Extract nus and times
+    phaseAngs_a_raw = [[[satID["phaseAng"] for satID in sat]
+                        for sat in plane] for plane in passOrbits_a]
+    phaseAngs_d_raw = [[[satID["phaseAng"] for satID in sat]
+                        for sat in plane] for plane in passOrbits_d]
+#     phaseAngs_a_raw = getSatValues_constPlan(passOrbits_a, 'phaseAng')
+#     phaseAngs_d_raw = getSatValues_constPlan(passOrbits_d, 'phaseAng')
+
+    phaseAngs_a = [[[np.mod(ang, 360 * u.deg) - 180 * u.deg for ang in sat]
+                    for sat in plane] for plane in phaseAngs_a_raw]
+    phaseAngs_d = [[[np.mod(ang, 360 * u.deg) - 180 * u.deg for ang in sat]
+                    for sat in plane] for plane in phaseAngs_d_raw]
+
+    t2obs_a = [[[satID["t2Pass"] for satID in sat]
+                for sat in plane] for plane in passOrbits_a]
+    t2obs_d = [[[satID["t2Pass"] for satID in sat]
+                for sat in plane] for plane in passOrbits_d]
+
+    timesSec_a = [[[timeVal.to_value('s') for timeVal in sat]
+                   for sat in plane] for plane in t2obs_a]
+    timesSec_d = [[[timeVal.to_value('s') for timeVal in sat]
+                   for sat in plane] for plane in t2obs_d]
+
+    timesArr_a = np.array(timesSec_a)
+    timesArr_d = np.array(timesSec_d)
+
+    period = [[sat.period.value for sat in plane] for plane in constellation]
+    periodArr = np.array(period)
+
+    semiMajors = [[sat.a.to(u.m).value for sat in plane] for plane in constellation]
+    semiMajorArr = np.array(semiMajors)
+
+    if timesArr_a.ndim != periodArr.ndim:
+        periodArr = np.repeat(periodArr[:, :, np.newaxis], np.shape(timesArr_a)[-1], axis=2)
+    orbRaw_a = timesArr_a / periodArr
+    orbKInt_a = orbRaw_a.astype(int)
+
+    orbRaw_d = timesArr_d / periodArr
+    orbKInt_d = orbRaw_d.astype(int)
+
+    phaseAngsArr_a = [[[ang.to(u.rad).value for ang in sat]
+                       for sat in plane] for plane in phaseAngs_a]
+    phaseAngsArr_d = [[[ang.to(u.rad).value for ang in sat]
+                       for sat in plane] for plane in phaseAngs_d]
+
+    t_a, delv_a, delv1_a, delv2_a, aphase_a, flag_a = t_phase_coplanar(
+        semiMajorArr, phaseAngsArr_a, orbKInt_a, orbKInt_a)
+    t_d, delv_d, delv1_d, delv2_d, aphase_d, flag_d = t_phase_coplanar(
+        semiMajorArr, phaseAngsArr_d, orbKInt_d, orbKInt_d)
+
+
+    # Get feasible times/deltaVs
+    timesFeasible_a = timesArr_a[flag_a]
+    timesFeasible_d = timesArr_d[flag_d]
+    delVFeasible_a = delv_a[flag_a]
+    delVFeasible_d = delv_d[flag_d]
+
+    timesPassFlat_a = timesFeasible_a.flatten()
+    timesPassFlat_d = timesFeasible_d.flatten()
+    delVFlat_a = delVFeasible_a.flatten()
+    delVFlat_d = delVFeasible_d.flatten()
+
+    timesPassFlat = np.append(timesPassFlat_a, timesPassFlat_d)
+    delVFlat = np.append(delVFlat_a, delVFlat_d)
+
+#     idSort = np.argsort(timesPassFlat)
+
+#     timesSorted = timesPassFlat[idSort]
+#     delVSorted = delVFlat[idSort]
+
+#     timesInLoop = np.copy(timesSorted)
+#     delVInLoop = np.copy(delVSorted)
+
+#     is_efficient = np.arange(timesSorted.shape[0])
+#     n_points = timesSorted.shape[0]
+#     next_pt_idx = 0
+#     while next_pt_idx < len(timesInLoop):
+#         # Find delta Vs that took less fuel, but more time
+#         #     import ipdb; ipdb.set_trace()
+#         # Already starting with 'fastest' time because times werre sorted
+#         nondominated_point_mask = delVInLoop < delVInLoop[next_pt_idx]
+#         nondominated_point_mask[:next_pt_idx+1] = True
+#         is_efficient = is_efficient[nondominated_point_mask]
+#         timesInLoop = timesInLoop[nondominated_point_mask]
+#         delVInLoop = delVInLoop[nondominated_point_mask]
+#         next_pt_idx += 1
+#     timesEff = timesSorted[is_efficient]
+#     delVEff = delVSorted[is_efficient]
+    timesEff, delVEff = findNonDominated(timesPassFlat, delVFlat)
+    ids, tags = findParetoIds(delVEff, timesEff, timesArr_a, timesArr_d, delv_a, delv_d)
+
+    if plot:
+        plt.figure()
+        ax = plt.gca()
+        for planeIdx, plane in enumerate(t_a):
+            for satIdx, sat in enumerate(plane):
+                color = next(ax._get_lines.prop_cycler)['color']
+                planeStr = str(planeIdx + 1)
+                satStr = str(satIdx + 1)
+                mask_a = flag_a[planeIdx][satIdx]
+                mask_d = flag_d[planeIdx][satIdx]
+                plt.plot(timesArr_a[planeIdx][satIdx][mask_a]/60/60, delv_a[planeIdx][satIdx][mask_a], 'o', color=color,
+                         label=f'Plane: {planeStr} | Sat: {satStr} ')
+                plt.plot(timesArr_d[planeIdx][satIdx][mask_d]/60/60,
+                         delv_d[planeIdx][satIdx][mask_d], 'x', color=color)
+        #         plt.plot(timesArr_a[planeIdx][satIdx]/60/60, delv_a[planeIdx][satIdx], 'o', color = color,
+        #                  label = f'Plane: {planeStr} | Sat: {satStr} ')
+        #         plt.plot(timesArr_d[planeIdx][satIdx]/60/60, delv_d[planeIdx][satIdx], 'x', color = color)
+        plt.xlabel('Time (Hours)')
+        plt.ylabel('Delta V (m/s)')
+        plt.title(
+            'Propellant and Time cost to first pass \n \'x\' for descending passes | \'o\' for ascending passes')
+        ax.set_xlim(left=0)
+        ax.set_ylim(bottom=0)
+        plt.legend()
+
+    return ids, tags
+
+#### Utility Functions ####
+def getSatValues_const(constellation, attribute):
+    """
+    Gets a specific attribute from each satellite in a constellation (Ex: generated by constellationFuncs.genWalker)
+
+    Inputs:
+    Constellation (List): Constellation list where satellites are organized in the by planes then satellites. Ex indices: Walker[planeIdx][satIdx]
+    Attribute (str): String indicating which attribute to extract
+
+    Outputs:
+    List of attributes, data structure of plane -> sat preserved
+    """
+    return [[getattr(sat,attribute) for sat in plane] for plane in constellation]
+def getSatValues_const_func(constellation, attribute, func):
+    """
+    Gets a specific value from each satellite in a constellation, subject to a function
+    Constellation can be generrated by constellationFuncs.genWalker
+
+    Inputs:
+    Constellation (List): Constellation list where satellites are organized in the by planes then satellites. Ex indices: Walker[planeIdx][satIdx]
+    Attribute (str): String indicating which attribute to extract
+    Func (func): Function to be applied
+
+    Ex to get values 10 km higher than from semi-major axis 'a' in walker constellation:
+
+    getSatValues_const_func(walker, lambda a : a + 10 * u.km, 'a')
+
+
+    Outputs:
+    List of values, data structure of plane -> sat preserved
+    """
+    return [[func(getattr(sat,attribute)) for sat in plane] for plane in constellation]
+
+def getSatValues_constPlan(constellation, attribute):
+    """
+    Gets a specific attribute from each satellite in a constellation in the planner
+
+    Inputs:
+    Constellation (List): Constellation list where satellites are organized in the by planes then satellites. Ex indices: Walker[planeIdx][satIdx]
+    Attribute (str): String indicating which attribute to extract
+
+    Outputs:
+    List of attributes, data structure of plane -> sat preserved
+    """
+    return [[[getattr(time,attribute) for time in sat] for sat in plane] for plane in constellation]

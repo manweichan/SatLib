@@ -53,3 +53,6 @@ def genWalker(i, t, p, f, alt, epoch = False):
         sats.append(planeSats)
         
     return sats
+
+def getSatValues(constellation, value):
+    return [[getattr(sat,value) for sat in plane] for plane in constellation]

@@ -202,13 +202,19 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
         a_tgt = a_tgt * u.m
     if not isinstance(theta, u.quantity.Quantity):
         theta = theta * u.rad
+
+    ## Check to see if dimensions match
+    if theta.ndim != a_tgt.ndim:
+        a_tgt = np.repeat(a_tgt[:, :, np.newaxis], np.shape(theta)[-1], axis=2)
+
     w_tgt = np.sqrt(mu/a_tgt**3)
     t_phase = (2 * np.pi * k_tgt + theta.to(u.rad).value) / w_tgt
     a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
 
+
+    # import ipdb; ipdb.set_trace()
     rp = 2 * a_phase - a_tgt #radius of perigee
     passFlag = rp > poliastro.constants.R_earth #Check which orbits are non-feasible due to Earth's radius
-
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
 
     #Get individual burn values
@@ -238,6 +244,7 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     #     "a_phase": a_phase
     # }
     return t_phase.to(u.s), deltaV.to(u.m/u.s), delV1.to(u.m/u.s), delV2.to(u.m/u.s), a_phase.to(u.km), passFlag
+
 
 def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth, 
                          rPlanet = poliastro.constants.R_earth):
