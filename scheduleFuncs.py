@@ -467,6 +467,8 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = Fals
     Outputs
     ids (List): List of indices corresponding to which satellite in the constellation are optimally positioned to make a maneuver
     tags (List of strings): List of which array (t_a or t_d, to 'a' and 'd' respectively) that correspond to if the desired pass corresponds to the ascending or descending pass
+    delVOut (Dict): Dictionary of delV burns required
+    tOut (Dict): Dictionary of expected pass times
     """
     # Get times of interest
     tInitMJDRaw = tInit.mjd
@@ -572,6 +574,28 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = Fals
     timesEff, delVEff = findNonDominated(timesPassFlat, delVFlat)
     ids, tags = findParetoIds(delVEff, timesEff, timesArr_a, timesArr_d, delv_a, delv_d)
 
+    delv1_a_out = [delv1_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
+    delv2_a_out = [delv2_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
+
+    delv1_d_out = [delv1_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
+    delv2_d_out = [delv2_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
+
+    delVOut = {
+                'delv1_a' : delv1_a_out,
+                'delv2_a' : delv2_a_out,
+                'delv1_d' : delv1_d_out,
+                'delv2_d' : delv2_d_out
+    }
+
+    t_a_out = [timesArr_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
+
+    t_d_out = [timesArr_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
+
+    tOut = {
+            'tPass_a' : t_a_out,
+            'tPass_d' : t_d_out
+    }
+    # import ipdb; ipdb.set_trace()
     # ids_a = []
     # ids_d = []
     # for tagId, tag in enumerate(tags):
@@ -581,6 +605,7 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = Fals
     #         ids_d.append(ids[tagId])
     #     else:
     #         print("Non valid tag when splitting ids")    
+
     if plot:
         plt.figure()
         ax = plt.gca()
@@ -613,7 +638,7 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = Fals
 
         plt.legend(loc='upper right')
 
-    return ids, tags
+    return ids, tags, delVOut, tOut
 
 #### Utility Functions ####
 def getSatValues_const(constellation, attribute):
