@@ -212,7 +212,6 @@ def t_phase_coplanar(a_tgt, theta, k_tgt, k_int, mu = poliastro.constants.GM_ear
     a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
 
 
-    # import ipdb; ipdb.set_trace()
     rp = 2 * a_phase - a_tgt #radius of perigee
     passFlag = rp > poliastro.constants.R_earth #Check which orbits are non-feasible due to Earth's radius
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize

@@ -451,7 +451,7 @@ def findParetoIds(delVEff, timesEff, t_a, t_d, delv_a, delv_d):
         paretoIdx.append(idxFinal)
     return paretoIdx, tags
 
-def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = False):
+def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = False, figName = None, pltLgd = False):
     """
     Given a constellation, ground station, initial time, and how many days ahead to plan, the function returns
     which ids and which orbits are the optimal in terms of deltaV and timing
@@ -462,6 +462,8 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = Fals
     tInit (astropy time object): Time to initialize planner
     daysAhead (int): Amount of days ahead to for the scheduler to plan for
     plot (Bool): Plots if True
+    savePlot (Bool): Saves if False
+    figName (Str): String for figure name if savePlot = True
     pltLgd (Bool): Plots legend if True
 
     Outputs
@@ -629,14 +631,16 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, pltLgd = Fals
         #         plt.plot(timesArr_d[planeIdx][satIdx]/60/60, delv_d[planeIdx][satIdx], 'x', color = color)
         plt.plot(timesEff/60/60, delVEff, 'r-', label='Pareto Front')
         plt.plot(0,0,'g^',label='Utopia Point')
-        plt.xlabel('Time (Hours)')
-        plt.ylabel('Delta V (m/s)')
+        plt.xlabel('Time (Hours)', fontsize = 14)
+        plt.ylabel('Delta V (m/s)', fontsize = 14)
         plt.title(
-            'Propellant and Time cost to first pass \n \'x\' for descending passes | \'o\' for ascending passes')
+            'Propellant and Time cost to first pass \n \'x\' for descending passes | \'o\' for ascending passes',
+            fontsize = 16)
         # ax.set_xlim(left=0)
         # ax.set_ylim(bottom=0)
 
         plt.legend(loc='upper right')
+        plt.savefig(figName, facecolor="w", dpi=300, bbox_inches='tight')
 
     return ids, tags, delVOut, tOut
 
