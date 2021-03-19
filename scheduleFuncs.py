@@ -451,7 +451,8 @@ def findParetoIds(delVEff, timesEff, t_a, t_d, delv_a, delv_d):
         paretoIdx.append(idxFinal)
     return paretoIdx, tags
 
-def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = False, figName = None, pltLgd = False):
+def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = False, figName = None, pltLgd = False,
+                numSats = False):
     """
     Given a constellation, ground station, initial time, and how many days ahead to plan, the function returns
     which ids and which orbits are the optimal in terms of deltaV and timing
@@ -465,12 +466,14 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
     savePlot (Bool): Saves if False
     figName (Str): String for figure name if savePlot = True
     pltLgd (Bool): Plots legend if True
+    numSats (int): Integer number 'n'. Ouputs the 'n' fastest ground passes in ids.
 
     Outputs
-    ids (List): List of indices corresponding to which satellite in the constellation are optimally positioned to make a maneuver
+    idsOut (Dict): Dictionary of indices corresponding to which satellite in the constellation are optimally positioned to make a maneuver. First idx is plane, second idx is satellite in plane, 3rd idx is pass corresopnding to day after initialization
     tags (List of strings): List of which array (t_a or t_d, to 'a' and 'd' respectively) that correspond to if the desired pass corresponds to the ascending or descending pass
     delVOut (Dict): Dictionary of delV burns required
     tOut (Dict): Dictionary of expected pass times
+    orbOut (Dict): Dictionary of desired 'final' orbits after maneuver
     """
     # Get times of interest
     tInitMJDRaw = tInit.mjd
@@ -481,7 +484,7 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
     days2Investigate = [time.Time(dayMJD, format='mjd', scale='utc')
                         for dayMJD in days2InvestigateMJD]
 
-    passTimes = []  # First layer down depicts satellites in a plane. Second layer depicts individual satellites in a plane
+    passTimes = []  # First layer down depicts satellites in a plane. Second layer depicts individual satellites in a plane. 3rd layer 1st idx is for ascending pass, 2nd idx is for descending pass, 4th idx is pass corresopnding to day after initialization
     anoms = []
     aSats = getSatValues_const(constellation, 'a') #Semi Major axes
     alts = [[sat.a - poliastro.constants.R_earth for sat in plane] for plane in constellation]
@@ -565,6 +568,7 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
     delVFeasible_a = delv_a[flag_a]
     delVFeasible_d = delv_d[flag_d]
 
+    # Flatten data arrays to put into pareto analysis
     timesPassFlat_a = timesFeasible_a.flatten()
     timesPassFlat_d = timesFeasible_d.flatten()
     delVFlat_a = delVFeasible_a.flatten()
@@ -573,40 +577,56 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
     timesPassFlat = np.append(timesPassFlat_a, timesPassFlat_d)
     delVFlat = np.append(delVFlat_a, delVFlat_d)
 
+    
     timesEff, delVEff = findNonDominated(timesPassFlat, delVFlat)
-    ids, tags = findParetoIds(delVEff, timesEff, timesArr_a, timesArr_d, delv_a, delv_d)
+    ids, tags = findParetoIds(delVEff, timesEff, timesArr_a, timesArr_d, delv_a, delv_d) #Gets ids and tags, which are for either ascending or descending
 
+
+    if numSats: #Find ids for lowest times
+        idChosen = ids[0:numSats]
+    else:
+        idChosen = None
+    idsOut = {
+                'idsAll' : ids,
+                'idsChosen' : idChosen
+    }
+
+    ## Get feasible delta Vs
     delv1_a_out = [delv1_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
     delv2_a_out = [delv2_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
 
     delv1_d_out = [delv1_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
     delv2_d_out = [delv2_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
 
+    delv_a_out = [delv_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
+    delv_d_out = [delv_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
+
     delVOut = {
-                'delv1_a' : delv1_a_out,
-                'delv2_a' : delv2_a_out,
-                'delv1_d' : delv1_d_out,
-                'delv2_d' : delv2_d_out
+                'delV1_a' : delv1_a_out,
+                'delV2_a' : delv2_a_out,
+                'delV1_d' : delv1_d_out,
+                'delV2_d' : delv2_d_out,
+                'delVTot_a' : delv_a_out,
+                'delVTot_d' : delv_d_out
     }
 
+    ## Get feasible times
     t_a_out = [timesArr_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
-
     t_d_out = [timesArr_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
-
+    tAll_out = t_a_out + t_d_out
     tOut = {
             'tPass_a' : t_a_out,
-            'tPass_d' : t_d_out
+            'tPass_d' : t_d_out,
+            'tAll'    : tAll_out
     }
-    # import ipdb; ipdb.set_trace()
-    # ids_a = []
-    # ids_d = []
-    # for tagId, tag in enumerate(tags):
-    #     if tag == 'a':
-    #         ids_a.append(ids[tagId])
-    #     elif tag == 'd':
-    #         ids_d.append(ids[tagId])
-    #     else:
-    #         print("Non valid tag when splitting ids")    
+
+    ## Get feasible orbits
+    orb_a_out =  [passOrbits_a[x[0]][x[1]][x[2]] for x,t in zip(ids, tags) if t == 'a']#[passOrbits_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
+    orb_d_out =  [passOrbits_a[x[0]][x[1]][x[2]] for x,t in zip(ids, tags) if t == 'd']#[passOrbits_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
+    orbOut = {
+            'orb_a' : orb_a_out,
+            'orb_d' : orb_d_out
+    }
 
     if plot:
         plt.figure()
@@ -640,9 +660,10 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
         # ax.set_ylim(bottom=0)
 
         plt.legend(loc='upper right')
-        plt.savefig(figName, facecolor="w", dpi=300, bbox_inches='tight')
+        if savePlot:
+            plt.savefig(figName, facecolor="w", dpi=300, bbox_inches='tight')
 
-    return ids, tags, delVOut, tOut
+    return idsOut, tags, delVOut, tOut, orbOut
 
 #### Utility Functions ####
 def getSatValues_const(constellation, attribute):
