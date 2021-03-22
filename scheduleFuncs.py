@@ -101,59 +101,64 @@ def scheduleISL(intOrb, tarOrb, numIntOrbs, numTarOrbs):
     nus1, nus2 = getNuIntersect(intOrb, tarOrb) #Get true anomaly of orbit intersects with respect to each orbit
     
     sched  = []
-    for idx, val in enumerate(nus1):
-        "Cycle through each intersect points (should be 2)"
-        # Extract true anomaly for each orbit of the corresponding intersection point
-        intNu1 = nus1[idx] #True anomaly of intercept for orbit 1
-        intNu2 = nus2[idx]
 
-        # Propagate orb1 to true anomaly
-        t2int_orb1 = orb1.time_to_anomaly(intNu1)
-        orb1_init2rvd = orb1.propagate(t2int_orb1)
+    if nus1 is not None:
+        for idx, val in enumerate(nus1):
+            "Cycle through each intersect points (should be 2)"
+            # Extract true anomaly for each orbit of the corresponding intersection point
+            intNu1 = nus1[idx] #True anomaly of intercept for orbit 1
+            intNu2 = nus2[idx]
+
+            # Propagate intOrb to true anomaly
+            t2int_orb1 = intOrb.time_to_anomaly(intNu1)
+            orb1_init2rvd = intOrb.propagate(t2int_orb1)
+            
+            tAtInitMan = intOrb.epoch + t2int_orb1 # Keep track off time. Time at first maneuver.
+
+            #Propagate target orbit by same amount
+            orb2_init2rvd = tarOrb.propagate(t2int_orb1)
         
-        tAtInitMan = orb1.epoch + t2int_orb1 # Keep track off time. Time at first maneuver.
+            # Determine phase angle for target to get to intercept point. Defined as rvd point to current true anomaly
+            phaseAng_tar2rvd = intNu2 - orb2_init2rvd.nu
 
-        #Propagate target orbit by same amount
-        orb2_init2rvd = orb2.propagate(t2int_orb1)
-    
-        # Determine phase angle for target to get to intercept point. Defined as rvd point to current true anomaly
-        phaseAng_tar2rvd = intNu2 - orb2_init2rvd.nu
+            if phaseAng_tar2rvd < -180 * u.deg: #Make sure all points are between -180 and 180
+                phaseAng_tar2rvd = phaseAng_tar2rvd + 2 * np.pi * u.rad
+            elif phaseAng_tar2rvd > 180 * u.deg:
+                phaseAng_tar2rvd = phaseAng_tar2rvd - 2 * np.pi * u.rad
+            else:
+                pass
 
-        if phaseAng_tar2rvd < -180 * u.deg: #Make sure all points are between -180 and 180
-            phaseAng_tar2rvd = phaseAng_tar2rvd + 2 * np.pi * u.rad
-        elif phaseAng_tar2rvd > 180 * u.deg:
-            phaseAng_tar2rvd = phaseAng_tar2rvd - 2 * np.pi * u.rad
-        else:
-            pass
+            ## Get phasing maneuver. 
 
-        ## Get phasing maneuver. 
+            # delVs apply to interceptor
+            # import ipdb; ipdb.set_trace()
+            # tPhase, delVPhase, delV1, delV2, aPhase = t_phase_coplanar(orb2_init2rvd.a.to(u.m).value, 
+            #                               phaseAng_tar2rvd.to(u.rad).value, numTarOrbs,
+            #                                                    numIntOrbs)
+            tPhase, delVPhase, delV1, delV2, aPhase, flag = t_phase_coplanar(orb2_init2rvd.a, 
+                                  phaseAng_tar2rvd.to(u.rad), numTarOrbs, numIntOrbs)
+            tPhaseS = tPhase #convert to seconds (astropy)
+            # delV1_ms = delV1 #convert to m/s (astropy)
+            # delV2_ms = delV1
+            orb2_rvd = orb2_init2rvd.propagate(tPhaseS) #target orbit at rendezvous
+            
+            #Keep track of time for 2nd maneuver
+            tAtFinMan = tAtInitMan + tPhaseS
+            
+            v_dir1 = orb1_init2rvd.v/norm(orb1_init2rvd.v) #Velocity direction of interceptor orbit at node
+            delVVec1 = v_dir1 * delV1 #DeltaV vector GCRS frame
+            deltaV_man1 = Maneuver.impulse(delVVec1)
+            orb1_phase_i = orb1_init2rvd.apply_maneuver(deltaV_man1) #Applied first burn
+            orb1_phase_f = orb1_phase_i.propagate(tPhaseS) #Propagate through phasing orbit
 
-        # delVs apply to interceptor
-        tPhase, delVPhase, delV1, delV2, aPhase = t_phase_coplanar(orb2_init2rvd.a.to(u.m).value, 
-                                      phaseAng_tar2rvd.to(u.rad).value, numTarOrbs,
-                                                                   numIntOrbs)
-        tPhaseS = tPhase * u.s #convert to seconds (astropy)
-        delV1_ms = delV1 * u.m / u.s #convert to m/s (astropy)
-        delV2_ms = delV1 * u.m / u.s
-        orb2_rvd = orb2_init2rvd.propagate(tPhaseS) #target orbit at rendezvous
-        
-        #Keep track of time for 2nd maneuver
-        tAtFinMan = tAtInitMan + tPhaseS
-        
-        v_dir1 = orb1_init2rvd.v/norm(orb1_init2rvd.v) #Velocity direction of interceptor orbit at node
-        delVVec1 = v_dir1 * delV1_ms #DeltaV vector GCRS frame
-        deltaV_man1 = Maneuver.impulse(delVVec1)
-        orb1_phase_i = orb1_init2rvd.apply_maneuver(deltaV_man1) #Applied first burn
-        orb1_phase_f = orb1_phase_i.propagate(tPhaseS) #Propagate through phasing orbit
-
-        v_dir2 = orb1_phase_f.v/norm(orb1_phase_f.v) #Get direction of velocity at end of phasing
-        delVVec2 = v_dir2 * delV2_ms
-        deltaV_man2 = Maneuver.impulse(v_dir2 * delV2_ms) #Delta V  of recircularizing orbit
-        orb1_rvd = orb1_phase_f.apply_maneuver(deltaV_man2) #Orbit at rendezvous
-        
-        burnSched_i = BurnSchedule(tAtInitMan, delVVec1) #First burn
-        burnSched_f = BurnSchedule(tAtFinMan, delVVec2) #Second burn
-        sched.append([burnSched_i, burnSched_f])
+            v_dir2 = orb1_phase_f.v/norm(orb1_phase_f.v) #Get direction of velocity at end of phasing
+            delVVec2 = v_dir2 * delV2
+            deltaV_man2 = Maneuver.impulse(v_dir2 * delV2) #Delta V  of recircularizing orbit
+            orb1_rvd = orb1_phase_f.apply_maneuver(deltaV_man2) #Orbit at rendezvous
+            
+            burnSched_i = BurnSchedule(tAtInitMan, delVVec1) #First burn
+            burnSched_f = BurnSchedule(tAtFinMan, delVVec2) #Second burn
+            sched.append([burnSched_i, burnSched_f])
     return sched
 
 def get_pass_times_anomalies(orb, gs, dates,
@@ -326,8 +331,8 @@ def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
                 t2Pass = times_a - sat0Epoch
 
                 backDict = {
-                    "orbPass": orbit_back_a,
-                    "orbBack": orbit_back0_a,
+                    "orbPass": orbit_back_a, #Desired orbit
+                    "orb0": orbit_back0_a, #Back propagated orbits
                     "nuBack": nu,
                     "phaseAng": phaseAng,
                     "t2Pass": t2Pass
@@ -354,7 +359,7 @@ def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
 
                 backDict = {
                     "orbPass": orbit_back_d,
-                    "orb": orbit_back0_d,
+                    "orb0": orbit_back0_d, #Back propagated orbits
                     "nuBack": nu,
                     "phaseAng": phaseAng,
                     "t2Pass": t2Pass
@@ -410,7 +415,6 @@ def findNonDominated(timesPassFlat, delVFlat):
 def findParetoIds(delVEff, timesEff, t_a, t_d, delv_a, delv_d):
     """
     Given a set of efficient pareto values (timesEff), return the indices that they correspond to in the larger arrays: t_a, t_d
-    TODO: Make more robust. How can we figure out if there are more than 1 time that satisfies the matching criteria?
 
     Inputs
     timeseEff (np.array): array of efficient values from larger set
@@ -444,9 +448,6 @@ def findParetoIds(delVEff, timesEff, t_a, t_d, delv_a, delv_d):
                     break
         else:
             raise Exception("tag not defined correctly")
-        #Check if there is more than one solution
-        # if idx.shape[0] > 1:
-        #     raise Exception("More than one time satisfies criteria")
 
         paretoIdx.append(idxFinal)
     return paretoIdx, tags
@@ -587,7 +588,7 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
     else:
         idChosen = None
     idsOut = {
-                'idsAll' : ids,
+                'idsAll' : ids, #In order of times
                 'idsChosen' : idChosen
     }
 
@@ -622,10 +623,16 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
 
     ## Get feasible orbits
     orb_a_out =  [passOrbits_a[x[0]][x[1]][x[2]] for x,t in zip(ids, tags) if t == 'a']#[passOrbits_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
-    orb_d_out =  [passOrbits_a[x[0]][x[1]][x[2]] for x,t in zip(ids, tags) if t == 'd']#[passOrbits_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
+    orb_d_out =  [passOrbits_d[x[0]][x[1]][x[2]] for x,t in zip(ids, tags) if t == 'd']#[passOrbits_d[tuple(x)] for x,t in zip(ids, tags) if t == 'd']
+    # orb_a_out_test = [passOrbits_a[x[0]][x[1]][x[2]] if t == 'a' else None for x,t in zip(ids, tags)]#[passOrbits_a[tuple(x)] for x,t in zip(ids, tags) if t == 'a']
+    orb_a_ids = [idx for idx,t in zip(ids, tags) if t == 'a']
+    orb_d_ids = [idx for idx,t in zip(ids, tags) if t == 'd']
     orbOut = {
             'orb_a' : orb_a_out,
-            'orb_d' : orb_d_out
+            'orb_a_id' : orb_a_ids,
+            'orb_d' : orb_d_out,
+            'orb_d_id' : orb_d_ids,
+            # 'test' : orb_a_out_test
     }
 
     if plot:

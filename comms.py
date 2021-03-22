@@ -1,6 +1,8 @@
 ##Comms functions
 
 import numpy as np
+import poliastro
+import astropy.unit as u
 
 def satFootprintConeAng_fromAltMEA(alt, MEA, rPlanet = 6378.1e3):
 	"""
@@ -87,7 +89,7 @@ def footprintLength(nu, ele, alt, bw, unit = 'km', re = 6378.1e3):
     return fpLength
 
 
-def slantRange_fromAltECA(alt, lam, re = 6378.1e3):
+def slantRange_fromAltECA(alt, lam, re = poliastro.constants.R_earth):
 	"""
 	Gets relevant slant range angles if given altitude and earth central angle (ECA). 
 	Section 8.3.1 from SME SMAD, starting from eqn 8-26
@@ -102,6 +104,11 @@ def slantRange_fromAltECA(alt, lam, re = 6378.1e3):
 	ele : elevation angle measured at the target between spacecraft and local horizontal (rad)
 	D   : distance to the target from the ground station (m)
 	"""
+    if not isinstance(alt, astropy.units.quantity.Quantity):
+       alt = alt * u.m
+    if not isinstance(lam, astropy.units.quantity.Quantity):
+       lam = lam * u.rad
+
 	sinrho = re / (re + alt)
 	tanNuNum = (sinrho * np.sin(lam)) #numerator
 	tanNuDen = (1 - sinrho * np.cos(lam))
@@ -110,7 +117,7 @@ def slantRange_fromAltECA(alt, lam, re = 6378.1e3):
 	D = re * (np.sin(lam) / np.sin(nu)) 
 	return nu, ele, D
 
-def slantRange_fromAltNu(alt, nu, re = 6378.1e3):
+def slantRange_fromAltNu(alt, nu, re = poliastro.constants.R_earth):
 	"""
 	Gets relevant slant range angles if given altitude and nadir angle (nu). 
 	Section 8.3.1 from SME SMAD, starting from eqn 8-26
@@ -125,6 +132,11 @@ def slantRange_fromAltNu(alt, nu, re = 6378.1e3):
 	ele : elevation angle measured at the target between spacecraft and local horizontal (rad)
 	D   : distance to the target from the ground station (m)
 	"""
+    if not isinstance(alt, astropy.units.quantity.Quantity):
+       alt = alt * u.m
+    if not isinstance(nu, astropy.units.quantity.Quantity):
+       nu = nu * u.rad
+
 	sinrho = re / (re + alt)
 
 	cosEle = np.sin(nu) / sinrho
@@ -136,7 +148,7 @@ def slantRange_fromAltNu(alt, nu, re = 6378.1e3):
 
 	return lam, ele, D
 
-def slantRange_fromAltEle(alt, ele, re = 6378.1e3):
+def slantRange_fromAltEle(alt, ele, re = poliastro.constants.R_earth):
 	"""
 	Gets relevant slant range angles if given altitude and elevation angle (nu). 
 	Section 8.3.1 from SME SMAD, starting from eqn 8-26
@@ -151,6 +163,11 @@ def slantRange_fromAltEle(alt, ele, re = 6378.1e3):
 	nu  : nadir angle measured from spacecraft subsatellite point to ground target (rad)
 	D   : distance to the target from the ground station (m)
 	"""
+    if not isinstance(alt, astropy.units.quantity.Quantity):
+       alt = alt * u.m
+    if not isinstance(ele, astropy.units.quantity.Quantity):
+       ele = ele * u.rad
+
 	sinrho = re / (re + alt)
 
 	sinnu = np.cos(ele) * sinrho
