@@ -2,7 +2,7 @@
 
 import numpy as np
 import poliastro
-import astropy.unit as u
+import astropy.units as u
 
 def satFootprintConeAng_fromAltMEA(alt, MEA, rPlanet = 6378.1e3):
 	"""
