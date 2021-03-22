@@ -62,7 +62,7 @@ def delV_circInc(v, i):
     return delV
 
 
-def circ2elip_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
+def circ2elip_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
     """
     Delta V required to go from circular orbit to elliptical
     circ2elip_Hohmann(a1, a2, muPlanet = 3.986e14)
@@ -70,11 +70,15 @@ def circ2elip_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     a2: semi major axis of larger ellipse (m) 
     muPlanet: Gravitation parameter (Earth default)
     """
+    if not isinstance(a1, astropy.units.quantity.Quantity):
+       a1 = a1 * u.m
+    if not isinstance(a2, astropy.units.quantity.Quantity):
+       a2 = a2 * u.m
     v1 = np.sqrt(muPlanet/a1) * (np.sqrt(2*a2/(a1 + a2)) - 1)
     return np.abs(v1)
 
 
-def elip2circ_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
+def elip2circ_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
     """
     Delta V required to go from elliptical orbit to circular orbit
     elip2circ_Hohmann(a1, a2, muPlanet = 3.986e14)
@@ -82,11 +86,15 @@ def elip2circ_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     a2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
     muPlanet: Gravitation parameter (Earth default)
     """
+    if not isinstance(a1, astropy.units.quantity.Quantity):
+       a1 = a1 * u.m
+    if not isinstance(a2, astropy.units.quantity.Quantity):
+       a2 = a2 * u.m
     v2 = np.sqrt(muPlanet/a2) * (1 - np.sqrt(2*a1/(a1 + a2)))
     return np.abs(v2)
 
 
-def delV_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
+def delV_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
     """
     Delta V required to conduct a Hohmann Transfer
     delV_Hohmann(a1, a2, muPlanet = 3.986e14)
@@ -94,13 +102,17 @@ def delV_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     a2: radii of arrival of final circular orbit (Assuming Hohmann) (m)
     muPlanet: Gravitation parameter (Earth default)
     """
+    if not isinstance(a1, astropy.units.quantity.Quantity):
+       a1 = a1 * u.m
+    if not isinstance(a2, astropy.units.quantity.Quantity):
+       a2 = a2 * u.m
     v1 = circ2elip_Hohmann(a1, a2)
     v2 = elip2circ_Hohmann(a1, a2)
     delV = v1 + v2
     return delV
 
 
-def t_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
+def t_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
     """
     Time required to conduct a Hohmann Transfer
     t_Hohmann(a1, a2, muPlanet = 3.986e14)
@@ -108,11 +120,15 @@ def t_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth.value):
     a2: semi major axis of desired circular orbit (m)
     muPlanet: Gravitation parameter (Earth default)
     """
+    if not isinstance(a1, astropy.units.quantity.Quantity):
+       a1 = a1 * u.m
+    if not isinstance(a2, astropy.units.quantity.Quantity):
+       a2 = a2 * u.m
     t = np.pi * np.sqrt((a1 + a2)**3 / (8 * muPlanet))
     return t
 
 
-def delV_HohmannPlaneChange(a1, a2, theta, muPlanet=poliastro.constants.GM_earth.value):
+def delV_HohmannPlaneChange(a1, a2, theta, muPlanet=poliastro.constants.GM_earth):
     """
     Calculates the delta-V value to conduct a combined plane change and Hohmann
     delV_HohmannPlaneChange(a1, a2, theta)
@@ -121,6 +137,14 @@ def delV_HohmannPlaneChange(a1, a2, theta, muPlanet=poliastro.constants.GM_earth
     theta: degrees of inclination change (rad)
     muPlanet: Gravitation parameter (Earth default)
     """
+
+    if not isinstance(a1, astropy.units.quantity.Quantity):
+       a1 = a1 * u.m
+    if not isinstance(a2, astropy.units.quantity.Quantity):
+       a2 = a2 * u.m
+    if not isinstance(theta, astropy.units.quantity.Quantity):
+       theta = theta * u.rad
+       
     a = (a1 + a2) / 2  # semi major axis of transfer ellipse
 
     # Determine which orbit to conduct an inclination change at (larger radius)
@@ -361,21 +385,25 @@ def orbitalPeriod_fromAlt(alt, rPlanet=constants.R_earth, muPlanet=poliastro.con
     return t
 
 
-def circVel_fromAlt(alt, rPlanet=constants.R_earth.to(u.m).value, muPlanet=poliastro.constants.GM_earth.value):
+def circVel_fromAlt(alt, rPlanet=constants.R_earth.to(u.m).value, muPlanet=poliastro.constants.GM_earth):
     """
     Inputs (altitude, radius of planet-Earth is default, Gravitation parameter of planet-Earth is default)
     alt unit is in meters
     """
+    if not isinstance(alt, u.quantity.Quantity):
+        alt = alt * u.m
     r = alt + rPlanet
     v = np.sqrt(muPlanet/r)
     return v
 
 
-def circVel_fromRad(r, muPlanet=poliastro.constants.GM_earth.value):
+def circVel_fromRad(r, muPlanet=poliastro.constants.GM_earth):
     """
     Inputs (orbit radius, Gravitation parameter of planet-Earth is default)
     alt unit is in meters
     """
+    if not isinstance(r, u.quantity.Quantity):
+        r = r * u.m
     v = np.sqrt(muPlanet/r)
     return v
 
