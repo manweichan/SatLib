@@ -11,6 +11,19 @@ from poliastro.bodies import Earth
 from poliastro.frames.equatorial import GCRS
 import OpticalLinkBudget.OLBtools as olb
 
+class Constellation():
+    def __init__(self, planes):
+        self.planes = planes
+    def addPlane(self, plane):
+        self.planes.append(plane)
+
+class Plane():
+    def __init__(self, satellites):
+        self.sats = satellites
+
+    def addSat(self, sat):
+        self.sats.append(sat)
+
 class Satellite(Orbit):
     def __init__(self, state, epoch, dataMem = None, schedule = None, txOpticalPayload = None, rxOpticalPayload = None,
     txRfPayload = None, rxRfPayload = None):

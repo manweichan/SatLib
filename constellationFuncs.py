@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import propEqns as pe
 import orbitalMechanics as om
 import poliastro
+from poliastro.bodies import Earth
 import numpy as np
 
 def genWalker(i, t, p, f, alt, epoch = False):
@@ -23,6 +24,7 @@ def genWalker(i, t, p, f, alt, epoch = False):
     
     Outputs:
     sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
+    constClass (object)      : Constellation class from satClasses
     """
     
     #Check for astropy classes
@@ -42,9 +44,10 @@ def genWalker(i, t, p, f, alt, epoch = False):
     phaseDiff = pu * f
     
     sats = []
-    
+    constClass = sc.Constellation([])
     for plane in range(0,p): #Loop through each plane
         planeSats = []
+        planeInit = sc.Plane([])
         raan = plane * nodeSpacing
         for sat in range(0,int(s)): #Loop through each satellite in a plane
             omega0 = plane * phaseDiff
@@ -56,9 +59,10 @@ def genWalker(i, t, p, f, alt, epoch = False):
                 orbLoop = sc.Satellite.circular(Earth, alt = alt,
                      inc = i, raan = raan, arglat = omega)
             planeSats.append(orbLoop)
+            planeInit.addSat(orbLoop)
         sats.append(planeSats)
-        
-    return sats
+        constClass.addPlane(planeInit)
+    return sats, constClass
 
 def getSatValues(constellation, value):
     return [[getattr(sat,value) for sat in plane] for plane in constellation]
