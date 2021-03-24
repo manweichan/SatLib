@@ -309,14 +309,14 @@ def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
             satTimes_a = []
             satTimes_d = []
 
-            sat0 = constellation[idxPlane][idxSat] #Get current satellite
+            sat0 = constellation.planes[idxPlane].sats[idxSat] #Get current satellite
             sat0Epoch = sat0.epoch
             sat0Nu = sat0.nu
             for idxTime, times_a in enumerate(sat[0]):
                 orbit_back_a = Satellite.circular(Earth, 
                                                   alt=alts[idxPlane][idxSat],
                                                   inc=incs[idxPlane][idxSat],
-                                                  raan=constellation[idxPlane][idxSat].raan,
+                                                  raan=constellation.planes[idxPlane].sats[idxSat].raan,
                                                   arglat=anoms[idxPlane][idxSat][0],
                                                   epoch=times_a)
 
@@ -343,7 +343,7 @@ def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
                 orbit_back_d = Satellite.circular(Earth,
                                                   alt=alts[idxPlane][idxSat],
                                                   inc=incs[idxPlane][idxSat], 
-                                                  raan=constellation[idxPlane][idxSat].raan,
+                                                  raan=constellation.planes[idxPlane].sats[idxSat].raan,
                                                   arglat=anoms[idxPlane][idxSat][1],
                                                   epoch=times_d)
 
@@ -488,13 +488,13 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
     passTimes = []  # First layer down depicts satellites in a plane. Second layer depicts individual satellites in a plane. 3rd layer 1st idx is for ascending pass, 2nd idx is for descending pass, 4th idx is pass corresopnding to day after initialization
     anoms = []
     aSats = getSatValues_const(constellation, 'a') #Semi Major axes
-    alts = [[sat.a - poliastro.constants.R_earth for sat in plane] for plane in constellation]
+    alts = [[sat.a - poliastro.constants.R_earth for sat in plane.sats] for plane in constellation.planes]
     incs = getSatValues_const(constellation, 'inc')
-    for plane in constellation:
+    for plane in constellation.planes:
         passTimesPlane = []
         anomaliesPlane = []
         incPlane = []
-        for sat in plane:
+        for sat in plane.sats:
             passTime, anom = get_pass_times_anomalies(
                 sat, gs, days2Investigate)
             
@@ -538,10 +538,10 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
     timesArr_a = np.array(timesSec_a)
     timesArr_d = np.array(timesSec_d)
 
-    period = [[sat.period.value for sat in plane] for plane in constellation]
+    period = [[sat.period.value for sat in plane.sats] for plane in constellation.planes]
     periodArr = np.array(period)
 
-    semiMajors = [[sat.a.to(u.m).value for sat in plane] for plane in constellation]
+    semiMajors = [[sat.a.to(u.m).value for sat in plane.sats] for plane in constellation.planes]
     semiMajorArr = np.array(semiMajors)
 
     if timesArr_a.ndim != periodArr.ndim:
@@ -684,7 +684,7 @@ def getSatValues_const(constellation, attribute):
     Outputs:
     List of attributes, data structure of plane -> sat preserved
     """
-    return [[getattr(sat,attribute) for sat in plane] for plane in constellation]
+    return [[getattr(sat,attribute) for sat in plane.sats] for plane in constellation.planes]
 def getSatValues_const_func(constellation, attribute, func):
     """
     Gets a specific value from each satellite in a constellation, subject to a function
@@ -703,7 +703,7 @@ def getSatValues_const_func(constellation, attribute, func):
     Outputs:
     List of values, data structure of plane -> sat preserved
     """
-    return [[func(getattr(sat,attribute)) for sat in plane] for plane in constellation]
+    return [[func(getattr(sat,attribute)) for sat in plane.sats] for plane in constellation.planes]
 
 def getSatValues_constPlan(constellation, attribute):
     """
@@ -716,4 +716,4 @@ def getSatValues_constPlan(constellation, attribute):
     Outputs:
     List of attributes, data structure of plane -> sat preserved
     """
-    return [[[getattr(time,attribute) for time in sat] for sat in plane] for plane in constellation]
+    return [[[getattr(time,attribute) for time in sat] for sat in plane.sats] for plane in constellation.planes]

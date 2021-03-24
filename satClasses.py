@@ -17,6 +17,10 @@ class Constellation():
     def addPlane(self, plane):
         self.planes.append(plane)
 
+    def getVal(self, attribute):
+        pass
+
+
 class Plane():
     def __init__(self, satellites):
         self.sats = satellites
