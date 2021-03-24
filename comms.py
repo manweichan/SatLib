@@ -104,16 +104,16 @@ def slantRange_fromAltECA(alt, lam, re = poliastro.constants.R_earth):
 	ele : elevation angle measured at the target between spacecraft and local horizontal (rad)
 	D   : distance to the target from the ground station (m)
 	"""
-    if not isinstance(alt, astropy.units.quantity.Quantity):
-       alt = alt * u.m
-    if not isinstance(lam, astropy.units.quantity.Quantity):
-       lam = lam * u.rad
+	if not isinstance(alt, u.quantity.Quantity):
+		alt = alt * u.m
+	if not isinstance(lam, u.quantity.Quantity):
+		lam = lam * u.rad
 
 	sinrho = re / (re + alt)
 	tanNuNum = (sinrho * np.sin(lam)) #numerator
 	tanNuDen = (1 - sinrho * np.cos(lam))
 	nu = np.arctan2(tanNuNum, tanNuDen)
-	ele = np.pi/2 - nu - lam
+	ele = np.pi/2 * u.rad - nu - lam
 	D = re * (np.sin(lam) / np.sin(nu)) 
 	return nu, ele, D
 
@@ -132,17 +132,17 @@ def slantRange_fromAltNu(alt, nu, re = poliastro.constants.R_earth):
 	ele : elevation angle measured at the target between spacecraft and local horizontal (rad)
 	D   : distance to the target from the ground station (m)
 	"""
-    if not isinstance(alt, astropy.units.quantity.Quantity):
-       alt = alt * u.m
-    if not isinstance(nu, astropy.units.quantity.Quantity):
-       nu = nu * u.rad
+	if not isinstance(alt, u.quantity.Quantity):
+		alt = alt * u.m
+	if not isinstance(nu, u.quantity.Quantity):
+		nu = nu * u.rad
 
 	sinrho = re / (re + alt)
 
 	cosEle = np.sin(nu) / sinrho
 	ele = np.arccos(cosEle)
 
-	lam = np.pi/2 - nu - ele
+	lam = np.pi/2 * u.rad - nu - ele
 
 	D = re * (np.sin(lam) / np.sin(nu)) 
 
@@ -163,17 +163,17 @@ def slantRange_fromAltEle(alt, ele, re = poliastro.constants.R_earth):
 	nu  : nadir angle measured from spacecraft subsatellite point to ground target (rad)
 	D   : distance to the target from the ground station (m)
 	"""
-    if not isinstance(alt, astropy.units.quantity.Quantity):
-       alt = alt * u.m
-    if not isinstance(ele, astropy.units.quantity.Quantity):
-       ele = ele * u.rad
+	if not isinstance(alt, u.quantity.Quantity):
+		alt = alt * u.m
+	if not isinstance(ele, u.quantity.Quantity):
+		ele = ele * u.rad
 
 	sinrho = re / (re + alt)
 
 	sinnu = np.cos(ele) * sinrho
 	nu = np.arcsin(sinnu)
 
-	lam = np.pi/2 - ele - nu
+	lam = np.pi/2 * u.rad - ele - nu
 
 	D = re * (np.sin(lam) / np.sin(nu)) 
 
