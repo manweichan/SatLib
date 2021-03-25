@@ -47,7 +47,6 @@ def getNuIntersect(orb1, orb2):
     # Flip intersection lilne to point to first crossing after RAAN
     elif intersectLine[-1] < 0:
         intersectLine = -intersectLine
-
     # Get Raan direction GCRF
     khat = np.array([0, 0, 1])  # Z direction
     raanVec1 = np.cross(khat, L1hat)

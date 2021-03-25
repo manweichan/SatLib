@@ -9,7 +9,10 @@ from poliastro import constants
 from poliastro.earth import Orbit
 from poliastro.bodies import Earth
 from poliastro.frames.equatorial import GCRS
+from poliastro.maneuver import Maneuver
 import OpticalLinkBudget.OLBtools as olb
+import scheduleFuncs as sch
+import orbitalMechanics as om
 
 class Constellation():
     def __init__(self, planes):
@@ -17,8 +20,11 @@ class Constellation():
     def addPlane(self, plane):
         self.planes.append(plane)
 
-    def getVal(self, attribute):
-        pass
+    @classmethod
+    def fromList(cls, list):
+        orbPlanes = []
+        orbPlanes = [Plane(p) for p in list]
+        return cls(orbPlanes)
 
 
 class Plane():
@@ -30,7 +36,7 @@ class Plane():
 
 class Satellite(Orbit):
     def __init__(self, state, epoch, dataMem = None, schedule = None, txOpticalPayload = None, rxOpticalPayload = None,
-    txRfPayload = None, rxRfPayload = None):
+    txRfPayload = None, rxRfPayload = None, potentialManSchedule = None):
         super().__init__(state, epoch) #Inherit class for Poliastro orbits (allows for creation of orbits)
         
         if dataMem is None: #Set up ability to hold data
@@ -63,6 +69,10 @@ class Satellite(Orbit):
         else:
             self.rxRfPayload = rxRfPayload
     
+        if potentialManSchedule is None: #Set up ability to hold potential maneuver schedule
+            self.potentialManSchedule = []
+        else:
+            self.potentialManSchedule = potentialManSchedule
     # # @classmethod
     # def propagate(self, value, method=farnocchia, rtol=1e-10, **kwargs):
     #     # print("godo")
@@ -169,8 +179,6 @@ class Satellite(Orbit):
 
 
         return P_rx, ConN0
-        # except AttributeError:
-        #     print("Need to add txRFPayload to Transmitting Satellite")
 
     def calc_optLinkBudgetAsTx(self, RxObject, txID = 0, rxID = 0, verbose = False):
         """
@@ -240,6 +248,101 @@ class Satellite(Orbit):
 
         return P_rx_dB, P_rx
 
+    def scheduleIntercept(self, tarOrb, numIntOrbs, numTarOrbs):
+        """
+        Function outputs a schedule of burns in order to attain an ISL given two
+        orbits.
+        
+        Inputs
+        self (Poliastro object): Orbit of interceptor aka the one making the maneuver
+        tarOrb (Poliastro orbit): Orbit of target satellite
+        numIntOrbs (integer): Number of orbits interceptor makes before rendezvous with target. Usually same integer as numTarOrbs
+        numTarOrbs (integer): Number of orbits target makes before rendezvous with target. Usually same as numIntOrbs
+        
+        Outputs
+        sched (Schedule object): List of scheduled burns. First index is for first intersection point, second index is for seconod intersect point.
+        delVTots (list) : Total deltaV of maneuver
+        tFinals (list) : Final times of maneuver
+        """
+        nus1, nus2 = sch.getNuIntersect(self, tarOrb) #Get true anomaly of orbit intersects with respect to each orbit
+        
+        sched  = []
+        delVTots = []
+        tFinals = []
+        if nus1 is not None:
+            for idx, val in enumerate(nus1):
+                "Cycle through each intersect points (should be 2)"
+                # Extract true anomaly for each orbit of the corresponding intersection point
+                intNu1 = nus1[idx] #True anomaly of intercept for orbit 1
+                intNu2 = nus2[idx]
+                # Propagate self to true anomaly
+                t2int_orb1 = self.time_to_anomaly(intNu1)
+                orb1_init2rvd = self.propagate(t2int_orb1)
+                if t2int_orb1 < 0:
+                    t2int_orb1 += self.period
+                # print("intNu1",intNu1)
+                # print("time 2 int", t2int_orb1)
+                tAtInitMan = self.epoch + t2int_orb1 # Keep track off time. Time at first maneuver.
+                #Propagate target orbit by same amount
+                orb2_init2rvd = tarOrb.propagate(t2int_orb1)
+            
+                # Determine phase angle for target to get to intercept point. Defined as rvd point to current true anomaly
+                phaseAng_tar2rvd = intNu2 - orb2_init2rvd.nu
+
+                if phaseAng_tar2rvd < -180 * u.deg: #Make sure all points are between -180 and 180
+                    phaseAng_tar2rvd = phaseAng_tar2rvd + 2 * np.pi * u.rad
+                elif phaseAng_tar2rvd > 180 * u.deg:
+                    phaseAng_tar2rvd = phaseAng_tar2rvd - 2 * np.pi * u.rad
+                else:
+                    pass
+
+                ## Get phasing maneuver. 
+
+                # delVs apply to interceptor
+                # import ipdb; ipdb.set_trace()
+                # tPhase, delVPhase, delV1, delV2, aPhase = t_phase_coplanar(orb2_init2rvd.a.to(u.m).value, 
+                #                               phaseAng_tar2rvd.to(u.rad).value, numTarOrbs,
+                #                                                    numIntOrbs)
+                tPhase, delVPhase, delV1, delV2, aPhase, flag = om.t_phase_coplanar(orb2_init2rvd.a, 
+                                      phaseAng_tar2rvd.to(u.rad), numTarOrbs, numIntOrbs)
+                tPhaseS = tPhase #convert to seconds (astropy)
+                # delV1_ms = delV1 #convert to m/s (astropy)
+                # delV2_ms = delV1
+                orb2_rvd = orb2_init2rvd.propagate(tPhaseS) #target orbit at rendezvous
+                
+                #Keep track of time for 2nd maneuver
+                tAtFinMan = tAtInitMan + tPhaseS
+                # print("tAtFinMan", tAtFinMan)
+
+                v_dir1 = orb1_init2rvd.v/np.linalg.norm(orb1_init2rvd.v) #Velocity direction of interceptor orbit at node
+                delVVec1 = v_dir1 * delV1 #DeltaV vector GCRS frame
+                deltaV_man1 = Maneuver.impulse(delVVec1)
+                orb1_phase_i = orb1_init2rvd.apply_maneuver(deltaV_man1) #Applied first burn
+                orb1_phase_f = orb1_phase_i.propagate(tPhaseS) #Propagate through phasing orbit
+
+                v_dir2 = orb1_phase_f.v/np.linalg.norm(orb1_phase_f.v) #Get direction of velocity at end of phasing
+                delVVec2 = v_dir2 * delV2
+                deltaV_man2 = Maneuver.impulse(v_dir2 * delV2) #Delta V  of recircularizing orbit
+                orb1_rvd = orb1_phase_f.apply_maneuver(deltaV_man2) #Orbit at rendezvous
+                
+                burnSched_i = BurnSchedule(tAtInitMan, delVVec1) #First burn
+                delV_i = np.linalg.norm(burnSched_i.deltaV)
+
+                burnSched_f = BurnSchedule(tAtFinMan, delVVec2) #Second burn
+                delV_f = np.linalg.norm(burnSched_f.deltaV)
+
+                delVTots.append(delV_i + delV_f)
+                sched.append([burnSched_i, burnSched_f])
+
+                tFinals.append(burnSched_f.time)
+                
+            schDetails = {"sched":sched,
+                            "delV": delVTots,
+                            "tFinals": tFinals}
+            # print("delV: ", delVTots)
+            self.potentialManSchedule.append(schDetails)
+                # import ipdb; ipdb.set_trace()
+        return sched, delVTots, tFinals
 
 class TxOpticalPayload(): #Defines tx optical payload
     def __init__(self, P_tx, wavelength, beam_width, pointingErr = 0, sysLoss = 0): # Add tx optical payload
