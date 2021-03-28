@@ -89,7 +89,7 @@ def footprintLength(nu, ele, alt, bw, unit = 'km', re = 6378.1e3):
     return fpLength
 
 
-def slantRange_fromAltECA(alt, lam, re = poliastro.constants.R_earth):
+def slantRange_fromAltECA(alt, lam, re = poliastro.constants.general.R_earth):
 	"""
 	Gets relevant slant range angles if given altitude and earth central angle (ECA). 
 	Section 8.3.1 from SME SMAD, starting from eqn 8-26
@@ -117,7 +117,7 @@ def slantRange_fromAltECA(alt, lam, re = poliastro.constants.R_earth):
 	D = re * (np.sin(lam) / np.sin(nu)) 
 	return nu, ele, D
 
-def slantRange_fromAltNu(alt, nu, re = poliastro.constants.R_earth):
+def slantRange_fromAltNu(alt, nu, re = poliastro.constants.general.R_earth):
 	"""
 	Gets relevant slant range angles if given altitude and nadir angle (nu). 
 	Section 8.3.1 from SME SMAD, starting from eqn 8-26
@@ -148,7 +148,7 @@ def slantRange_fromAltNu(alt, nu, re = poliastro.constants.R_earth):
 
 	return lam, ele, D
 
-def slantRange_fromAltEle(alt, ele, re = poliastro.constants.R_earth):
+def slantRange_fromAltEle(alt, ele, re = poliastro.constants.general.R_earth):
 	"""
 	Gets relevant slant range angles if given altitude and elevation angle (nu). 
 	Section 8.3.1 from SME SMAD, starting from eqn 8-26
