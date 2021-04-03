@@ -301,6 +301,17 @@ def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
     """
     passOrbits_a = []  # Index is passOrbits_a[plane][sat][day]
     passOrbits_d = []
+    passOrbits = []
+    dataDescrip = ('*orbPass    : Desired orbit that will make the ground pass \n\
+                    *orb0       : Desired orbit back propagated to inital epoch \n\
+                    *nuBack     : Mean anomly of back propagated orbit \n\
+                    *phaseAng   : Difference in mean anomaly between desired orbit and actual orbit \n\
+                    *t2Pass     : Time until pass. Counting from initialized orbit to pass time \n\
+                    *passType   : Pass occurs on either the ascending ~a~ or descending ~d~ part of orbit \n\
+                    *planeIdx   : Id of which plane the desired satellite refers to \n\
+                    *satIdx     : Id of which satellite within the plane the desired sat refers to \n\
+                    *dataDescrip: Description of variables in this dictionary')
+
     for idxPlane, plane in enumerate(passTimes):
         planeSats_a = []
         planeSats_d = []
@@ -334,9 +345,14 @@ def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
                     "orb0": orbit_back0_a, #Back propagated orbits
                     "nuBack": nu,
                     "phaseAng": phaseAng,
-                    "t2Pass": t2Pass
+                    "t2Pass": t2Pass,
+                    "passType": 'a',
+                    "planeIdx": idxPlane,
+                    "satIdx": idxSat,
+                    "dataDescrip": dataDescrip
                 }
                 satTimes_a.append(backDict)
+                passOrbits.append(backDict)
 
             for idxTime, times_d in enumerate(sat[1]):
                 orbit_back_d = Satellite.circular(Earth,
@@ -361,15 +377,21 @@ def getDesiredPassOrbits(constellation, passTimes, tInit, alts, incs, anoms):
                     "orb0": orbit_back0_d, #Back propagated orbits
                     "nuBack": nu,
                     "phaseAng": phaseAng,
-                    "t2Pass": t2Pass
+                    "t2Pass": t2Pass,
+                    "passType": 'd',
+                    "planeIdx": idxPlane,
+                    "satIdx": idxSat,
+                    "dataDescrip": dataDescrip
                 }
                 satTimes_d.append(backDict)
+                passOrbits.append(backDict)
 
             planeSats_a.append(satTimes_a)
             planeSats_d.append(satTimes_d)
         passOrbits_a.append(planeSats_a)
         passOrbits_d.append(planeSats_d)
-    return passOrbits_a, passOrbits_d
+    # passOrbits = passOrbits_a + passOrbits_d
+    return passOrbits_a, passOrbits_d, passOrbits
 
 
 def findNonDominated(timesPassFlat, delVFlat):
@@ -399,7 +421,6 @@ def findNonDominated(timesPassFlat, delVFlat):
     next_pt_idx = 0
     while next_pt_idx < len(timesInLoop):
         # Find delta Vs that took less fuel, but more time
-        #     import ipdb; ipdb.set_trace()
         # Already starting with 'fastest' time because times werre sorted
         nondominated_point_mask = delVInLoop < delVInLoop[next_pt_idx]
         nondominated_point_mask[:next_pt_idx+1] = True
@@ -504,13 +525,13 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
         passTimes.append(passTimesPlane)
         anoms.append(anomaliesPlane)
 
-    passOrbits_a, passOrbits_d = getDesiredPassOrbits(constellation, 
+    passOrbits_a, passOrbits_d, passOrbits = getDesiredPassOrbits(constellation, 
                                                       passTimes, 
                                                       tInit,
                                                       alts, 
                                                       incs, 
                                                       anoms)
-
+    import ipdb; ipdb.set_trace()
     # Extract nus and times
     phaseAngs_a_raw = [[[satID["phaseAng"] for satID in sat]
                         for sat in plane] for plane in passOrbits_a]

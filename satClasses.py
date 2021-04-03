@@ -28,8 +28,8 @@ class Constellation():
 
 
 class Plane():
-    def __init__(self, satellites):
-        self.sats = satellites
+    def __init__(self, sats):
+        self.sats = sats
 
     def addSat(self, sat):
         self.sats.append(sat)
@@ -299,7 +299,6 @@ class Satellite(Orbit):
                 ## Get phasing maneuver. 
 
                 # delVs apply to interceptor
-                # import ipdb; ipdb.set_trace()
                 # tPhase, delVPhase, delV1, delV2, aPhase = t_phase_coplanar(orb2_init2rvd.a.to(u.m).value, 
                 #                               phaseAng_tar2rvd.to(u.rad).value, numTarOrbs,
                 #                                                    numIntOrbs)
@@ -341,7 +340,6 @@ class Satellite(Orbit):
                             "tFinals": tFinals}
             # print("delV: ", delVTots)
             self.potentialManSchedule.append(schDetails)
-                # import ipdb; ipdb.set_trace()
         return sched, delVTots, tFinals
 
 class TxOpticalPayload(): #Defines tx optical payload
