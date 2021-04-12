@@ -150,7 +150,7 @@ def slantRange_fromAltNu(alt, nu, re = poliastro.constants.general.R_earth):
 
 def slantRange_fromAltEle(alt, ele, re = poliastro.constants.general.R_earth):
 	"""
-	Gets relevant slant range angles if given altitude and elevation angle (nu). 
+	Gets relevant slant range angles if given altitude and elevation angle (ele). 
 	Section 8.3.1 from SME SMAD, starting from eqn 8-26
 
 	Inputs
