@@ -531,7 +531,7 @@ def getPassSats(constellation, gs, tInit, daysAhead, plot = False, savePlot = Fa
                                                       alts, 
                                                       incs, 
                                                       anoms)
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     # Extract nus and times
     phaseAngs_a_raw = [[[satID["phaseAng"] for satID in sat]
                         for sat in plane] for plane in passOrbits_a]
