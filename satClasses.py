@@ -29,7 +29,7 @@ class Constellation():
 
 class Plane():
     def __init__(self, sats):
-        self.sats = sats
+        self.sats = list(sats)
 
     def addSat(self, sat):
         self.sats.append(sat)
