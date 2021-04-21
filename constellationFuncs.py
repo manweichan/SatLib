@@ -62,7 +62,7 @@ def genWalker(i, t, p, f, alt, epoch = False):
             planeInit.addSat(orbLoop)
         sats.append(planeSats)
         constClass.addPlane(planeInit)
-    return sats, constClass
+    return constClass#, sats
 
 def getSatValues(constellation, value):
     return [[getattr(sat,value) for sat in plane] for plane in constellation]
