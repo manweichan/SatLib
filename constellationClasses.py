@@ -99,6 +99,7 @@ class Constellation():
 					orbLoop = Satellite.circular(Earth, alt = alt,
 						 inc = i, raan = raan, arglat = omega)
 				orbLoop.satID = satIDCounter
+				orbLoop.planeID = planeIDCounter
 				satIDCounter += 1
 				planeSats.append(orbLoop)
 			planeToAppend = Plane.from_list(planeSats)
@@ -128,25 +129,32 @@ class Constellation():
 		Outputs:
 		maneuverPoolCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)
 		maneuverPoolAll (list of Maneuver objects): All potential maneuvers
+		paretoSats (list of pareto front satellites): Satellite objects on the pareto front
 		"""
 		if savePlot:
 			assert figName, "Need to name your figure using figName input"
 
 		maneuverPoolAll = []
 		maneuverPoolCut = []
+		ghostSatsPassAll = []
+		ghostSatsInitAll = []
 		for plane in self.planes:
-			maneuverPlaneCut, maneuverPlaneAll = plane.get_pass_details(GroundLoc, tInit, days)
+			maneuverPlaneCut, maneuverPlaneAll, ghostSatsPass, ghostSatsInit = plane.get_pass_details(GroundLoc, tInit, days)
 			maneuverPoolAll.append(maneuverPlaneAll)
 			maneuverPoolCut.append(maneuverPlaneCut)
+			ghostSatsPassAll.append(ghostSatsPass)
+			ghostSatsInitAll.append(ghostSatsInit)
+
+		semiFlatCut = [item for sublist in maneuverPoolCut for item in sublist] #Flatten list
+		flatCut = [item for sublist in semiFlatCut for item in sublist]
+
+		paretoSats = ut.find_non_dominated_time_deltaV(flatCut)
 
 		if plot:
 			from matplotlib import cm
-			semiFlatCut = [item for sublist in maneuverPoolCut for item in sublist]
-			flatCut = [item for sublist in semiFlatCut for item in sublist]
 
-			paretoSats = ut.find_non_dominated_time_deltaV(flatCut)
 
-			c = cm.get_cmap('tab10', len(self.planes))
+			c = cm.get_cmap('tab10', len(self.planes)) # color map for plots
 
 			colors = c.colors
 
@@ -183,7 +191,7 @@ class Constellation():
 				plt.savefig(figName, facecolor="w", dpi=300, bbox_inches='tight')
 			plt.show()
 
-		return maneuverPoolCut, maneuverPoolAll
+		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll
 	
 	def get_ISL_maneuver(self, Constellation):
 		pass
@@ -291,15 +299,23 @@ class Plane():
 		"""
 		maneuverListAll = []
 		maneuverListCut = []
+		ghostSatsPassAll = []
+		ghostSatsInitAll = []
 		for sat in self.sats:
 			ghostSatsPass, ghostSatsInit, potentialManeuversAll, potentialManeuversCut = sat.get_desired_pass_orbs(GroundLoc, tInit, days)
 			for man in potentialManeuversAll:
 				man.planeID = self.planeID
 			for man in potentialManeuversCut:
 				man.planeID = self.planeID
+			for sat in ghostSatsPass:
+				sat.planeID = self.planeID
+			for sat in ghostSatsInit:
+				sat.planeID = self.planeID
 			maneuverListAll.append(potentialManeuversAll)
 			maneuverListCut.append(potentialManeuversCut)
-		return maneuverListCut, maneuverListAll
+			ghostSatsPassAll.append(ghostSatsPass)
+			ghostSatsInitAll.append(ghostSatsInit)
+		return maneuverListCut, maneuverListAll, ghostSatsPassAll, ghostSatsInitAll
 
 ## Satellite class 
 class Satellite(Orbit):
@@ -440,7 +456,7 @@ class Satellite(Orbit):
 		maneuverObjectsAll = []
 		maneuverObjectsCut = []
 		## TODO: This will have to be redone once we get J2 perturbations in as RAAN will drift. We'll need multiple raans.
-		for sch in scheduleItms:
+		for idx, sch in enumerate(scheduleItms):
 			raans, anoms = self.desired_raan_from_pass_time(sch.time, GroundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
 			if sch.passType == 'a': #Ascending argument of latitude
 				omega = anoms[0]
@@ -455,7 +471,12 @@ class Satellite(Orbit):
 			ghostSatFuture.satID = self.satID #tag with satID
 			ghostSatFuture.note = sch.passType #Tag with ascending or descending
 			ghostSatInit = ghostSatFuture.propagate(tInit) ## TO DO propagate with j2 perturbation
+			ghostSatInit.satID = self.satID #tag with satID
 			
+			##Tag satellite with maneuver number
+			ghostSatFuture.manNum = idx
+			ghostSatInit.manNum = idx
+
 			desiredGhostOrbits_atPass.append(ghostSatFuture)
 			desiredGhostOrbits_tInit.append(ghostSatInit)
 			
@@ -478,6 +499,9 @@ class Satellite(Orbit):
 			## Create maneuver object
 			manObj = ManeuverObject(tInit, delVTot, time2pass, self.satID,
 								   ghostSatFuture, note=sch.passType)
+
+			## Tag manuever object with maneuver number (to match ghost orbits later)
+			manObj.manNum = idx
 
 			maneuverObjectsAll.append(manObj)
 			if passFlag:
@@ -678,6 +702,23 @@ class ManeuverObject(ManeuverSchedule):
 		self.target = target
 		self.note = note
 		self.planeID = planeID
+
+	def get_dist_from_utopia(self):
+		squared = self.time2Pass.to(u.hr).value**2 + self.deltaV.to(u.m/u.s).value**2
+		dist = np.sqrt(squared)
+		self.utopDist = dist
+
+	def get_weighted_dist_from_utopia(self, w_delv, w_t):
+		"""
+		Get weighted distance from utopia point 
+
+		Inputs
+		w_delv: delV weight
+		w_t: time weight
+		"""
+		squared = self.time2Pass.to(u.hr).value**2 * w_t + self.deltaV.to(u.m/u.s).value**2 * w_delv
+		dist = np.sqrt(squared)
+		self.utopDistWeighted = dist
 
 ## Data class
 class Data():
