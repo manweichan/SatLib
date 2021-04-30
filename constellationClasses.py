@@ -201,15 +201,26 @@ class Constellation():
 	
 	def propagate(self, time):
 		"""
-		Propagates satellites in the constellation to a certain time
+		Propagates satellites in the constellation to a certain time.
 
 		Inputs
 		time(astropy time object): Time to propagate to
 		"""
+		planes2const = []
 		for plane in self.planes:
+			if not plane: #Continue if empty
+				continue
+
+			planeSats = []
 			for satIdx, sat in enumerate(plane.sats):
 				satProp = sat.propagate(time)
-				plane.sats[satIdx] = satProp
+				planeSats.append(satProp)
+				# plane.sats[satIdx] = satProp
+			plane2append = Plane.from_list(planeSats)
+			planes2const.append(plane2append)
+		# import ipdb; ipdb.set_trace()
+		planes2const.append(plane2append)
+		return Constellation.from_list(planes2const)
 	
 	def get_sats(self):
 		"""
@@ -217,7 +228,9 @@ class Constellation():
 		"""
 		satList = []
 		planes = self.planes
-		for plane in planes:
+		for plane in planes: #Continue if empty
+			if not plane:
+				continue
 			for sat in plane.sats:
 				satList.append(sat)
 		return satList
@@ -255,11 +268,15 @@ class Plane():
 		"""
 		Create plane from a list of satellite objects
 		"""
-		for idx, sat in enumerate(satList):
-			if idx == 0:
-				plane = cls(sat)
-			else:
-				plane.add_sat(sat)
+		if not satList: #Empty list
+			plane = []
+			print("Empty list entered")
+		else:
+			for idx, sat in enumerate(satList):
+				if idx == 0:
+					plane = cls(sat)
+				else:
+					plane.add_sat(sat)
 		return plane
 	
 	def set_plane_parameters(self):
@@ -474,8 +491,8 @@ class Satellite(Orbit):
 			ghostSatInit.satID = self.satID #tag with satID
 			
 			##Tag satellite with maneuver number
-			ghostSatFuture.manNum = idx
-			ghostSatInit.manNum = idx
+			ghostSatFuture.manID = idx
+			ghostSatInit.manID = idx
 
 			desiredGhostOrbits_atPass.append(ghostSatFuture)
 			desiredGhostOrbits_tInit.append(ghostSatInit)
@@ -489,7 +506,7 @@ class Satellite(Orbit):
 			nuGhost = ghostSatInit.nu
 			nuInit = satInit.nu
 			phaseAng = nuInit - nuGhost
-			
+		
 			## TO DO get deltaV direction
 			tPhase, delVTot, delV1, delV2, a_phase, passFlag = self._coplanar_phase(ghostSatFuture.a, 
 									phaseAng,
@@ -501,7 +518,7 @@ class Satellite(Orbit):
 								   ghostSatFuture, note=sch.passType)
 
 			## Tag manuever object with maneuver number (to match ghost orbits later)
-			manObj.manNum = idx
+			manObj.manID = idx
 
 			maneuverObjectsAll.append(manObj)
 			if passFlag:
