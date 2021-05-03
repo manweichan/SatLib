@@ -642,7 +642,76 @@ class Satellite(Orbit):
 
 		return t_phase.to(u.s), deltaV.to(u.m/u.s), delV1.to(u.m/u.s), delV2.to(u.m/u.s), a_phase.to(u.km), passFlag
 
+	def get_nu_intercept(self, satellite):
+		"""
+		Given two orbits, determine true anomaly (argument of latitude)
+		of each circular orbit for the position of closest approach of the orbits
+		themselves (not the individual satellites). This will help
+		determine which point in the orbit is desired for rendezvous for ISL.
+
+		Input
+		self (Satellite object): Self, which is one of the satellites in question
+		satellite (Satellite object): The target satellite of the reendezvous
+
+		Output
+		nus: Set of 2 true anomalies for each respective orbit for optimal ISL distance closing
+
+		"""
+
+		## TO DO: Build out the timed perturbation variation
+
+		L1 = np.cross(self.r, self.v)  # Angular momentum of first orbit
+		L2 = np.cross(satellite.r, satellite.v)
+		L1hat = L1/norm(L1)
+		L2hat = L2/norm(L2)
+		intersectLine = np.cross(L1hat, L2hat) #Line that passes through both intersection points
+
+		# Check for co-planar orbits
+		Lcheck = np.isclose(L1hat, L2hat)  # Check if angular momentum is the same
+		if np.all(Lcheck):  # Coplanar orbits
+			print("Orbits are co-planar")
+			nus1 = None
+			nus2 = None
+			return nus1, nus2
 	
+		# Check to see if intersect line vector points to first close pass after RAAN
+		if intersectLine[-1] > 0:  # Intersection line points to first crossing after RAAN
+			pass
+		# Flip intersection lilne to point to first crossing after RAAN
+		elif intersectLine[-1] < 0:
+			intersectLine = -intersectLine
+		# Get Raan direction GCRF
+		khat = np.array([0, 0, 1])  # Z direction
+		raanVec1 = np.cross(khat, L1hat)
+		raanVec2 = np.cross(khat, L2hat)
+		# Angle formula: cos(theta) = (a dot b) / (norm(a) * norm(b))
+		# Gets angle from True anomaly at RAAN (0 deg) to intersect point
+		ab1 = np.dot(raanVec1, intersectLine) / \
+			(norm(raanVec1) * norm(intersectLine))
+		ab2 = np.dot(raanVec2, intersectLine) / \
+			(norm(raanVec2) * norm(intersectLine))
+		nu1 = np.arccos(ab1)
+		nu2 = np.arccos(ab2)
+
+		# Check for equatorial orbits
+		L1Eq = np.isclose(self.inc, 0 * u.deg)
+		L2Eq = np.isclose(satellite.inc, 0 * u.deg)
+		if L1Eq:
+			nu1 = satellite.raan
+		elif L2Eq:
+			nu2 = self.raan
+		else:
+			pass
+		# return true anomaly of second crossing as well
+		nus1raw = [nu1, nu1 + np.pi * u.rad]
+		nus2raw = [nu2, nu2 + np.pi * u.rad]
+
+		# Make sure all values under 360 deg
+		nus1 = [np.mod(nu, 360*u.deg) for nu in nus1raw]
+		nus2 = [np.mod(nu, 360*u.deg) for nu in nus2raw]
+
+		return nus1, nus2
+
 	def get_pass_from_plane(self, Plane):
 		"""
 		Get pass details from plane (Also will output mean anomaly and time of pass)
