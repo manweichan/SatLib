@@ -623,6 +623,9 @@ class Satellite(Orbit):
 			theta = theta * u.rad
 
 		w_tgt = np.sqrt(mu/a_tgt**3)
+		print(w_tgt.to(1 / u.s))
+		print('theta: ', theta.to(u.deg))
+		print('k_tgt: ',k_tgt)
 		t_phase = (2 * np.pi * k_tgt + theta.to(u.rad).value) / w_tgt
 		a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
 
