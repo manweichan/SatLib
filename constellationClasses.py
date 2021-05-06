@@ -193,8 +193,35 @@ class Constellation():
 
 		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll
 	
-	def get_ISL_maneuver(self, Constellation):
-		pass
+	def get_ISL_maneuver(self, Constellation, perturbation='J2'):
+		"""
+		Calculate potential ISL maneuvers between all satellites in current constellation with
+		all satellites of another satellite
+		
+		Inputs
+		self (Constellation object): Constellation making the maneuvers
+		Constellation (Constellation object): Constellation to intercept
+
+		Output
+		maneuverObjs [list] : list of maneuver objects to create ISL opportunity
+		deltaVs [list] : list of total deltaVs
+		timeOfISL [list] : list of times that ISL opportunity will happen
+		"""
+
+		selfSats = self.get_sats()
+		targetSats = Constellation.get_sats()
+
+
+		maneuverObjs = []
+		deltaVs = []
+		timeOfISL = []
+		for satInt in selfSats:
+			for satTar in targetSats:
+				output = satInt.schedule_coplanar_intercept(satTar, perturbation)
+				maneuverObjs.append(output['maneuverObjects'])
+				deltaVs.append(output['delVTot'])
+				timeOfISL.append(output['islTime'])
+		return maneuverObjs, deltaVs, timeOfISL
 	
 	def calc_access(self, GroundLoc):
 		pass
@@ -623,9 +650,6 @@ class Satellite(Orbit):
 			theta = theta * u.rad
 
 		w_tgt = np.sqrt(mu/a_tgt**3)
-		print(w_tgt.to(1 / u.s))
-		print('theta: ', theta.to(u.deg))
-		print('k_tgt: ',k_tgt)
 		t_phase = (2 * np.pi * k_tgt + theta.to(u.rad).value) / w_tgt
 		a_phase = (mu * (t_phase / (2 * np.pi * k_int))**2)**(1/3)
 
@@ -715,6 +739,99 @@ class Satellite(Orbit):
 
 		return nus1, nus2
 
+	def schedule_coplanar_intercept(self, targetSat, perturbation='J2', debug=False):
+		"""
+		Schedule coplanar intercept (2 satellites are in the same orbital plane)
+		
+		Inputs
+		targetSat (Satellite object): Target satellite
+		perturbation options (string): 'none', 'J2'
+		Only no perturbation is currently implemented
+
+		Outputs
+		Dictionary with the following
+		maneuverObjects [ManeuverObjects]: Maneuver objects for both phasing burns
+		deltaVTot : total deltaV of phasing maneuver
+		islTime : time of ISL
+		debug (optional if debug=True): list of satellites to plot to ensure ISL
+		posDiff (optional if debug=True): difference in position between each of the satellites in debug and the initial satellite at time of maneuver
+		"""
+		if perturbation != 'J2':
+			nusInit, nusPass = self.get_nu_intercept(targetSat) #Get anomalies for intercept
+
+			## Get mean anomaly of targetSat 
+			nuAtPass = targetSat.nu
+			## Check if any of the angles are less than the satellite's anomaly
+			lessMask = [nu < nuAtPass for nu in nusPass]
+			## Add 2 pi to all angles that are less than targetSat anomaly
+			nusIntersect = [nu + 2*np.pi * u.rad if mask else nu for nu, mask in zip(nusPass,lessMask)]
+
+			## Find the next mean anomaly (aka first ISL opportunity after image acquisition)
+			nuDiffs = [nu - nuAtPass for nu in nusIntersect]
+
+			# Find minimum difference (First ISL opportunity after ground pass)
+			minNu = min(nuDiffs)
+			minIdx = nuDiffs.index(minNu)
+
+			targetNu = nusPass[minIdx]
+
+			targetSatAtISL = targetSat.propagate_to_anomaly(targetNu)
+			tAtISL = targetSatAtISL.epoch
+			tNow = self.epoch
+
+			##Propagate init sat to rendezvous anomaly
+			satInitAtAnom = self.propagate_to_anomaly(nusInit[minIdx])
+			tInitAtAnom = satInitAtAnom.epoch
+
+			tMan = tAtISL - tInitAtAnom #Time of maneuver
+
+			## Number of orbits for maneuver
+			rvdOrbsRaw = tMan.to(u.s) / self.period #Peg orbital maneuvers to relay satellite initial orbit period
+			rvdOrbsInt = rvdOrbsRaw.astype(int)
+
+			## Get phase for maneuver
+			targetSatAtManInit = targetSat.propagate(satInitAtAnom.epoch) #Match epochs so we get a difference in anomalies
+			targetNuInitSat = nusInit[minIdx] #Get mean anomaly required for initial satellite to reach rvd point
+
+			delPhase = targetNu - targetSatAtManInit.nu
+
+			tPhase, delVTot, delV1, delV2, a_phase, passFlag = self._coplanar_phase(self.a, 
+                        delPhase,
+                        rvdOrbsInt,
+                        rvdOrbsInt)
+
+			v_dir1 = satInitAtAnom.v/np.linalg.norm(satInitAtAnom.v)
+			delVVec1 = v_dir1 * delV1
+			deltaV_man1 = Maneuver.impulse(delVVec1)
+
+			orb1_phase_i = satInitAtAnom.apply_maneuver(deltaV_man1) #Applied first burn
+			orb1_phase_f = orb1_phase_i.propagate(tPhase) #Propagate through phasing orbit
+
+			v_dir2 = orb1_phase_f.v/np.linalg.norm(orb1_phase_f.v) #Get direction of velocity at end of phasing
+			delVVec2 = v_dir2 * delV2
+			deltaV_man2 = Maneuver.impulse(v_dir2 * delV2) #Delta V  of recircularizing orbit
+			orb1_rvd = orb1_phase_f.apply_maneuver(deltaV_man2) #Orbit at rendezvous
+
+			manObj1 = ManeuverObject(tInitAtAnom, deltaV_man1, tMan, self.satID, targetSat, planeID = self.planeID)
+			manObj2 = ManeuverObject(tAtISL, deltaV_man2, tMan, self.satID, targetSat, planeID = self.planeID)
+			manList = [manObj1, manObj2]
+
+			if debug:
+				satsList = [satInitAtAnom, orb1_phase_i, orb1_phase_f, orb1_rvd, targetSatAtISL]
+				posDiffs = [satInitAtAnom.r - sat.r for sat in satsList]
+				output = {'maneuverObjects': manList,
+				          'delVTot': delVTot,
+				          'islTime': tAtISL,
+				          'debug': satsList,
+				          'posDiff': posDiffs}	
+			else:
+				output = {'maneuverObjects': manList,
+				          'delVTot': delVTot,
+				          'islTime': tAtISL}
+
+			return output
+
+
 	def get_pass_from_plane(self, Plane):
 		"""
 		Get pass details from plane (Also will output mean anomaly and time of pass)
@@ -783,6 +900,9 @@ class ManeuverSchedule(ScheduleItem):
 
 ## ManeuverObject Class
 class ManeuverObject(ManeuverSchedule):
+	"""
+	Not to be confused with the poliastro class 'Maneuver'
+	"""
 	def __init__(self, time, deltaV, time2Pass, satID, target, note=None, 
 				 planeID = None):
 		ManeuverSchedule.__init__(self, time, deltaV)
