@@ -193,7 +193,7 @@ class Constellation():
 
 		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll
 	
-	def get_ISL_maneuver(self, Constellation, perturbation='J2'):
+	def get_ISL_maneuver(self, Constellation, perturbation='J2', plotFlag=False, savePlot = False, figName = None):
 		"""
 		Calculate potential ISL maneuvers between all satellites in current constellation with
 		all satellites of another satellite
@@ -201,28 +201,78 @@ class Constellation():
 		Inputs
 		self (Constellation object): Constellation making the maneuvers
 		Constellation (Constellation object): Constellation to intercept
+		perturbation (string): 'J2' for J2 perturbation, else 'none'
+		plotFlag (boolean): plot if True
+		savePlot(Bool): Saves plot if True
+		figName (str): file name for figure
 
 		Output
 		maneuverObjs [list] : list of maneuver objects to create ISL opportunity
 		deltaVs [list] : list of total deltaVs
 		timeOfISL [list] : list of times that ISL opportunity will happen
+		paretoSats [list] : list of satellites on the pareto front
 		"""
+		if savePlot:
+			assert figName, "Need to name your figure using figName input"
 
 		selfSats = self.get_sats()
 		targetSats = Constellation.get_sats()
-
+		tInit = selfSats[0].epoch #Get time at beginnnig of simulation
 
 		maneuverObjs = []
 		deltaVs = []
 		timeOfISL = []
+		islOrbs = []
 		for satInt in selfSats:
 			for satTar in targetSats:
 				output = satInt.schedule_coplanar_intercept(satTar, perturbation)
 				maneuverObjs.append(output['maneuverObjects'])
 				deltaVs.append(output['delVTot'])
 				timeOfISL.append(output['islTime'])
-		return maneuverObjs, deltaVs, timeOfISL
-	
+
+		paretoSats = ut.find_non_dominated_time_deltaV(deltaVs)
+
+		if plotFlag:
+			from matplotlib import cm
+
+
+			c = cm.get_cmap('tab10', len(self.planes)) # color map for plots
+
+			colors = c.colors
+
+			# style = ['o', 'x']
+			plt.figure()
+			plt.xlabel('Time (hrs)', fontsize = 14)
+			plt.ylabel('Delta V (m/s)', fontsize = 14)
+			plt.title('Potential Maneuver Options\n for ISL data transfer', fontsize = 16)
+
+			lgdCheck = []
+			paretoTimes = []
+			for man in deltaVs:
+				clrIdx = int(man.planeID)
+				
+				if clrIdx in lgdCheck:
+					label = None
+				else:
+					label = f'{clrIdx}'
+					lgdCheck.append(clrIdx)
+				timeAtPass = man.time - tInit #man.time gets time at ISL, tInit is the current time
+				# import ipdb; ipdb.set_trace()
+				plt.plot(timeAtPass.to(u.hr), man.deltaV, 'o',color = colors[clrIdx],
+						label = label)
+			paretoTimes = [(p.time-tInit).to(u.hr).value for p in paretoSats]
+			paretoDelV = [p.deltaV.value for p in paretoSats]
+			plt.plot(paretoTimes, paretoDelV, 'r-', label = 'Pareto Front')
+
+			plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
+			plt.legend(title = 'Plane Number')
+			plt.grid()
+			if savePlot:
+				plt.savefig(figName, facecolor="w", dpi=300, bbox_inches='tight')
+			plt.show()
+
+		return maneuverObjs, deltaVs, timeOfISL, paretoSats
+
 	def calc_access(self, GroundLoc):
 		pass
 	
@@ -753,6 +803,7 @@ class Satellite(Orbit):
 		maneuverObjects [ManeuverObjects]: Maneuver objects for both phasing burns
 		deltaVTot : total deltaV of phasing maneuver
 		islTime : time of ISL
+		islOrb (Satellite object): Orbit after ISL maneuvers 
 		debug (optional if debug=True): list of satellites to plot to ensure ISL
 		posDiff (optional if debug=True): difference in position between each of the satellites in debug and the initial satellite at time of maneuver
 		"""
@@ -814,19 +865,30 @@ class Satellite(Orbit):
 
 			manObj1 = ManeuverObject(tInitAtAnom, deltaV_man1, tMan, self.satID, targetSat, planeID = self.planeID)
 			manObj2 = ManeuverObject(tAtISL, deltaV_man2, tMan, self.satID, targetSat, planeID = self.planeID)
+
+			#Create a maneuver object that isn't used for scheduling, but will be used for the planner
+			totManObj = ManeuverObject(tAtISL, delVTot, tMan, self.satID, targetSat, planeID = self.planeID)
+			totManObj.mySat = self
+
+			## Reapply attributes that were lost during poliastro propagation
+			orb1_rvd.satID = self.satID
+			orb1_rvd.planeID = self.planeID
+
+			totManObj.mySatFin = orb1_rvd
+
 			manList = [manObj1, manObj2]
 
 			if debug:
 				satsList = [satInitAtAnom, orb1_phase_i, orb1_phase_f, orb1_rvd, targetSatAtISL]
 				posDiffs = [satInitAtAnom.r - sat.r for sat in satsList]
 				output = {'maneuverObjects': manList,
-				          'delVTot': delVTot,
+				          'delVTot': totManObj,
 				          'islTime': tAtISL,
 				          'debug': satsList,
 				          'posDiff': posDiffs}	
 			else:
 				output = {'maneuverObjects': manList,
-				          'delVTot': delVTot,
+				          'delVTot': totManObj,
 				          'islTime': tAtISL}
 
 			return output
@@ -904,13 +966,26 @@ class ManeuverObject(ManeuverSchedule):
 	Not to be confused with the poliastro class 'Maneuver'
 	"""
 	def __init__(self, time, deltaV, time2Pass, satID, target, note=None, 
-				 planeID = None):
+				 planeID = None, mySat=None, mySatFin=None):
+		"""
+		time: time of maneuver
+		deltaV: cost of manuever (fuel)
+		time2Pass: time 
+		satID: satellite ID of satellite to make maneuver (TO DO, remove and just use mySat attribute)
+		target: target of manuever (ground location or satellite for ISL)
+		note: Any special notes to include
+		planeID: plane ID of satellite to make maneuver (TO DO, remove and just use mySat attribute)
+		mySat: points to the satellite object making the maneuver
+		mySatFin: Final orbit after maneuver
+		"""
 		ManeuverSchedule.__init__(self, time, deltaV)
 		self.time2Pass = time2Pass
 		self.satID = satID
 		self.target = target
 		self.note = note
 		self.planeID = planeID
+		self.mySat = mySat
+		self.mySatFin = mySatFin
 
 	def get_dist_from_utopia(self):
 		squared = self.time2Pass.to(u.hr).value**2 + self.deltaV.to(u.m/u.s).value**2
