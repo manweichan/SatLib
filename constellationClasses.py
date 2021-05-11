@@ -113,7 +113,7 @@ class Constellation():
 	def reconfigure(self, GroundLoc, GroundStation):
 		pass
 	
-	def get_pass_maneuver(self, GroundLoc, tInit, days, plot = False, savePlot = False, figName = None):
+	def get_pass_maneuver(self, GroundLoc, tInit, days, useSatEpoch = False, plot = False, savePlot = False, figName = None):
 		"""
 		Gets set a maneuvers that will pass a specific ground location on
 		select days
@@ -122,6 +122,7 @@ class Constellation():
 		GroundLoc (Obj): Ground location object to be passed over
 		tInit (astropy time object): Time to initialize planner
 		days (int): Amount of days ahead to for the scheduler to plan for
+		useSatEpoch (Bool): If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner
 		plot (Bool): Plots maneuvers if True
 		savePlot(Bool): Saves plot if True
 		figName (str): file name for figure
@@ -130,6 +131,8 @@ class Constellation():
 		maneuverPoolCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)
 		maneuverPoolAll (list of Maneuver objects): All potential maneuvers
 		paretoSats (list of pareto front satellites): Satellite objects on the pareto front
+		ghostSatsInitAll (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time
+		ghostSatsPassAll(array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
 		"""
 		if savePlot:
 			assert figName, "Need to name your figure using figName input"
@@ -139,7 +142,9 @@ class Constellation():
 		ghostSatsPassAll = []
 		ghostSatsInitAll = []
 		for plane in self.planes:
-			maneuverPlaneCut, maneuverPlaneAll, ghostSatsPass, ghostSatsInit = plane.get_pass_details(GroundLoc, tInit, days)
+			if not plane: #Check if plane is empty
+				continue
+			maneuverPlaneCut, maneuverPlaneAll, ghostSatsPass, ghostSatsInit = plane.get_pass_details(GroundLoc, tInit, days, useSatEpoch)
 			maneuverPoolAll.append(maneuverPlaneAll)
 			maneuverPoolCut.append(maneuverPlaneCut)
 			ghostSatsPassAll.append(ghostSatsPass)
@@ -341,7 +346,7 @@ class Plane():
 		self.planeID = planeID
 	
 	@classmethod
-	def from_list(cls, satList):
+	def from_list(cls, satList, planeID = None):
 		"""
 		Create plane from a list of satellite objects
 		"""
@@ -351,7 +356,7 @@ class Plane():
 		else:
 			for idx, sat in enumerate(satList):
 				if idx == 0:
-					plane = cls(sat)
+					plane = cls(sat, planeID = planeID)
 				else:
 					plane.add_sat(sat)
 		return plane
@@ -377,7 +382,7 @@ class Plane():
 		"""
 		self.sats.append(sat)
 		
-	def get_pass_details(self, GroundLoc, tInit, days):
+	def get_pass_details(self, GroundLoc, tInit, days, useSatEpoch):
 		"""
 		Gets set a maneuvers that will pass a specific ground location on
 		select days
@@ -386,6 +391,7 @@ class Plane():
 		GroundLoc (Obj): Ground location object to be passed over
 		tInit (astropy time object): Time to initialize planner
 		days (int): Amount of days ahead to for the scheduler to plan for
+		useSatEpoch (Bool): If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner
 
 		Outputs:
 		maneuverListAll (list of Maneuver objects): All potential maneuvers
@@ -396,7 +402,7 @@ class Plane():
 		ghostSatsPassAll = []
 		ghostSatsInitAll = []
 		for sat in self.sats:
-			ghostSatsPass, ghostSatsInit, potentialManeuversAll, potentialManeuversCut = sat.get_desired_pass_orbs(GroundLoc, tInit, days)
+			ghostSatsPass, ghostSatsInit, potentialManeuversAll, potentialManeuversCut = sat.get_desired_pass_orbs(GroundLoc, tInit, days, useSatEpoch)
 			for man in potentialManeuversAll:
 				man.planeID = self.planeID
 			for man in potentialManeuversCut:
@@ -417,7 +423,7 @@ class Satellite(Orbit):
 	Defines the satellite class
 	"""
 	def __init__(self, state, epoch, satID = None, dataMem = None, schedule = None, 
-				 commsPayload = None, potentialManSchedule = None, planeID = None,
+				 commsPayload = None, previousSchedule = None, planeID = None,
 				 note = None):
 		super().__init__(state, epoch) #Inherit class for Poliastro orbits (allows for creation of orbits)
 		self.satID = satID
@@ -440,10 +446,10 @@ class Satellite(Orbit):
 		else:
 			self.commsPayload = commsPayload
 	
-		if potentialManSchedule is None: #Set up ability to hold potential maneuver schedule
-			self.potentialManSchedule = []
+		if previousSchedule is None: #Set up ability to hold potential maneuver schedule
+			self.previousSchedule = []
 		else:
-			self.potentialManSchedule = potentialManSchedule
+			self.previousSchedule = previousSchedule
 			
 	def calc_link_budget_tx(self, rx_comms_payload):
 		pass
@@ -461,6 +467,9 @@ class Satellite(Orbit):
 	def add_schedule(self, sch_commands): #Adds a schedule to the satellite
 		self.schedule.append(sch_commands)
 	
+	def add_previousSchedule(self, prevSch):
+		self.previousSchedule.append(prevSch)
+
 	def add_comms_payload(self, commsPL):
 		self.commsPayload.append(commsPL)
 		
@@ -470,7 +479,7 @@ class Satellite(Orbit):
 	def calc_access(self, GroundLoc, timeSpan):
 		pass
 	
-	def get_desired_pass_orbs(self, GroundLoc, tInit, days,
+	def get_desired_pass_orbs(self, GroundLoc, tInitSim, days, useSatEpoch,
 								 refVernalEquinox = astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
 		"""
 		Given an orbit and ground site, gets the pass time and true anomaly 
@@ -491,8 +500,12 @@ class Satellite(Orbit):
 		"""
 
 		## TODO: Doesn't yet account for RAAN drift due to J2 perturbation
-		
-		satInit = self.propagate(tInit)
+		if useSatEpoch:
+			tInit = self.epoch #Sets tInit to current satellite epoch
+			satInit = self
+		else:
+			tInit = tInitSim #Sets tInit to the starting point of simiulation
+			satInit = self.propagate(tInitSim)
 		
 		tInitMJDRaw = tInit.mjd
 		tInitMJD = int(tInitMJDRaw)
@@ -571,11 +584,19 @@ class Satellite(Orbit):
 			ghostSatFuture.manID = idx
 			ghostSatInit.manID = idx
 
+			## Tag ghost satellites with sat and plane IDs
+			ghostSatFuture.satID = self.satID
+			ghostSatFuture.satID = self.planeID
+
+			ghostSatInit.satID = self.satID
+			ghostSatInit.satID = self.planeID
+
 			desiredGhostOrbits_atPass.append(ghostSatFuture)
 			desiredGhostOrbits_tInit.append(ghostSatInit)
-			
 			## Get rendezvous time and number of orbits to phase
-			time2pass = ghostSatFuture.epoch - tInit
+			time2pass = ghostSatFuture.epoch - tInitSim
+			if time2pass < 0:
+				breakpoint()
 			rvdOrbsRaw = time2pass.to(u.s) / satInit.period
 			rvdOrbsInt = rvdOrbsRaw.astype(int)
 			
@@ -592,10 +613,15 @@ class Satellite(Orbit):
 	
 			## Create maneuver object
 			manObj = ManeuverObject(tInit, delVTot, time2pass, self.satID,
-								   ghostSatFuture, note=sch.passType)
+								   GroundLoc, note=sch.passType, mySat = self,
+								   mySatFin = ghostSatFuture)
 
 			## Tag manuever object with maneuver number (to match ghost orbits later)
 			manObj.manID = idx
+
+			## Tag maneuver object with planeID and satID
+			manObj.satID = self.satID
+			# manObj.planeID = self.planeID
 
 			maneuverObjectsAll.append(manObj)
 			if passFlag:
