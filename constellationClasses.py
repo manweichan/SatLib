@@ -11,6 +11,7 @@ from poliastro.frames.equatorial import GCRS
 import matplotlib.pyplot as plt
 from poliastro.plotting.static import StaticOrbitPlotter
 from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
+import seaborn as sns
 import astropy.units as u
 import astropy
 from astropy import time
@@ -156,15 +157,11 @@ class Constellation():
 		paretoSats = ut.find_non_dominated_time_deltaV(flatCut)
 
 		if plot:
-			from matplotlib import cm
 
-
-			c = cm.get_cmap('tab10', len(self.planes)) # color map for plots
-
-			colors = c.colors
-
+			colors = sns.color_palette('tab10', len(self.planes))
+			sns.set_style('whitegrid')
 			style = ['o', 'x']
-			plt.figure()
+			plt.figure(constrained_layout=True)
 			plt.xlabel('Time (hrs)', fontsize = 14)
 			plt.ylabel('Delta V (m/s)', fontsize = 14)
 			plt.title('Potential Maneuver Options\n \'o\' for ascending, \'x\' for descending passes', fontsize = 16)
@@ -191,9 +188,10 @@ class Constellation():
 
 			plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
 			plt.legend(title = 'Plane Number')
-			plt.grid()
+			# plt.grid()
 			if savePlot:
 				plt.savefig(figName, facecolor="w", dpi=300, bbox_inches='tight')
+			# plt.tight_layout()
 			plt.show()
 
 		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll
@@ -238,15 +236,11 @@ class Constellation():
 		paretoSats = ut.find_non_dominated_time_deltaV(deltaVs)
 
 		if plotFlag:
-			from matplotlib import cm
 
-
-			c = cm.get_cmap('tab10', len(self.planes)) # color map for plots
-
-			colors = c.colors
-
+			colors = sns.color_palette('tab10', len(self.planes))
+			sns.set_style('whitegrid')
 			# style = ['o', 'x']
-			plt.figure()
+			plt.figure(constrained_layout=True)
 			plt.xlabel('Time (hrs)', fontsize = 14)
 			plt.ylabel('Delta V (m/s)', fontsize = 14)
 			plt.title('Potential Maneuver Options\n for ISL data transfer', fontsize = 16)
