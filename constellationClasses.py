@@ -159,25 +159,29 @@ class Constellation():
 		flatCut = [item for sublist in semiFlatCut for item in sublist]
 
 		paretoSats = ut.find_non_dominated_time_deltaV(flatCut)
-
+		ax = None
 		if plot:
 
 			colors = sns.color_palette('tab10', len(self.planes))
 			sns.set_style('whitegrid')
 			style = ['o', 'x']
-			plt.figure(constrained_layout=True)
+			# fig = plt.figure(constrained_layout=True)
+			fig, ax = plt.subplots(constrained_layout=True)
 			plt.xlabel('Time (hrs)', fontsize = 14)
 			plt.ylabel('Delta V (m/s)', fontsize = 14)
 			plt.title('Potential Maneuver Options\n \'o\' for ascending, \'x\' for descending passes', fontsize = 16)
 
 			lgdCheck = []
 			for man in flatCut:
+
 				clrIdx = int(man.planeID)
 				passType = man.note
 				if passType =='a':
 					style = 'o'
 				elif passType == 'd':
 					style = 'x'
+				else:
+					style = 'o'
 				
 				if clrIdx in lgdCheck:
 					label = None
@@ -198,7 +202,7 @@ class Constellation():
 			# plt.tight_layout()
 			plt.show()
 
-		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll, missionCosts
+		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll, missionCosts, plt.gca()
 	
 	def get_ISL_maneuver(self, Constellation, perturbation='J2', plotFlag=False, savePlot = False, figName = None):
 		"""
@@ -227,7 +231,7 @@ class Constellation():
 		tInit = selfSats[0].epoch #Get time at beginnnig of simulation
 
 		maneuverObjs = []
-		deltaVs = []
+		transfers = []
 		timeOfISL = []
 		islOrbs = []
 		missionOptions = []
@@ -235,15 +239,15 @@ class Constellation():
 			for satTar in targetSats:
 				output = satInt.schedule_coplanar_intercept(satTar, perturbation=perturbation)
 				maneuverObjs.append(output['maneuverObjects'])
-				deltaVs.append(output['rvdMan'])
+				transfers.append(output['transfer'])
 				timeOfISL.append(output['islTime'])
 				missionDict = {
-								'imagingSatGhost': satTar.previousSchedule,
-								'ISLSatGhost': output['rvdMan']
+								'imagingSatGhost': satTar.previousTransfer,
+								'ISLSatGhost': output['transfer']
 				}
 				missionOptions.append(missionDict)
 
-		paretoSats = ut.find_non_dominated_time_deltaV(deltaVs)
+		paretoSats = ut.find_non_dominated_time_deltaV(transfers)
 
 		if plotFlag:
 
@@ -257,7 +261,7 @@ class Constellation():
 
 			lgdCheck = []
 			paretoTimes = []
-			for man in deltaVs:
+			for man in transfers:
 				clrIdx = int(man.planeID)
 				
 				if clrIdx in lgdCheck:
@@ -275,12 +279,12 @@ class Constellation():
 
 			plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
 			plt.legend(title = 'Plane Number')
-			plt.grid()
+			# plt.grid()
 			if savePlot:
 				plt.savefig(figName, facecolor="w", dpi=300, bbox_inches='tight')
 			plt.show()
 
-		return maneuverObjs, deltaVs, timeOfISL, paretoSats, missionOptions
+		return maneuverObjs, transfers, timeOfISL, paretoSats, missionOptions
 
 	def calc_access(self, GroundLoc):
 		pass
@@ -434,7 +438,7 @@ class Satellite(Orbit):
 	Defines the satellite class
 	"""
 	def __init__(self, state, epoch, satID = None, dataMem = None, schedule = None, 
-				 commsPayload = None, previousSchedule = None, planeID = None,
+				 commsPayload = None, previousTransfer = None, planeID = None,
 				 previousSatInteractions = None, note = None, task = None):
 		super().__init__(state, epoch) #Inherit class for Poliastro orbits (allows for creation of orbits)
 		self.satID = satID
@@ -458,10 +462,10 @@ class Satellite(Orbit):
 		else:
 			self.commsPayload = commsPayload
 	
-		if previousSchedule is None: #Set up ability to hold potential maneuver schedule
-			self.previousSchedule = []
+		if previousTransfer is None: #Set up ability to hold potential maneuver schedule
+			self.previousTransfer = []
 		else:
-			self.previousSchedule = previousSchedule
+			self.previousTransfer = previousTransfer
 
 		if previousSatInteractions is None: #Set up ability to hold history of previous interactions with other objects
 			self.previousSatInteractions = []
@@ -485,8 +489,8 @@ class Satellite(Orbit):
 	def add_schedule(self, sch_commands): #Adds a schedule to the satellite
 		self.schedule.append(sch_commands)
 	
-	def add_previousSchedule(self, prevSch):
-		self.previousSchedule.append(prevSch)
+	def add_previousTransfer(self, prevSch):
+		self.previousTransfer.append(prevSch)
 
 	def add_previousSatInteraction(self, object):
 		if not self.previousSatInteractions or not isinstance(object, list): #If empty
@@ -625,8 +629,7 @@ class Satellite(Orbit):
 			desiredGhostOrbits_tInit.append(ghostSatInit)
 			## Get rendezvous time and number of orbits to phase
 			time2pass = ghostSatFuture.epoch - tInitSim
-			if time2pass < 0:
-				breakpoint()
+
 			rvdOrbsRaw = time2pass.to(u.s) / satInit.period
 			rvdOrbsInt = rvdOrbsRaw.astype(int)
 			
@@ -641,52 +644,59 @@ class Satellite(Orbit):
 									rvdOrbsInt,
 									rvdOrbsInt)
 			
+
+
 			## Create maneuver object
-			manObj = ManeuverObject(tInit, delVTot, time2pass, self.satID,
+			manObj1 = ManeuverObject(tInit, delV1, time2pass, self.satID,
+								   GroundLoc, note=sch.passType, mySat = self)
+			manObj2 = ManeuverObject(time2pass, delV2, time2pass, self.satID,
 								   GroundLoc, note=sch.passType, mySat = self)
 
-
-
+			transferObj = Transfer(time2pass, delVTot, time2pass, self.satID,
+								   GroundLoc, note=sch.passType, mySat = self)
+			transferObj.task = task
+			transferObj.maneuvers = [manObj1, manObj2]
 			## Check if satellite interacted with any satellites before
 			runningMissionCost = []
 			if self.previousSatInteractions is not None:
 				for sat in self.previousSatInteractions:
-					previousMans = sat.previousSchedule
+					previousMans = sat.previousTransfer
 
 					## Add mission cost from previous satellite maneuvers
 					runningMissionCost.extend(previousMans)
 
 			## Add maneuverObject to ghostSatFuture
-			if self.previousSchedule:
+			if self.previousTransfer:
 				#Add existing schedule to ghost satellite
-				ghostSatFuture.add_previousSchedule(self.previousSchedule) 
-				runningMissionCost.extend(self.previousSchedule)
+				ghostSatFuture.add_previousTransfer(self.previousTransfer) 
+				runningMissionCost.extend(self.previousTransfer)
 
 			ghostSatFuture.task = task #Attach the task to the satellite
-			ghostSatFuture.add_previousSchedule(manObj)
+			ghostSatFuture.add_previousTransfer(transferObj)
 			
 
 
-			## Add ghostSatFuture to manObj
-			manObj.mySatFin = ghostSatFuture
+			## Add ghostSatFuture to transferObj
+			transferObj.mySatFin = ghostSatFuture
 
-			## Tag manuever object with maneuver number (to match ghost orbits later)
-			manObj.manID = idx
+			## Tag transfer object with maneuver number (to match ghost orbits later)
+			transferObj.manID = idx
 
-			## Tag maneuver object with planeID and satID
-			manObj.satID = self.satID
+			## Tag transfer object with planeID and satID
+			transferObj.satID = self.satID
 			# manObj.planeID = self.planeID
 
-			maneuverObjectsAll.append(manObj)
+			maneuverObjectsAll.append(transferObj)
 			if passFlag:
-				maneuverObjectsCut.append(manObj)
+				maneuverObjectsCut.append(transferObj)
 
 			## Add current satellitte cost to other external mission costs
-			runningMissionCost.append(manObj)
-			runningMissionCosts.append(runningMissionCost)
+			runningMissionCost.append(transferObj)
 
-			
-			
+			missionOption = MissionOption(runningMissionCost, task)
+			missionOption.get_mission_specs()
+			runningMissionCosts.append(missionOption)
+
 		return desiredGhostOrbits_atPass, desiredGhostOrbits_tInit, maneuverObjectsAll, maneuverObjectsCut, runningMissionCosts
 		
 	def desired_raan_from_pass_time(self, tPass, GroundLoc):
@@ -947,13 +957,13 @@ class Satellite(Orbit):
 			deltaV_man2 = Maneuver.impulse(v_dir2 * delV2) #Delta V  of recircularizing orbit
 			orb1_rvd = orb1_phase_f.apply_maneuver(deltaV_man2) #Orbit at rendezvous
 
-			manObj1 = ManeuverObject(tInitAtAnom, deltaV_man1, tMan, self.satID, targetSat, planeID = self.planeID)
-			manObj2 = ManeuverObject(tAtISL, deltaV_man2, tMan, self.satID, targetSat, planeID = self.planeID)
+			## Changed deltaV_man1 to delV1 here. Removed directional information
+			manObj1 = ManeuverObject(tInitAtAnom, delV1, tMan, self.satID, targetSat, planeID = self.planeID)
+			manObj2 = ManeuverObject(tAtISL, delV2, tMan, self.satID, targetSat, planeID = self.planeID)
 
-			#Create a maneuver object that isn't used for scheduling, but will be used for the planner
-			totManObj = ManeuverObject(tAtISL, delVTot, tMan, self.satID, targetSat, planeID = self.planeID)
-			# breakpoint()
-
+			#Create a Transfer object that isn't used for scheduling, but will be used for the planner
+			transferObj = Transfer(tAtISL, delVTot, tMan, self.satID, targetSat, planeID = self.planeID)
+			transferObj.task = task
 			## Reapply attributes that were lost during poliastro propagation
 			orb1_rvd.satID = self.satID
 			orb1_rvd.planeID = self.planeID
@@ -972,8 +982,10 @@ class Satellite(Orbit):
 			satInitAtAnom.task = task
 
 			##Attribute beginning and ending orbits to maneuvers
-			totManObj.mySat = self
-			totManObj.mySatFin = orb1_rvd
+			transferObj.mySat = self
+			transferObj.planeID = self.planeID
+			transferObj.satID = self.satID
+			# totManObj.mySatFin = orb1_rvd
 
 			manObj1.mySat = satInitAtAnom
 			manObj1.mySatFin = orb1_phase_i
@@ -981,25 +993,28 @@ class Satellite(Orbit):
 			manObj2.mySat = orb1_phase_f
 			manObj2.mySatFin = orb1_rvd
 
-			## Add required schedule to get to orb1_rvd
-			orb1_rvd.add_previousSchedule(manObj1)
-			orb1_rvd.add_previousSchedule(manObj2)
-			totManObj.mySatFin = orb1_rvd
-
 
 			manList = [manObj1, manObj2]
+
+			## Add required schedule to get to orb1_rvd
+			# orb1_rvd.add_previousSchedule(manObj1)
+			# orb1_rvd.add_previousSchedule(manObj2)
+			transferObj.mySatFin = orb1_rvd
+			transferObj.maneuvers = manList #Add the components to teh transffer
+			orb1_rvd.add_previousTransfer(transferObj)
+
 
 			if debug:
 				satsList = [satInitAtAnom, orb1_phase_i, orb1_phase_f, orb1_rvd, targetSatAtISL]
 				posDiffs = [satInitAtAnom.r - sat.r for sat in satsList]
 				output = {'maneuverObjects': manList,
-						  'rvdMan': totManObj,
+						  'transfer': transferObj,
 						  'islTime': tAtISL,
 						  'debug': satsList,
 						  'posDiff': posDiffs}	
 			else:
 				output = {'maneuverObjects': manList,
-						  'rvdMan': totManObj,
+						  'transfer': transferObj,
 						  'islTime': tAtISL}
 
 			return output
@@ -1118,6 +1133,16 @@ class ManeuverObject(ManeuverSchedule):
 		dist = np.sqrt(squared)
 		self.utopDistWeighted = dist
 
+class Transfer(ManeuverObject):
+	def __init__(self, time, deltaV, time2Pass, satID, target, note=None, 
+				 planeID = None, mySat=None, mySatFin=None, maneuvers=None,
+				 task=None):
+		ManeuverObject.__init__(self, time, deltaV, time2Pass, satID, target, 
+			note=note, planeID = planeID, mySat=mySat, mySatFin=mySatFin)
+		self.maneuvers = maneuvers
+		self.task = task
+
+
 ## Data class
 class Data():
 	def __init__(self, tStamp, dSize):
@@ -1197,13 +1222,21 @@ class CommsPayload():
 		GonT_dB = self.G_r - T_dB - self.L_line
 		return GonT_dB  
 
-class missionOptions():
+class MissionOption():
 	"""
 	Holder for mission options
 	"""                       
-	def __init__(self, listOfManeuvers):
-		self.listOfManeuvers = listOfManeuvers     
+	def __init__(self, listOfTransfers, maneuverGoal):
+		self.listOfTransfers = listOfTransfers     
+		self.maneuverGoal = maneuverGoal
 
 	def get_mission_specs(self):
-		self.maneuverCosts = [m.deltaV for m in listOfManeuvers]
-		self.tootalCost = sum(self.maneuverCosts)
+		self.maneuverCosts = [m.deltaV for m in self.listOfTransfers]
+		self.totalCost = sum(self.maneuverCosts)
+
+		#Find downlink satellite
+		dlSat = [s for s in self.listOfTransfers if s.mySatFin.task == 'Downlink']
+		if dlSat:
+			self.dlTime = dlSat[0].time2Pass
+		else:
+			self.dlTime = 'Not scheduled yet'

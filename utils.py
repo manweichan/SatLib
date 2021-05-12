@@ -1,5 +1,6 @@
 import operator
 import copy
+import collections
 
 def find_non_dominated_time_deltaV(flatArray):
     keyfun = operator.attrgetter('time2Pass.value')
@@ -14,3 +15,8 @@ def find_non_dominated_time_deltaV(flatArray):
         paretoSats.append(best) #Add best satellite to list
     return paretoSats
     
+def flatten(x): # Flattens a nested list
+    if isinstance(x, collections.Iterable):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
