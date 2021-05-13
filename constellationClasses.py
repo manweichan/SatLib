@@ -202,7 +202,7 @@ class Constellation():
 			# plt.tight_layout()
 			plt.show()
 
-		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll, missionCosts, plt.gca()
+		return maneuverPoolCut, maneuverPoolAll, paretoSats, ghostSatsInitAll, ghostSatsPassAll, missionCosts
 	
 	def get_ISL_maneuver(self, Constellation, perturbation='J2', plotFlag=False, savePlot = False, figName = None):
 		"""
@@ -1240,3 +1240,15 @@ class MissionOption():
 			self.dlTime = dlSat[0].time2Pass
 		else:
 			self.dlTime = 'Not scheduled yet'
+
+	def get_weighted_dist_from_utopia(self, w_delv, w_t):
+		"""
+		Get weighted distance from utopia point 
+
+		Inputs
+		w_delv: delV weight
+		w_t: time weight
+		"""
+		squared = self.dlTime.to(u.hr).value**2 * w_t + self.totalCost.to(u.m/u.s).value**2 * w_delv
+		dist = np.sqrt(squared)
+		self.utopDistWeighted = dist
