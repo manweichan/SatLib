@@ -572,8 +572,17 @@ class Satellite(Orbit):
 		angleToHrs_a = astropy.coordinates.Angle(theta_GMT_a).hour
 		angleToHrs_d = astropy.coordinates.Angle(theta_GMT_d).hour
 		
-		tPass_a = [day + angleToHrs_a[idx] * u.hr for idx, day in enumerate(days)]
-		tPass_d = [day + angleToHrs_d[idx] * u.hr for idx, day in enumerate(days)]
+		tPass_a = []
+		tPass_d = []
+		for d_idx, day in enumerate(days):
+			timePass_a = day + angleToHrs_a[d_idx] * u.hr
+			timePass_d = day + angleToHrs_d[d_idx] * u.hr
+			if timePass_a > self.epoch: #Make sure time is in the future
+				tPass_a.append(timePass_a)
+			if timePass_d > self.epoch:
+				tPass_d.append(timePass_d)
+		# tPass_a = [day + angleToHrs_a[idx] * u.hr for idx, day in enumerate(days)]
+		# tPass_d = [day + angleToHrs_d[idx] * u.hr for idx, day in enumerate(days)]
 		timesRaw = [tPass_a, tPass_d]
 
 		note_a = f"Potential ascending pass times for Satellite: {self.satID}"
