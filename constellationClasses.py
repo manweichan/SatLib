@@ -111,7 +111,14 @@ class Constellation():
 		return constClass
 		
 		
-	def reconfigure(self, GroundLoc, GroundStation):
+	def plan_reconfigure(self, GroundLoc, GroundStation, tInit, days, figName=None):
+		manTestCut, manTest, pSats, ghostSatsInit, ghostSatsPass, rmc = walker2021.get_pass_maneuver(groundLocTest, 
+																									tInit,
+																									daysAhead, 
+																									task = 'Image',
+																									plot = True, 
+																									savePlot = True, 
+																									figName = f'figures/{figName}ImagePass.png')
 		pass
 	
 	def get_pass_maneuver(self, GroundLoc, tInit, days, useSatEpoch = False, task = None, plot = False, savePlot = False, figName = None):
