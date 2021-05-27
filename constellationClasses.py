@@ -111,7 +111,7 @@ class Constellation():
 		return constClass
 		
 		
-	def plan_reconfigure(self, GroundLoc, GroundStation, tInit, days, figName=None, selectionMethod=1, selectionParams=None, plot = False):
+	def plan_reconfigure(self, GroundLoc, GroundStation, tInit, days, figName=None, selectionMethod=1, selectionParams=None, plot = False, savePlot = False):
 		"""
 		Plane reconfiguration of the constellation to visit and image a GroundLoc and downlink to a GroundStation
 
@@ -126,6 +126,7 @@ class Constellation():
 				Elements 5,6,7,8 are the number of selected satellites to move into the next round of the selection cycle.
 				Example: [[1,1],[1,3],[1,5],[1,8] 5, 5, 5, 6]
 		plot (Bool): Outputs plots if true
+		savePlot (Bool): Save plot outputs
 
 		Outputs
 		suggestedMissions: Suggested mission
@@ -158,6 +159,7 @@ class Constellation():
 			if plot:
 				tMaxPlot = (days + 1) * u.day
 				xlimits = [-5, tMaxPlot.to(u.hr).value]
+				ylimits = [-5, 500]
 				plt.figure(constrained_layout=True)
 				plt.xlabel('Time (hrs)', fontsize = 14)
 				plt.ylabel('Delta V (m/s)', fontsize = 14)
@@ -165,12 +167,12 @@ class Constellation():
 				lgdCheck = []
 				for man in imageManeuvers_flat:
 				#     clrIdx = int(man.planeID)
-					passType = man.note
-					if passType =='a':
-						style = 'ko'
-					elif passType == 'd':
-						style = 'kx'
-					plt.plot(man.time2Pass.to(u.hr), man.deltaV, style)#,
+					# passType = man.note
+					# if passType =='a':
+					# 	style = 'ko'
+					# elif passType == 'd':
+					# 	style = 'kx'
+					plt.plot(man.time2Pass.to(u.hr), man.deltaV, 'ko')#,
 						# label = label)
 				selectTimesW = [p.time2Pass.to(u.hr).value for p in selectWeightedManeuversImage]
 				selectDelVW = [p.deltaV.value for p in selectWeightedManeuversImage]
@@ -179,9 +181,16 @@ class Constellation():
 				plt.plot(selectTimesW, selectDelVW, 'b^', label = 'Selected Sats Weighted', markersize = 10)
 
 				plt.xlim(xlimits)
-				# plt.ylim(ylimits)
+				plt.ylim(ylimits)
 				plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
 				plt.legend()
+				if savePlot:
+					from datetime import datetime
+					now = datetime.now()
+					timestamp = now.isoformat()
+					fname = "figures/pool/" + str(timestamp) +"imagingMans"+".png"
+					plt.savefig(fname,facecolor="w", dpi=300)
+
 
 			## Create new constellation objects
 			origSats = self.get_sats() #Original satellites
@@ -217,6 +226,39 @@ class Constellation():
 			transfersISL.sort(key = lambda x: x.utopDistWeighted)
 			selectWeightedManeuversISL = transfersISL[0:nSatISL]
 
+			if plot:
+				tMaxPlot = (days + 1) * u.day
+				xlimits = [-5, tMaxPlot.to(u.hr).value]
+				plt.figure(constrained_layout=True)
+				plt.xlabel('Time (hrs)', fontsize = 14)
+				plt.ylabel('Delta V (m/s)', fontsize = 14)
+				plt.title('Potential ISL Options\n \'o\' for ascending, \'x\' for descending passes', fontsize = 16)
+				lgdCheck = []
+				for man in transfersISL:
+				#     clrIdx = int(man.planeID)
+					# passType = man.note
+					# if passType =='a':
+					# 	style = 'ko'
+					# elif passType == 'd':
+					# 	style = 'kx'
+					plt.plot(man.time2Pass.to(u.hr), man.deltaV, 'ko')#,
+						# label = label)
+				selectTimesW = [p.time2Pass.to(u.hr).value for p in selectWeightedManeuversISL]
+				selectDelVW = [p.deltaV.value for p in selectWeightedManeuversISL]
+				# plt.plot(paretoTimes, paretoDelV, 'r-', label = 'Pareto Front')
+				# plt.plot(selectTimes, selectDelV, 'go', label = 'Selected Sats', markersize = 10)
+				plt.plot(selectTimesW, selectDelVW, 'b^', label = 'Selected Sats Weighted', markersize = 10)
+
+				plt.xlim(xlimits)
+				plt.ylim(ylimits)
+				plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
+				plt.legend()
+
+				if savePlot:
+					fname = "figures/pool/" + str(timestamp) + "ISLMans" + ".png"
+					plt.savefig(fname,facecolor="w", dpi=300)
+
+
 			#### Might need to uncomment this
 			# for s in selectWeightedManeuversISL:
 			#     s.mySat.task = 'ISL'
@@ -248,12 +290,74 @@ class Constellation():
 			[obj.get_weighted_dist_from_utopia(DLWeights[0],DLWeights[1]) for obj in downlinkManeuvers_flat] #Gets utopia distance
 			downlinkManeuvers_flat.sort(key = lambda x: x.utopDistWeighted)
 			selectWeightedDownlinkManeuvers = downlinkManeuvers_flat[0:nSatMission]
+			
+			if plot:
+				tMaxPlot = (days + 1) * u.day
+				xlimits = [-5, tMaxPlot.to(u.hr).value]
+				plt.figure(constrained_layout=True)
+				plt.xlabel('Time (hrs)', fontsize = 14)
+				plt.ylabel('Delta V (m/s)', fontsize = 14)
+				plt.title('Potential Downlink Options\n \'o\' for ascending, \'x\' for descending passes', fontsize = 16)
+				lgdCheck = []
+				for man in downlinkManeuvers_flat:
+				#     clrIdx = int(man.planeID)
+					# passType = man.note
+					# if passType =='a':
+					# 	style = 'ko'
+					# elif passType == 'd':
+					# 	style = 'kx'
+					plt.plot(man.time2Pass.to(u.hr), man.deltaV, 'ko')#,
+						# label = label)
+				selectTimesW = [p.time2Pass.to(u.hr).value for p in selectWeightedDownlinkManeuvers]
+				selectDelVW = [p.deltaV.value for p in selectWeightedDownlinkManeuvers]
+				# plt.plot(paretoTimes, paretoDelV, 'r-', label = 'Pareto Front')
+				# plt.plot(selectTimes, selectDelV, 'go', label = 'Selected Sats', markersize = 10)
+				plt.plot(selectTimesW, selectDelVW, 'b^', label = 'Selected Sats Weighted', markersize = 10)
+
+				plt.xlim(xlimits)
+				plt.ylim(ylimits)
+				plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
+				plt.legend()
+				if savePlot:
+					fname = "figures/pool/" + str(timestamp) + "DLMans" +".png"
+					plt.savefig(fname,facecolor="w", dpi=300)
 
 			##Find best overall mission
 			missionCosts = utils.flatten(runningMissionCost)
 			[obj.get_weighted_dist_from_utopia(missionWeights[0], missionWeights[1]) for obj in missionCosts] #Gets utopia distance
 			missionCosts.sort(key = lambda x: x.utopDistWeighted)
 			selectMissionOptions = missionCosts[0:nSatMission]
+
+			if plot:
+				tMaxPlot = (days + 1) * u.day
+				xlimits = [-5, tMaxPlot.to(u.hr).value]
+				plt.figure(constrained_layout=True)
+				plt.xlabel('Time (hrs)', fontsize = 14)
+				plt.ylabel('Delta V (m/s)', fontsize = 14)
+				plt.title('Potential Mission Options\n \'o\' for ascending, \'x\' for descending passes', fontsize = 16)
+				lgdCheck = []
+				for man in missionCosts:
+				#     clrIdx = int(man.planeID)
+					# passType = man.note
+					# if passType =='a':
+					# 	style = 'ko'
+					# elif passType == 'd':
+					# 	style = 'kx'
+					plt.plot(man.dlTime.to(u.hr), man.totalCost, 'ko')#,
+						# label = label)
+				selectTimesW = [p.dlTime.to(u.hr).value for p in selectMissionOptions]
+				selectDelVW = [p.totalCost.value for p in selectMissionOptions]
+				# plt.plot(paretoTimes, paretoDelV, 'r-', label = 'Pareto Front')
+				# plt.plot(selectTimes, selectDelV, 'go', label = 'Selected Sats', markersize = 10)
+				plt.plot(selectTimesW, selectDelVW, 'b^', label = 'Selected Sats Weighted', markersize = 10)
+
+				plt.xlim(xlimits)
+				plt.ylim(ylimits)
+				plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
+				plt.legend()
+				if savePlot:
+					fname = "figures/pool/" + str(timestamp) + "missionMans" + ".png"
+					plt.savefig(fname,facecolor="w", dpi=300)
 
 			return selectMissionOptions
 
