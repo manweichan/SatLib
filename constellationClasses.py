@@ -205,7 +205,7 @@ class Constellation():
 			selectSatsISL_f = Constellation.from_list(selectPlanes_f) #Satellite orbits after ISL maneuver
 
 			##Find downlink capable satellites
-			downlinkManeuvers, pSats_GP, ghostSatsInit_GP, ghostSatsPass_GP, runningMissionCost = selectSatsISL_f.get_pass_maneuver(GroundLoc,
+			downlinkManeuvers, pSats_GP, ghostSatsInit_GP, ghostSatsPass_GP, runningMissionCost = selectSatsISL_f.get_pass_maneuver(GroundStation,
 					                                                                                                            tInit, 
 					                                                                                                            days, 
 					                                                                                                            useSatEpoch=True,
