@@ -111,7 +111,7 @@ class Constellation():
 		return constClass
 		
 		
-	def plan_reconfigure(self, GroundLoc, GroundStation, tInit, days, figName=None, selectionMethod=1, selectionParams=None):
+	def plan_reconfigure(self, GroundLoc, GroundStation, tInit, days, figName=None, selectionMethod=1, selectionParams=None, plot = False):
 		"""
 		Plane reconfiguration of the constellation to visit and image a GroundLoc and downlink to a GroundStation
 
@@ -125,6 +125,7 @@ class Constellation():
 		selectionParams (list of 2 element lists): Need 4 different weights, 1 to select imaging satellites, 2 to select ISL satellites, 3 to select downlink satellites, 4 to select missiions. 
 				Elements 5,6,7,8 are the number of selected satellites to move into the next round of the selection cycle.
 				Example: [[1,1],[1,3],[1,5],[1,8] 5, 5, 5, 6]
+		plot (Bool): Outputs plots if true
 
 		Outputs
 		suggestedMissions: Suggested mission
@@ -144,7 +145,7 @@ class Constellation():
 																										tInit,
 																										days, 
 																										task = 'Image',
-																										plot = True, 
+																										plot = plot, 
 																										savePlot = True, 
 																										figName = f'figures/{figName}ImagePass.png')
 			
@@ -153,6 +154,34 @@ class Constellation():
 			[obj.get_weighted_dist_from_utopia(imageWeights[0],imageWeights[1]) for obj in imageManeuvers_flat] #Gets utopia distance
 			imageManeuvers_flat.sort(key = lambda x: x.utopDistWeighted)
 			selectWeightedManeuversImage = imageManeuvers_flat[0:nSatImage]
+
+			if plot:
+				tMaxPlot = (days + 1) * u.day
+				xlimits = [-5, tMaxPlot.to(u.hr).value]
+				plt.figure(constrained_layout=True)
+				plt.xlabel('Time (hrs)', fontsize = 14)
+				plt.ylabel('Delta V (m/s)', fontsize = 14)
+				plt.title('Potential Maneuver Options\n \'o\' for ascending, \'x\' for descending passes', fontsize = 16)
+				lgdCheck = []
+				for man in imageManeuvers_flat:
+				#     clrIdx = int(man.planeID)
+					passType = man.note
+					if passType =='a':
+						style = 'ko'
+					elif passType == 'd':
+						style = 'kx'
+					plt.plot(man.time2Pass.to(u.hr), man.deltaV, style)#,
+						# label = label)
+				selectTimesW = [p.time2Pass.to(u.hr).value for p in selectWeightedManeuversImage]
+				selectDelVW = [p.deltaV.value for p in selectWeightedManeuversImage]
+				# plt.plot(paretoTimes, paretoDelV, 'r-', label = 'Pareto Front')
+				# plt.plot(selectTimes, selectDelV, 'go', label = 'Selected Sats', markersize = 10)
+				plt.plot(selectTimesW, selectDelVW, 'b^', label = 'Selected Sats Weighted', markersize = 10)
+
+				plt.xlim(xlimits)
+				# plt.ylim(ylimits)
+				plt.plot(0,0,'g*',label='Utopia Point', markersize = 20)
+				plt.legend()
 
 			## Create new constellation objects
 			origSats = self.get_sats() #Original satellites
@@ -181,7 +210,7 @@ class Constellation():
 			## Might not need a lot of these outputs. TO DO eliminate needless outputs
 			maneuverObjs, transfersISL, timeOfISL, paretoSatsISL, missionOptions = potentialRelaySatsConstellation.get_ISL_maneuver(ghostImagingSatsConstellation, 
 																															perturbation = 'none', 
-																															plotFlag=True)
+																															plotFlag=plot)
 
 			## Weighted Choice
 			[obj.get_weighted_dist_from_utopia(ISLWeights[0], ISLWeights[1]) for obj in transfersISL] #Gets utopia distance
@@ -193,26 +222,26 @@ class Constellation():
 			#     s.mySat.task = 'ISL'
 
 			for s in selectWeightedManeuversISL:
-			    s.mySatFin.add_previousSatInteraction(s.target) #Adds target satellite(ground image) to previous interactions with the downlink satellite
+				s.mySatFin.add_previousSatInteraction(s.target) #Adds target satellite(ground image) to previous interactions with the downlink satellite
 
 			## Create constellation of ghost ISL satellites
 			ghostISLSatsWeighted = [s.mySatFin for s in selectWeightedManeuversISL] #Final orbital config
 			selectPlanes_f = []
 			for planeIdx in range(0,numOriginalPlanes):
-			    sats_f = [s for s in ghostISLSatsWeighted if s.planeID == planeIdx]
-			    plane2append_f = Plane.from_list(sats_f, planeID = planeIdx)
-			    selectPlanes_f.append(plane2append_f)
+				sats_f = [s for s in ghostISLSatsWeighted if s.planeID == planeIdx]
+				plane2append_f = Plane.from_list(sats_f, planeID = planeIdx)
+				selectPlanes_f.append(plane2append_f)
 			selectSatsISL_f = Constellation.from_list(selectPlanes_f) #Satellite orbits after ISL maneuver
 
 			##Find downlink capable satellites
 			downlinkManeuvers, pSats_GP, ghostSatsInit_GP, ghostSatsPass_GP, runningMissionCost = selectSatsISL_f.get_pass_maneuver(GroundStation,
-					                                                                                                            tInit, 
-					                                                                                                            days, 
-					                                                                                                            useSatEpoch=True,
-                                                                                                            					task = 'Downlink',
-                                                                                                            					plot = True, 
-                                                                                                            					savePlot = True,
-                                                                                                            					figName = f'figures/{figName}groundPassPlanner.png')
+																																tInit, 
+																																days, 
+																																useSatEpoch=True,
+																																task = 'Downlink',
+																																plot = True, 
+																																savePlot = plot,
+																																figName = f'figures/{figName}groundPassPlanner.png')
 
 			downlinkManeuvers_flat = utils.flatten(downlinkManeuvers)
 
