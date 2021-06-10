@@ -558,6 +558,7 @@ class Constellation():
 			plane2append = Plane.from_list(planeSats)
 			planes2const.append(plane2append)
 		# import ipdb; ipdb.set_trace()
+		# breakpoint()
 		# planes2const.append(plane2append)
 		return Constellation.from_list(planes2const)
 
@@ -565,6 +566,9 @@ class Constellation():
 		"""
 		Propagates satellites and returns position (R) and Velocity (V) values
 		at the specific timeDeltas input. Defaults to propagation using J2 perturbation
+
+		Inputs
+		timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
 		"""
 		planes2const = []
 
