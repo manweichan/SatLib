@@ -3,7 +3,7 @@ from poliastro import constants
 from poliastro.earth import Orbit
 from poliastro.bodies import Earth
 from poliastro.maneuver import Maneuver
-from poliastro.twobody.propagation import propagate
+from poliastro.twobody.propagation import propagate, func_twobody
 from poliastro.twobody.propagation import cowell
 from poliastro.core.perturbations import J2_perturbation
 from poliastro.util import norm
@@ -558,8 +558,53 @@ class Constellation():
 			plane2append = Plane.from_list(planeSats)
 			planes2const.append(plane2append)
 		# import ipdb; ipdb.set_trace()
-		planes2const.append(plane2append)
+		# planes2const.append(plane2append)
 		return Constellation.from_list(planes2const)
+
+	def get_rv_from_propagate(self, timeDeltas, method="J2"):
+		"""
+		Propagates satellites and returns position (R) and Velocity (V) values
+		at the specific timeDeltas input. Defaults to propagation using J2 perturbation
+		"""
+		planes2const = []
+
+		for plane in self.planes:
+			if not plane: #Continue if empty
+				constrained_layout
+
+			planeSats = []
+			for satIdx, sat in enumerate(plane.sats):
+				if method == "J2":
+					def f(t0, state, k): #Define J2 perturbation
+						du_kep = func_twobody(t0, state, k)
+						ax, ay, az = J2_perturbation(
+						    t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
+						)
+						du_ad = np.array([0, 0, 0, ax, ay, az])
+
+						return du_kep + du_ad
+					coords = propagate(
+						sat,
+						timeDeltas,
+						method=cowell,
+						f=f,
+						)
+				else:
+					coords = propagate(
+						sat,
+						timeDeltas,
+						)
+
+				sat.rvCoords = coords
+				planeSats.append(sat)
+			planes2append = Plane.from_list(planeSats)
+			planes2const.append(planes2append)
+			# breakpoint()
+		return Constellation.from_list(planes2const)
+
+
+
+
 	
 	def get_sats(self):
 		"""
@@ -584,6 +629,7 @@ class Constellation():
 		for sat in sats:
 			op.plot(sat)
 		op.show()
+		return op
 		
 	def __eq__(self, other): 
 		return self.__dict__ == other.__dict__
