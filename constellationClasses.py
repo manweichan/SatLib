@@ -169,9 +169,9 @@ class Constellation():
 				#     clrIdx = int(man.planeID)
 					# passType = man.note
 					# if passType =='a':
-					# 	style = 'ko'
+					#   style = 'ko'
 					# elif passType == 'd':
-					# 	style = 'kx'
+					#   style = 'kx'
 					plt.plot(man.time2Pass.to(u.hr), man.deltaV, 'ko')#,
 						# label = label)
 				selectTimesW = [p.time2Pass.to(u.hr).value for p in selectWeightedManeuversImage]
@@ -238,9 +238,9 @@ class Constellation():
 				#     clrIdx = int(man.planeID)
 					# passType = man.note
 					# if passType =='a':
-					# 	style = 'ko'
+					#   style = 'ko'
 					# elif passType == 'd':
-					# 	style = 'kx'
+					#   style = 'kx'
 					plt.plot(man.time2Pass.to(u.hr), man.deltaV, 'ko')#,
 						# label = label)
 				selectTimesW = [p.time2Pass.to(u.hr).value for p in selectWeightedManeuversISL]
@@ -303,9 +303,9 @@ class Constellation():
 				#     clrIdx = int(man.planeID)
 					# passType = man.note
 					# if passType =='a':
-					# 	style = 'ko'
+					#   style = 'ko'
 					# elif passType == 'd':
-					# 	style = 'kx'
+					#   style = 'kx'
 					plt.plot(man.time2Pass.to(u.hr), man.deltaV, 'ko')#,
 						# label = label)
 				selectTimesW = [p.time2Pass.to(u.hr).value for p in selectWeightedDownlinkManeuvers]
@@ -340,9 +340,9 @@ class Constellation():
 				#     clrIdx = int(man.planeID)
 					# passType = man.note
 					# if passType =='a':
-					# 	style = 'ko'
+					#   style = 'ko'
 					# elif passType == 'd':
-					# 	style = 'kx'
+					#   style = 'kx'
 					plt.plot(man.dlTime.to(u.hr), man.totalCost, 'ko')#,
 						# label = label)
 				selectTimesW = [p.dlTime.to(u.hr).value for p in selectMissionOptions]
@@ -582,7 +582,7 @@ class Constellation():
 					def f(t0, state, k): #Define J2 perturbation
 						du_kep = func_twobody(t0, state, k)
 						ax, ay, az = J2_perturbation(
-						    t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
+							t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
 						)
 						du_ad = np.array([0, 0, 0, ax, ay, az])
 
@@ -607,7 +607,109 @@ class Constellation():
 		return Constellation.from_list(planes2const)
 
 
+	def get_relative_velocities(self):
+		"""
+		Gets relative velocities between satellites in the constellation
 
+		Needs to run get_rv_from_propagate first to get position/velocity values first
+
+		Outputs:
+		outputData (dict) : First layer key are the satellites being compared i.e. '4-10'
+							means that satellite 4 is compared to satellite 10. Secoond layer
+							key are the specific data types described below:
+
+							LOS (Bool): Describes if there is a line of sight between the satellites
+							pDiff : Relative position (xyz)
+							pDiffNorm : magnitude of relative positions
+							pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossinig)
+							flag180 : Flag to determine if there was a 180 degree 'direct crossing'
+							velDiffNorm : relative velocities
+							slewRate : slew rates required to hold pointing between satellites
+							dopplerShift : Effective doppler shifts due to relative velocities
+		"""
+
+		#Check if first satellite has rvCoords Attribute
+		assert self.planes[0].sats[0].rvCoords, "Run self.get_rv_from_propagate first to get rv values"
+		c = 3e8 * u.m / u.s
+
+		sats = self.get_sats()
+
+		outputData = {}
+		for satRef in sats:
+			for sat in sats:
+
+				if satRef.satID == sat.satID:
+					continue
+
+				# dictEntry = {}
+
+				#Reference orbit RV values
+				satRef_r = satRef.rvCoords.without_differentials()
+				satRef_v = satRef.rvCoords.differentials                
+
+				#Comparison orbit RV values
+				sat_r = sat.rvCoords.without_differentials()
+				sat_v = sat.rvCoords.differentials
+
+				#Determine LOS availability (Vallado pg 306 5.3)
+				adotb = sat_r.dot(satRef_r)
+				aNorm = sat_r.norm()
+				bNorm = satRef_r.norm()
+				theta = np.arccos(adotb/(aNorm * bNorm))
+				
+				theta1 = np.arccos(constants.R_earth / aNorm)
+				theta2 = np.arccos(constants.R_earth / bNorm)
+				
+				LOSidx = (theta1 + theta2) > theta
+
+
+
+
+				
+				#Relative positions
+				pDiff = satRef_r - sat_r
+				pDiffNorm  = pDiff.norm()
+				
+				pDiffDot = pDiff[:-1].dot(pDiff[1:])
+				if min(pDiffDot) < 0: ## Checks for 180 deg crossinig
+					flag180 = 1
+				else:
+					flag180 = 0
+
+				velDiff = satRef_v["s"] - sat_v["s"]
+				velDiffNorm = velDiff.norm()
+
+				#Slew Equations
+				## Do it using the slew equation (From Trevor Dahl report)
+				rCV = pDiff.cross(velDiff)
+				slewRateOrb = rCV / pDiffNorm**2
+				slewRateOrbNorm = slewRateOrb.norm()
+
+
+				#Doppler shift
+				pDiffU = pDiff/pDiffNorm #unit vector direction of relative position
+				rdDot = satRef_v["s"].to_cartesian() #Get velocity of destination satellite (Reference orbit)
+				numTerm = rdDot.dot(pDiffU)
+				rsDot = sat_v["s"].to_cartesian()
+				denTerm = rsDot.dot(pDiffU)
+				num = c - numTerm
+				den = c - denTerm
+				fd_fs = num/den
+
+				dictEntry = {
+							'LOS':LOSidx,
+							'pDiff':pDiff,
+							'pDiffNorm':pDiffNorm,
+							'pDiffDot': pDiffDot,
+							'flag180': flag180,
+							'velDiffNorm': velDiffNorm,
+							'slewRate': slewRateOrbNorm,
+							'dopplerShift':fd_fs,
+				}
+
+				dictKey = str(satRef.satID) + '-' + str(sat.satID)
+				outputData[dictKey] = dictEntry
+		return outputData
 
 	
 	def get_sats(self):
@@ -627,16 +729,38 @@ class Constellation():
 		"""
 		Plot constellation using Poliastro interface
 		"""
-		## Doesn't seem to work in jupyter notebooks
+		## Doesn't seem to work in jupyter notebooks. Must return plot object and show in jupyter notebook
 		sats = self.get_sats()
 		op = OrbitPlotter3D()
 		for sat in sats:
-			op.plot(sat)
-		op.show()
+			op.plot(sat, label=f"ID {sat.satID:.0f}")
+		# op.show()
+		return op ##
+
+	def plotSats(self, satIDs):
+		"""
+		Plot individual satellites using Poliastro interface
+
+		Inputs
+		satIDs [list] : list of integers referring to satIDs to plot
+		"""
+		sats = self.get_sats()
+		op = OrbitPlotter3D()
+		for sat in sats:
+			if sat.satID in satIDs:
+				op.plot(sat, label=f"ID {sat.satID:.0f}")
 		return op
 		
 	def __eq__(self, other): 
 		return self.__dict__ == other.__dict__
+
+# ## Constellation data class that holds data from analyzing a constellation
+# class ConstellationData(Constellation):
+#   """
+#   This class holds the analysis conducted on a constellation class
+#   """
+#   def __init__(self):
+#       super.__init__()
 
 ## Plane class
 class Plane():
