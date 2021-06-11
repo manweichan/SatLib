@@ -607,7 +607,7 @@ class Constellation():
 		return Constellation.from_list(planes2const)
 
 
-	def get_relative_velocities(self):
+	def get_relative_velocity_analysis(self):
 		"""
 		Gets relative velocities between satellites in the constellation
 
@@ -702,7 +702,7 @@ class Constellation():
 							'pDiffNorm':pDiffNorm,
 							'pDiffDot': pDiffDot,
 							'flag180': flag180,
-							'velDiffNorm': velDiffNorm,
+							'relVel': velDiffNorm,
 							'slewRate': slewRateOrbNorm,
 							'dopplerShift':fd_fs,
 				}
