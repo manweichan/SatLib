@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from poliastro import constants
 from poliastro.earth import Orbit
@@ -8,6 +9,7 @@ from poliastro.twobody.propagation import cowell
 from poliastro.core.perturbations import J2_perturbation
 from poliastro.util import norm
 from poliastro.frames.equatorial import GCRS
+from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 from poliastro.plotting.static import StaticOrbitPlotter
 from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
@@ -753,6 +755,42 @@ class Constellation():
 		
 	def __eq__(self, other): 
 		return self.__dict__ == other.__dict__
+
+	def generate_czml_file(self, fname, prop_duration, sample_points):
+		"""
+		Generates CZML file for the constellation for plotting
+
+		Inputs
+		fname (string): File name (including path to file) for saved czml file. Currently plots in a directory czmlFiles
+		"""
+		seedSat = self.get_sats()[0]
+		start_epoch = seedSat.epoch #iss.epoch
+
+		end_epoch = start_epoch + prop_duration
+
+		earth_uv = "https://earthobservatory.nasa.gov/ContentFeature/BlueMarble/Images/land_shallow_topo_2048.jpg"
+		extractor = CZMLExtractor(start_epoch, end_epoch, sample_points,
+		                          attractor=Earth, pr_map=earth_uv)
+		for plane in self.planes: #Loop through each plane
+		    for sat in plane.sats: #Loop through each satellite in a plane
+		        extractor.add_orbit(sat, groundtrack_show=False,
+		                    groundtrack_trail_time=0, path_show=True)
+		        
+		testL = [str(x) for x in extractor.packets]
+		toPrint = ','.join(testL)
+		toPrint = '[' + toPrint + ']'
+		cwd = os.getcwd()
+
+		czmlDir = os.path.join(cwd, "czmlFiles")
+		
+		## Check if directory is available
+		czmlDirExist = os.path.isdir(czmlDir)
+		os.makedirs(path, exist_ok=True) 
+
+		fileDir = os.path.join(cwd, czmlDir, fname + ".czml")
+		f = open(fileDir, "w")
+		f.write(toPrint)
+		f.close()
 
 # ## Constellation data class that holds data from analyzing a constellation
 # class ConstellationData(Constellation):
