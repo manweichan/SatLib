@@ -615,7 +615,7 @@ class Constellation():
 
 		Needs to run get_rv_from_propagate first to get position/velocity values first
 
-		Outputs:
+		Outputs
 		outputData (dict) : First layer key are the satellites being compared i.e. '4-10'
 							means that satellite 4 is compared to satellite 10. Secoond layer
 							key are the specific data types described below:
@@ -631,7 +631,10 @@ class Constellation():
 		"""
 
 		#Check if first satellite has rvCoords Attribute
-		assert self.planes[0].sats[0].rvCoords, "Run self.get_rv_from_propagate first to get rv values"
+		# assert self.planes[0].sats[0].rvCoords, "Run self.get_rv_from_propagate first to get rv values"
+		if not hasattr(self.planes[0].sats[0], 'rvCoords'):
+			print("Run self.get_rv_from_propagate first to get rv values")
+			return
 		c = 3e8 * u.m / u.s
 
 		sats = self.get_sats()
@@ -770,19 +773,19 @@ class Constellation():
 
 		earth_uv = "https://earthobservatory.nasa.gov/ContentFeature/BlueMarble/Images/land_shallow_topo_2048.jpg"
 		extractor = CZMLExtractor(start_epoch, end_epoch, sample_points,
-		                          attractor=Earth, pr_map=earth_uv)
+								  attractor=Earth, pr_map=earth_uv)
 		for plane in self.planes: #Loop through each plane
-		    for sat in plane.sats: #Loop through each satellite in a plane
-		        extractor.add_orbit(sat, groundtrack_show=False,
-		                    groundtrack_trail_time=0, path_show=True)
-		        
+			for sat in plane.sats: #Loop through each satellite in a plane
+				extractor.add_orbit(sat, groundtrack_show=False,
+							groundtrack_trail_time=0, path_show=True)
+				
 		testL = [str(x) for x in extractor.packets]
 		toPrint = ','.join(testL)
 		toPrint = '[' + toPrint + ']'
 		cwd = os.getcwd()
 
 		czmlDir = os.path.join(cwd, "czmlFiles")
-		
+
 		## Check if directory is available
 		czmlDirExist = os.path.isdir(czmlDir)
 		os.makedirs(path, exist_ok=True) 
@@ -893,6 +896,7 @@ class Plane():
 		return maneuverListCut, maneuverListAll, ghostSatsPassAll, ghostSatsInitAll, missionCostsAll
 	def __eq__(self, other): 
 		return self.__dict__ == other.__dict__
+		
 ## Satellite class 
 class Satellite(Orbit):
 	"""
@@ -934,8 +938,87 @@ class Satellite(Orbit):
 			self.previousSatInteractions = previousSatInteractions
 
 			
-	def calc_link_budget_tx(self, rx_comms_payload):
-		pass
+	def calc_link_budget_tx(self, rx_object, l_atm = 0, l_pointing = 0, l_pol = 0, txID = 0, rxID = 0, drReq = None, verbose = False):
+		"""
+		Calculate link budget with self as transmitter
+		
+		Inputs
+		rx_object: Satellite or GroundStation Object
+		l_atm (dB): Atmospheric loss
+		l_pointing (dB): pointing loss
+		l_pol (dB): Polarization loss
+		txID (int): Choose tx communications payload. Default to 0 since we will most likely just have 1 payload
+		rxID (int): Choose rx communications payload. Default to 0 since we will most likely just have 1 payload
+		drReq (bytes): Required data rate in bytes. Default to None
+		verbose (Bool): If True, print components of link budget
+	
+		Outputs (dictionary)
+		P_rx (dBW): Received power
+		ConN0 (dBHz): Signal to noise ratio
+		EbN0 (dB): Energy per bit. Calculated if a required data rate is given "drReq"
+
+		"""
+		assert hasattr(self, 'commsPayload'), "Need to add rx_object to Transmitting Satellite"
+		assert hasattr(rx_object, 'commsPayload'), "Need to add rx_object to rx_object Satellite"
+
+		#Get tx payload
+		txPL = self.commsPayload[txID]
+		EIRP_dB = txPL.get_EIRP()
+		wl = txPL.wavelength #wavelength
+
+		#Get rx payload
+		rxPL = rx_object.commsPayload[rxID]
+		G_rx = rxPL.g_rx
+
+		posVecTx = self.r #position of tx satellite (ECI)
+
+		if rx_object.__class__.__name__ == 'Satellite':
+			posVecRx = rx_object.r #Position of rx satellite (ECI)
+		elif rx_object.__class__.__name__ == 'GroundStation':
+			posVecRx = rx_object.propagate_to_ECI(self.epoch).data.without_differentials().xyz
+		else:
+			print("rx_object Class not recognized")
+
+		posVecDiff = astropy.coordinates.CartesianRepresentation(posVecTx - posVecRx)
+		dist = posVecDiff.norm().to(u.m)
+
+		GonT_dB = rxPL.get_GonT()
+		L_fs = (4 * np.pi * dist / wl) ** 2 #Free space path loss
+		L_fs_dB = 10 * np.log10(L_fs.value)
+		if L_fs_dB == float("inf") or L_fs_dB == float("-inf"):
+			L_fs_dB = 0
+
+		L_other_dB = l_pointing + l_pol
+
+		L_u = L_fs_dB + l_atm
+
+
+		P_rx = EIRP_dB - L_fs_dB + G_rx - L_other_dB
+
+		k_dB = 228.6 #Boltzmann constant in dB
+
+		if verbose:
+			print("L_fs:    ", L_fs_dB)
+			print("EIRP:    ", EIRP_dB)
+			print("L_u:     ", L_u)
+			print("L_other: ", L_other_dB)
+			print("Gont:    ", GonT_dB)
+			print("K:       ", k_dB)
+
+		#Signal to noise ratio
+		ConN0 = EIRP_dB - L_u - L_other_dB + GonT_dB + k_dB
+
+		output = {
+					"p_rx" : P_rx,
+					"ConN0": ConN0,
+		}
+
+		if drReq: #Calculate EbNo if data rate required is input
+			dr_dB = 10 * np.log10(drReq) #data rate in decibel
+			EbN0 = ConN0 - dr_dB
+			output["EbN0"] = EbN0
+
+		return output
 	
 	def schedule_intercept(sat):
 		pass
@@ -1639,7 +1722,7 @@ class CommsPayload():
 	"""
 	def __init__(self, freq = None, wavelength = None, p_tx = None, 
 				 g_tx = None, sysLoss_tx = None, l_tx = None, 
-				 pointingErr = None, g_rx = None, tSys = None,
+				 pointingErr = None, g_rx = None, t_sys = None,
 				 sysLoss_rx = None,  beamWidth = None, aperture = None,
 				 l_line = None):
 		self.freq = freq
@@ -1650,16 +1733,25 @@ class CommsPayload():
 		self.l_tx = l_tx
 		self.pointingErr = pointingErr
 		self.g_rx = g_rx
-		self.tSys = tSys
+		self.t_sys = t_sys
 		self.sysLoss_rx = sysLoss_rx
 		self.beamWidth = beamWidth
 		self.aperture = aperture
 		self.l_line = l_line
-		
+
+		c = 3e8 * u.m / u.s
+		if self.freq == None:
+			self.freq = c / self.wavelength
+		elif self.wavelength == None:
+			self.wavelength = c / self.freq
+
+	def print_instance_attributes(self):
+		for attribute, value in self.__dict__.items():
+			print(attribute, '=', value)
 	
 	def get_EIRP(self):
 		# TRY WITH ASTROPY UNITS
-		P_tx = self.P_tx
+		P_tx = self.p_tx
 		P_tx_dB = 10 * np.log10(P_tx)
 
 		l_tx_dB = self.l_tx
@@ -1684,12 +1776,12 @@ class CommsPayload():
 		term2 = T_feeder * (1 - 1/feederTerm)
 		term3 = T_receiver
 		Tsys = term1 + term2 + term3
-		self.T_sys = Tsys
+		self.t_sys = Tsys
 		
 	def get_GonT(self):
 		# TRY WITH ASTROPY UNITS
-		T_dB = 10 * np.log10(self.T_sys)
-		GonT_dB = self.G_r - T_dB - self.L_line
+		T_dB = 10 * np.log10(self.t_sys)
+		GonT_dB = self.g_rx - T_dB - self.l_line
 		return GonT_dB  
 
 class MissionOption():
