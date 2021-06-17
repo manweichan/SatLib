@@ -556,12 +556,45 @@ class Constellation():
 			for satIdx, sat in enumerate(plane.sats):
 				satProp = sat.propagate(time)
 				planeSats.append(satProp)
-				# plane.sats[satIdx] = satProp
 			plane2append = Plane.from_list(planeSats)
 			planes2const.append(plane2append)
-		# import ipdb; ipdb.set_trace()
-		# breakpoint()
-		# planes2const.append(plane2append)
+		return Constellation.from_list(planes2const)
+
+	def add_comms_payload(self, commsPL):
+		"""
+		Adds comms payload to each satellite in the constellation.
+
+		Inputs
+		commsPL (CommsPayload Object): Communications payload
+		"""
+		planes2const = []
+		for plane in self.planes:
+			if not plane: #Continue if empty
+				continue
+
+			planeSats = []
+			for satIdx, sat in enumerate(plane.sats):
+				satComms = sat.add_comms_payload(commsPL)
+				planeSats.append(satComms)
+			plane2append = Plane.from_list(planeSats)
+			planes2const.append(plane2append)
+		return Constellation.from_list(planes2const)
+
+	def remove_comms_payload(self):
+		"""
+		Removes comms payload in each satellite in the constellation.
+		"""
+		planes2const = []
+		for plane in self.planes:
+			if not plane: #Continue if empty
+				continue
+
+			planeSats = []
+			for satIdx, sat in enumerate(plane.sats):
+				satComms = sat.reset_payload()
+				planeSats.append(satComms)
+			plane2append = Plane.from_list(planeSats)
+			planes2const.append(plane2append)
 		return Constellation.from_list(planes2const)
 
 	def get_rv_from_propagate(self, timeDeltas, method="J2"):
@@ -646,8 +679,6 @@ class Constellation():
 				if satRef.satID == sat.satID:
 					continue
 
-				# dictEntry = {}
-
 				#Reference orbit RV values
 				satRef_r = satRef.rvCoords.without_differentials()
 				satRef_v = satRef.rvCoords.differentials                
@@ -716,7 +747,76 @@ class Constellation():
 				outputData[dictKey] = dictEntry
 		return outputData
 
-	
+	def calc_isl_link_performance(self, l_atm = 0, l_pointing = 0, 
+							 l_pol = 0, txID = 0, rxID = 0, 
+							 drReq = None):
+		"""
+		Calculates the isl link performance between satellites in the constellation
+
+		Inputs:
+		l_atm (dB): Atmospheric loss
+		l_pointing (dB): pointing loss
+		l_pol (dB): Polarization loss
+		txID (int): Choose tx communications payload. Default to 0 since we will most likely just have 1 payload
+		rxID (int): Choose rx communications payload. Default to 0 since we will most likely just have 1 payload
+		drReq (bytes): Required data rate in bytes. Default to None
+		"""
+		if not hasattr(self.planes[0].sats[0], 'commsPayload'):
+			print("Assign communications payload to satellites in constellation")
+			return
+
+		if not hasattr(self.planes[0].sats[0], 'rvCoords'):
+			print("Run self.get_rv_from_propagate first to get rv values")
+			return
+		sats = self.get_sats()
+
+		outputData = {}
+
+		for satRef in sats:
+			for sat in sats:
+
+				if satRef.satID == sat.satID:
+					continue
+
+				#Reference orbit RV values
+				satRef_r = satRef.rvCoords.without_differentials()
+				satRef_v = satRef.rvCoords.differentials                
+
+				#Comparison orbit RV values
+				sat_r = sat.rvCoords.without_differentials()
+				sat_v = sat.rvCoords.differentials
+
+				#Determine LOS availability (Vallado pg 306 5.3)
+				adotb = sat_r.dot(satRef_r)
+				aNorm = sat_r.norm()
+				bNorm = satRef_r.norm()
+				theta = np.arccos(adotb/(aNorm * bNorm))
+				
+				theta1 = np.arccos(constants.R_earth / aNorm)
+				theta2 = np.arccos(constants.R_earth / bNorm)
+				
+				LOSidx = (theta1 + theta2) > theta
+
+				
+				#Relative positions
+				pDiff = satRef_r - sat_r
+				pDiffNorm  = pDiff.norm()
+
+				linkPerf = satRef.calc_link_budget_tx(sat, from_relative_position=True, path_dist=pDiffNorm,
+													l_atm = l_atm, l_pointing = l_pointing, 
+													 l_pol = l_pol, txID = txID, rxID = rxID, 
+													 drReq = drReq)
+
+				dictEntry = {
+							'LOS':LOSidx,
+							'pDiff':pDiff,
+							'pDiffNorm':pDiffNorm,
+							'linkPerf': linkPerf,
+							}
+				dictKey = str(satRef.satID) + '-' + str(sat.satID)
+				outputData[dictKey] = dictEntry
+		return outputData
+
 	def get_sats(self):
 		"""
 		Gets a list of all the satetllite objects in the constellation
@@ -896,7 +996,7 @@ class Plane():
 		return maneuverListCut, maneuverListAll, ghostSatsPassAll, ghostSatsInitAll, missionCostsAll
 	def __eq__(self, other): 
 		return self.__dict__ == other.__dict__
-		
+
 ## Satellite class 
 class Satellite(Orbit):
 	"""
@@ -938,12 +1038,17 @@ class Satellite(Orbit):
 			self.previousSatInteractions = previousSatInteractions
 
 			
-	def calc_link_budget_tx(self, rx_object, l_atm = 0, l_pointing = 0, l_pol = 0, txID = 0, rxID = 0, drReq = None, verbose = False):
+	def calc_link_budget_tx(self, rx_object, from_relative_position = False, path_dist = None,
+							 l_atm = 0, l_pointing = 0, 
+							 l_pol = 0, txID = 0, rxID = 0, 
+							 drReq = None, verbose = False):
 		"""
 		Calculate link budget with self as transmitter
 		
 		Inputs
 		rx_object: Satellite or GroundStation Object
+		from_relative_position (bool): Flag if True, calculates path propagation from given position (path_dist)
+		path_dist (astropy distance): Distance between tx and rx antennas
 		l_atm (dB): Atmospheric loss
 		l_pointing (dB): pointing loss
 		l_pol (dB): Polarization loss
@@ -960,6 +1065,8 @@ class Satellite(Orbit):
 		"""
 		assert hasattr(self, 'commsPayload'), "Need to add rx_object to Transmitting Satellite"
 		assert hasattr(rx_object, 'commsPayload'), "Need to add rx_object to rx_object Satellite"
+		if from_relative_position:
+			assert path_dist, "Need to also input a path distance (i.e. path_dist = 100 * u.km)"
 
 		#Get tx payload
 		txPL = self.commsPayload[txID]
@@ -970,23 +1077,34 @@ class Satellite(Orbit):
 		rxPL = rx_object.commsPayload[rxID]
 		G_rx = rxPL.g_rx
 
-		posVecTx = self.r #position of tx satellite (ECI)
+		if from_relative_position:
+			posVecDiff = path_dist
+			dist = posVecDiff.to(u.m)
+		else: #Calculate distance from objects
+			posVecTx = self.r #position of tx satellite (ECI)
 
-		if rx_object.__class__.__name__ == 'Satellite':
-			posVecRx = rx_object.r #Position of rx satellite (ECI)
-		elif rx_object.__class__.__name__ == 'GroundStation':
-			posVecRx = rx_object.propagate_to_ECI(self.epoch).data.without_differentials().xyz
-		else:
-			print("rx_object Class not recognized")
+			if rx_object.__class__.__name__ == 'Satellite':
+				posVecRx = rx_object.r #Position of rx satellite (ECI)
+			elif rx_object.__class__.__name__ == 'GroundStation':
+				posVecRx = rx_object.propagate_to_ECI(self.epoch).data.without_differentials().xyz
+			else:
+				print("rx_object Class not recognized")
 
-		posVecDiff = astropy.coordinates.CartesianRepresentation(posVecTx - posVecRx)
-		dist = posVecDiff.norm().to(u.m)
+			posVecDiff = astropy.coordinates.CartesianRepresentation(posVecTx - posVecRx)
+
+			dist = posVecDiff.norm().to(u.m)
 
 		GonT_dB = rxPL.get_GonT()
 		L_fs = (4 * np.pi * dist / wl) ** 2 #Free space path loss
 		L_fs_dB = 10 * np.log10(L_fs.value)
-		if L_fs_dB == float("inf") or L_fs_dB == float("-inf"):
-			L_fs_dB = 0
+
+		if L_fs_dB.ndim == 0:
+			if L_fs_dB == float("inf") or L_fs_dB == float("-inf"):
+				L_fs_dB = 0
+		else:
+			L_fs_dB[L_fs_dB == float("inf")] = 0
+			L_fs_dB[L_fs_dB == float("-inf")] = 0
+		
 
 		L_other_dB = l_pointing + l_pol
 
@@ -1044,6 +1162,7 @@ class Satellite(Orbit):
 
 	def add_comms_payload(self, commsPL):
 		self.commsPayload.append(commsPL)
+		return self
 		
 	def reset_payload(self):
 		self.commsPayload = []
@@ -1721,10 +1840,10 @@ class CommsPayload():
 	l_line (dB) : Line loss on receive side
 	"""
 	def __init__(self, freq = None, wavelength = None, p_tx = None, 
-				 g_tx = None, sysLoss_tx = None, l_tx = None, 
-				 pointingErr = None, g_rx = None, t_sys = None,
-				 sysLoss_rx = None,  beamWidth = None, aperture = None,
-				 l_line = None):
+				 g_tx = None, sysLoss_tx = 0, l_tx = 0, 
+				 pointingErr = 0, g_rx = None, t_sys = None,
+				 sysLoss_rx = 0,  beamWidth = None, aperture = None,
+				 l_line = 0):
 		self.freq = freq
 		self.wavelength = wavelength
 		self.p_tx = p_tx
