@@ -13,6 +13,8 @@ from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 from poliastro.plotting.static import StaticOrbitPlotter
 from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
+import cartopy.crs as ccrs
+
 import seaborn as sns
 import astropy.units as u
 import astropy
@@ -20,6 +22,7 @@ from astropy import time
 from astropy.coordinates import EarthLocation
 import OpticalLinkBudget.OLBtools as olb
 import utils as utils
+from copy import deepcopy
 
 ## Constellation Class
 class Constellation():
@@ -52,7 +55,7 @@ class Constellation():
 		return const
 	
 	@classmethod
-	def from_walker(cls, i, t, p, f, alt, epoch = False):
+	def from_walker(cls, i, t, p, f, alt, epoch = False, raan_offset = 0 * u.deg):
 		"""
 		Generate a walker constellation
 		Outputs a set of satellite orbits 
@@ -64,6 +67,7 @@ class Constellation():
 		f (int between 0 and p-1): determines relative spacing between satellites in adjacent planes
 		alt (km)                 : altitude of orbit
 		epoch (astropy time)     : epoch to initiate satellites. Default of False defines satellites at J2000
+		raan_offset (astropy deg): offset the raan of the first satellite
 
 		Outputs:
 		sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
@@ -73,8 +77,15 @@ class Constellation():
 		#Check for astropy classes
 		if not isinstance(i, astropy.units.quantity.Quantity):
 			i = i * u.rad
+			print("WARNING: Inclination treated as radians")
 		if not isinstance(alt, astropy.units.quantity.Quantity):
 			alt = alt * u.km
+			print("WARNING: Altitude treated as kilometers")
+
+		if not isinstance(raan_offset, astropy.units.quantity.Quantity):
+			raan_offset = raan_offset * u.deg
+			print("WARNING: raan_offset treated as degrees")
+
 		#Check f is bettween 0 and p-1
 		assert f >= 0 and f <= p-1, "f must be between 0 and p-1"
 
@@ -91,7 +102,7 @@ class Constellation():
 		satIDCounter = 0
 		for plane in range(0,p): #Loop through each plane
 			planeSats = []
-			raan = plane * nodeSpacing
+			raan = plane * nodeSpacing + raan_offset
 			for sat in range(0,int(s)): #Loop through each satellite in a plane
 				omega0 = plane * phaseDiff
 				omega = omega0 + sat * interPlaneSpacing
@@ -671,8 +682,12 @@ class Constellation():
 		c = 3e8 * u.m / u.s
 
 		sats = self.get_sats()
+		numSats = len(sats)
 
 		outputData = {}
+
+		outputData['numSats'] = numSats
+		outputData['satData'] = {}
 		for satRef in sats:
 			for sat in sats:
 
@@ -717,7 +732,7 @@ class Constellation():
 
 				#Slew Equations
 				## Do it using the slew equation (From Trevor Dahl report)
-				rCV = pDiff.cross(velDiff)
+				rCV = pDiff.cross(velDiff) #r cross v
 				slewRateOrb = rCV / pDiffNorm**2
 				slewRateOrbNorm = slewRateOrb.norm()
 
@@ -732,19 +747,58 @@ class Constellation():
 				den = c - denTerm
 				fd_fs = num/den
 
-				dictEntry = {
-							'LOS':LOSidx,
-							'pDiff':pDiff,
-							'pDiffNorm':pDiffNorm,
-							'pDiffDot': pDiffDot,
-							'flag180': flag180,
+				## Perform max/min analysis
+
+				maxPos = max(pDiffNorm)
+				minPos = min(pDiffNorm)
+
+				maxVel = max(velDiffNorm)
+				minVel = min(velDiffNorm)
+
+				slewMax = max(slewRateOrbNorm)
+				slewMin = min(slewRateOrbNorm)
+
+				dopplerMax = max(fd_fs)
+				dopplerMin = min (fd_fs)
+
+				## Check if adjacent sats (i.e. SatIDs are consecutive)
+				idDiff = satRef.satID - sat.satID
+				idDiffAbs = abs(idDiff)
+				if idDiffAbs == 1 or idDiffAbs == numSats - 1:
+					adjacentFlag = 1 #Flag means satellites are adjacent
+				else:
+					adjacentFlag = 0
+
+				posDict = {
+							'relPosVec': pDiff,
+							'relPosNorm': pDiffNorm,
+							'relPosMax': maxPos,
+							'relPosMin': minPos,
+							'delRelPos': pDiffDot,
+				}
+
+				velDict = {
 							'relVel': velDiffNorm,
 							'slewRate': slewRateOrbNorm,
-							'dopplerShift':fd_fs,
+							'dopplerShift': fd_fs,
+							'velMax': maxVel,
+							'velMin': minVel, 
+							'slewMax': slewMax,
+							'slewMin': slewMin,
+							'dopplerMin': dopplerMin,
+							'dopplerMax': dopplerMax,
+				}
+
+				dictEntry = {
+							'LOS':LOSidx,
+							'relPosition':posDict,
+							'flag180': flag180,
+							'relVel': velDict,
+							'adjacent':adjacentFlag,	
 				}
 
 				dictKey = str(satRef.satID) + '-' + str(sat.satID)
-				outputData[dictKey] = dictEntry
+				outputData['satData'][dictKey] = dictEntry
 		return outputData
 
 	def calc_isl_link_performance(self, l_atm = 0, l_pointing = 0, 
@@ -829,6 +883,39 @@ class Constellation():
 			for sat in plane.sats:
 				satList.append(sat)
 		return satList
+
+	def combine_constellations(self, constellation):
+		"""
+		Combines two constellations by appending the first constellation with the planes
+		of a second constellation
+		"""
+		constellationID = 0
+		planes2append = constellation.planes
+		newConst = deepcopy(self)
+
+		for plane in newConst.planes: # assign constellation ID to original constellation
+			for sat in plane.sats:
+				sat.constellationID = constellationID
+
+		constellationID += 1
+		for plane in planes2append:
+			for sat in plane.sats:
+				sat.constellationID = constellationID #Add new constellationID to second constellation
+			newConst.add_plane(plane)
+
+		return newConst 
+
+	def reassign_sat_ids(self):
+		"""
+		Reassign satellite IDs, normally down after combining constellations
+		"""
+		satIDNew = 0
+		for plane in self.planes:
+			for sat in plane.sats:
+				sat.satID = satIDNew
+				satIDNew += 1
+
+
 	
 	def plot(self):
 		"""
@@ -842,7 +929,7 @@ class Constellation():
 		# op.show()
 		return op ##
 
-	def plotSats(self, satIDs):
+	def plot_sats(self, satIDs):
 		"""
 		Plot individual satellites using Poliastro interface
 
@@ -855,16 +942,58 @@ class Constellation():
 			if sat.satID in satIDs:
 				op.plot(sat, label=f"ID {sat.satID:.0f}")
 		return op
+
+	def plot2D(self, timeInts, pts):
+		"""
+		Plots 2D ground tracks
+
+		Inputs
+		timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
+		pts [integer] : Number of plot points
+
+
+		"""
+		sats = self.get_sats()
+
+		fig = plt.figure()
+		ax = plt.axes(projection=ccrs.PlateCarree())
+		ax.stock_img()
+
+		plottedConstellationIds = [] #Constellation IDs that have been plotted
+
+		cmap = ['k', 'b', 'g', 'p']
+		cmapIdx = -1
+		for sat in sats:
+			lon, lat, h = utils.getLonLat(sat, timeInts, pts)
+			if hasattr(sat, 'constellationID'):#sat.constellationID is not None:
+				
+				if sat.constellationID not in plottedConstellationIds:
+					plottedConstellationIds.append(sat.constellationID)
+					cmapIdx += 1
+					# print(cmapIdx)
+					# breakpoint()
+				ax.plot(lon, lat, cmap[cmapIdx], transform=ccrs.Geodetic())
+				ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
+			else:
+				ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
+				ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
+		return fig, ax
+
 		
 	def __eq__(self, other): 
 		return self.__dict__ == other.__dict__
 
-	def generate_czml_file(self, fname, prop_duration, sample_points):
+	def generate_czml_file(self, fname, prop_duration, sample_points, scene3d=True,
+							specificSats=False ):
 		"""
 		Generates CZML file for the constellation for plotting
 
 		Inputs
 		fname (string): File name (including path to file) for saved czml file. Currently plots in a directory czmlFiles
+		prop_duration (astropy time): Time to propagate in simulation
+		sample_points (int): Number of sample points
+		scene3d (bool): Set to false for 2D plot
+		specificSats (list of ints) : List of satIDs to plot
 		"""
 		seedSat = self.get_sats()[0]
 		start_epoch = seedSat.epoch #iss.epoch
@@ -872,12 +1001,22 @@ class Constellation():
 		end_epoch = start_epoch + prop_duration
 
 		earth_uv = "https://earthobservatory.nasa.gov/ContentFeature/BlueMarble/Images/land_shallow_topo_2048.jpg"
+
 		extractor = CZMLExtractor(start_epoch, end_epoch, sample_points,
-								  attractor=Earth, pr_map=earth_uv)
-		for plane in self.planes: #Loop through each plane
-			for sat in plane.sats: #Loop through each satellite in a plane
-				extractor.add_orbit(sat, groundtrack_show=False,
-							groundtrack_trail_time=0, path_show=True)
+									  attractor=Earth, pr_map=earth_uv, scene3D=scene3d)
+
+		if specificSats:
+			for plane in self.planes: #Loop through each plane
+				for sat in plane.sats: #Loop through each satellite in a plane
+					if sat.satID in specificSats:
+						extractor.add_orbit(sat, groundtrack_show=False,
+								groundtrack_trail_time=0, path_show=True)
+						# breakpoint()
+		else:
+			for plane in self.planes: #Loop through each plane
+				for sat in plane.sats: #Loop through each satellite in a plane
+					extractor.add_orbit(sat, groundtrack_show=False,
+								groundtrack_trail_time=0, path_show=True)
 				
 		testL = [str(x) for x in extractor.packets]
 		toPrint = ','.join(testL)
@@ -887,8 +1026,8 @@ class Constellation():
 		czmlDir = os.path.join(cwd, "czmlFiles")
 
 		## Check if directory is available
-		czmlDirExist = os.path.isdir(czmlDir)
-		os.makedirs(path, exist_ok=True) 
+		# czmlDirExist = os.path.isdir(czmlDir)
+		os.makedirs(czmlDir, exist_ok=True) 
 
 		fileDir = os.path.join(cwd, czmlDir, fname + ".czml")
 		f = open(fileDir, "w")

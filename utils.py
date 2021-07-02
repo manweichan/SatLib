@@ -2,6 +2,25 @@ import operator
 import copy
 import collections
 
+import cartopy.crs as ccrs
+import numpy as np
+import poliastro
+from astropy.coordinates import (
+    GCRS,
+    ITRS,
+    CartesianRepresentation,
+    EarthLocation)
+from astropy import time
+import astropy.units as u
+from poliastro.twobody.propagation import propagate
+from poliastro.twobody.propagation import cowell
+from poliastro.core.perturbations import J2_perturbation
+from poliastro.core.propagation import func_twobody
+from poliastro.bodies import Earth
+from poliastro.czml.extract_czml import CZMLExtractor
+
+import matplotlib.pyplot as plt
+
 def find_non_dominated_time_deltaV(flatArray):
     keyfun = operator.attrgetter('time2Pass.value')
     flatSort = copy.deepcopy(flatArray)
@@ -33,3 +52,153 @@ def flatten(x): # Flattens a nested list
         return [a for i in x for a in flatten(i)]
     else:
         return [x]
+
+def getLonLat(orb, timeInts, pts, J2 = True):
+    """
+    Function gets latitudes and longitudes for ground track plotting
+    
+    Inputs
+    orb [poliastro orbit object]
+    timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
+    pts [integer] : Number of plot points
+    J2 : If True, orbits propagate with J2 perturbation
+    
+    Outputs
+    lon: Longitude (astropy angle units)
+    lat: Latitude (astropy angle units)
+    height: height (astropy distance units)
+    
+    """
+    if J2:
+        def f(t0, state, k):
+            du_kep = func_twobody(t0, state, k)
+            ax, ay, az = J2_perturbation(
+                t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
+            )
+            du_ad = np.array([0, 0, 0, ax, ay, az])
+
+            return du_kep + du_ad
+
+        coords = propagate(
+            orb,
+            time.TimeDelta(timeInts),
+            method = cowell,
+            f=f,
+            )
+                       
+    elif not J2:
+        coords = propagate(orb,
+         timeDeltas,
+         rtol=1e-11,)
+    else:
+        print("Check J2 input value")
+    time_rangePlot = orb.epoch + timeInts
+    gcrsXYZ = GCRS(coords, obstime=time_rangePlot,
+                   representation_type=CartesianRepresentation)
+    itrs_xyz = gcrsXYZ.transform_to(ITRS(obstime=time_rangePlot))
+    loc = EarthLocation.from_geocentric(itrs_xyz.x,itrs_xyz.y,itrs_xyz.z)
+
+    lat = loc.lat
+    lon = loc.lon
+    height = loc.height
+    
+    return lon, lat, height
+
+
+def plotGroundTrack(lon, lat, style):
+    """
+    Plots ground tracks on map using cartopy
+
+    Inputs
+    lon (deg): Longitude
+    lat (deg): Latitude
+    style (string): linestyle from matplotlib
+
+    Outputs
+    fig: matplotlib fig object
+    ax: matplotlib ax object
+    """
+    fig = plt.figure(figsize=(15, 25))
+    ax = plt.axes(projection=ccrs.PlateCarree())
+    ax.stock_img()
+    ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
+    ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
+    return fig, ax
+
+# def get_constellation_constraints(dataDict):
+#     """
+#     Gets constellation constraints given data of the form of a dictionary
+#     with keys 'pDiff', 'pDiffNorm', 'pDiffDot', 'slewRate', and 'dopplerShift'
+#     **get_relative_velocity_analysis is a method of the Constellation class that
+#     **has an output of this form
+
+#     Inputs
+#     dataDict : Dictionary with keys 'pDiff', 'pDiffNorm', 'pDiffDot', 'slewRate', and 'dopplerShift', 'numSats'
+#                 corresponding to position between satellites, norm of position between satellites
+#                 relative velocity between satellites, slew rates, doppler shift between satellites,
+#                 and number of satellites.
+
+
+
+#     """
+#     satData = dataDict['satData']
+#     satKeys = satData.keys()
+
+#     numSats = dataDict['numSats'] #number of satellites in the constellation
+
+#     ## Find satellites that are adjacent (in sat ID)
+
+#     adjacentSatKeys = []
+#     for key in satKeys:
+#         keySplit = key.split('-')
+#         satID1 = int(keySplit[0])
+#         satID2 = int(keySplit[1])
+#         satIDDiff = satID1 - satID2
+#         satDiffAbs = abs(satIDDiff)
+#         if satDiffAbs == 1 or satDiffAbs == numSats - 1:
+#             satData[key]['adjacent'] = 1 #1 for adjacent satellites figure 8
+#             keyStr = f'{satID1}-{satID2}'
+#             adjacentSatKeys.append(keyStr)
+#         else:
+#             satData[key]['adjacent'] = 0
+
+#     ## Get minimum/maximum distances between satellites in the constellation
+#     for key in satKeys:
+#         pairData = satData[key] #data pertaining to this particular satellite pair
+
+#         ## Get distances
+#         distances = satData[key]['pDiffNorm']
+#         maxDist = max(distances)
+#         minDist = min(distances)
+
+#         pairData['pDiffNormMax'] = maxDist
+#         pairData['pDiffNormMin'] = minDist
+
+#         ## Get velocities
+#         velocities = satData[key]['pDiffDot']
+#         maxVel = max(velocities)
+#         minVel = min(velocities)
+
+#         pairData['pDiffDotMax'] = maxVel
+#         pairData['pDiffDotMin'] = minVel
+
+
+#         ## Get slew rates
+#         slewRates = satData[key]['slewRate']
+#         maxSlew = max(slewRates)
+#         minSlew = min(slewRates)
+
+#         pairData['slewRateMax'] = maxSlew
+#         pairData['slewRateMin'] = minSlew
+
+#         ## Get doppler shifts
+#         doppler = satData[key]['dopplerShift']
+#         maxDoppler = max(doppler)
+#         minDoppler = min(doppler)
+
+#         pairData['dopplerMax'] = maxDoppler
+#         pairData['dopplerMin'] = minDoppler
+
+
+#     return dataDict
+
