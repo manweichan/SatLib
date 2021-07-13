@@ -1,0 +1,696 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Welcome to SatLib’s documentation! &#8212; SatLib  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinxdoc.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">SatLib  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Welcome to SatLib’s documentation!</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-constellationClasses">
+<span id="welcome-to-satlib-s-documentation"></span><h1>Welcome to SatLib’s documentation!<a class="headerlink" href="#module-constellationClasses" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.CommsPayload">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">CommsPayload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wavelength</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sysLoss_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pointingErr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_rx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_sys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sysLoss_rx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beamWidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aperture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_line</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.CommsPayload" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>freq</strong> – frequency (easier for rf payloads)</p></li>
+<li><p><strong>wavelength</strong> – wavelength (easier for optical payloads)</p></li>
+<li><p><strong>p_tx</strong> (<em>W</em>) – Transmit power</p></li>
+<li><p><strong>g_tx</strong> (<em>dB</em>) – Transmit gain</p></li>
+<li><p><strong>sysLoss_tx</strong> (<em>dB</em>) – Transmit system loss</p></li>
+<li><p><strong>l_tx</strong> (<em>dB</em>) – Other transmit loss</p></li>
+<li><p><strong>pointingErr</strong> (<em>dB</em>) – Pointing error</p></li>
+<li><p><strong>g_rx</strong> (<em>dB</em>) – Receive gain</p></li>
+<li><p><strong>tSys</strong> (<em>K</em>) – System temperature on receive side</p></li>
+<li><p><strong>sysLoss_rx</strong> (<em>dB</em>) – Recieve system loss</p></li>
+<li><p><strong>beamWidth</strong> (<em>rad</em>) – FWHM beam width for optical payload (Gaussian analysis)</p></li>
+<li><p><strong>aperture</strong> (<em>m</em>) – Optical recieve aperture diameter</p></li>
+<li><p><strong>l_line</strong> (<em>dB</em>) – Line loss on receive side</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.CommsPayload.set_sys_temp">
+<span class="sig-name descname"><span class="pre">set_sys_temp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">T_ant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T_feeder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T_receiver</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">L_feeder</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.CommsPayload.set_sys_temp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate system temperature.
+Reference: Section 5.5.5 of Maral “Satellite Communication Systems” pg 186</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>T_ant</strong> (<em>K</em>) – Temperature of antenna</p></li>
+<li><p><strong>T_feeder</strong> (<em>K</em>) – Temperature of feeder</p></li>
+<li><p><strong>T_receiver</strong> (<em>K</em>) – Temperature of receiver</p></li>
+<li><p><strong>L_feeder</strong> (<em>dB</em>) – Feeder loss</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.Constellation">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">Constellation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">planes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the Constellation class that holds a set of orbital planes</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.add_comms_payload">
+<span class="sig-name descname"><span class="pre">add_comms_payload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">commsPL</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.add_comms_payload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds comms payload to each satellite in the constellation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>commsPL</strong> (<em>CommsPayload Object</em>) – Communications payload</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.add_plane">
+<span class="sig-name descname"><span class="pre">add_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plane</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.add_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a plane to the Constellation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.calc_isl_link_performance">
+<span class="sig-name descname"><span class="pre">calc_isl_link_performance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l_atm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_pointing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_pol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rxID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drReq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.calc_isl_link_performance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the isl link performance between satellites in the constellation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>l_atm</strong> (<em>dB</em>) – Atmospheric loss</p></li>
+<li><p><strong>l_pointing</strong> (<em>dB</em>) – pointing loss</p></li>
+<li><p><strong>l_pol</strong> (<em>dB</em>) – Polarization loss</p></li>
+<li><p><strong>txID</strong> (<em>int</em>) – Choose tx communications payload. Default to 0 since we will most likely just have 1 payload</p></li>
+<li><p><strong>rxID</strong> (<em>int</em>) – Choose rx communications payload. Default to 0 since we will most likely just have 1 payload</p></li>
+<li><p><strong>drReq</strong> (<em>bytes</em>) – Required data rate in bytes. Default to None</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.combine_constellations">
+<span class="sig-name descname"><span class="pre">combine_constellations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constellation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.combine_constellations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combines two constellations by appending the first constellation with the planes
+of a second constellation</p>
+<p>Usually run reassign_sat_ids afterwards to reassign satellite Ids in the new constellation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.from_list">
+<em class="property"><span class="pre">classmethod</span> </em><span class="sig-name descname"><span class="pre">from_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">planes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.from_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create constellation object from a list of plane objects</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.from_walker">
+<em class="property"><span class="pre">classmethod</span> </em><span class="sig-name descname"><span class="pre">from_walker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">i</span></em>, <em class="sig-param"><span class="pre">t</span></em>, <em class="sig-param"><span class="pre">p</span></em>, <em class="sig-param"><span class="pre">f</span></em>, <em class="sig-param"><span class="pre">alt</span></em>, <em class="sig-param"><span class="pre">epoch=False</span></em>, <em class="sig-param"><span class="pre">raan_offset=&lt;Quantity</span> <span class="pre">0.</span> <span class="pre">deg&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.from_walker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a walker constellation
+Outputs a set of satellite orbits</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>i</strong> (<em>rad</em>) – inclination</p></li>
+<li><p><strong>t</strong> (<em>int</em>) – total number of satellites</p></li>
+<li><p><strong>p</strong> (<em>int</em>) – total number of planes</p></li>
+<li><p><strong>f</strong> (<em>int between 0 and p-1</em>) – determines relative spacing between satellites in adjacent planes</p></li>
+<li><p><strong>alt</strong> (<em>km</em>) – altitude of orbit</p></li>
+<li><p><strong>epoch</strong> (<em>astropy time</em>) – epoch to initiate satellites. Default of False defines satellites at J2000</p></li>
+<li><p><strong>raan_offset</strong> (<em>astropy deg</em>) – offset the raan of the first satellite</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl>
+<dt>tuple containing:</dt><dd><p>sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane</p>
+<p>constClass (object)      : Constellation class from satClasses</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.generate_czml_file">
+<span class="sig-name descname"><span class="pre">generate_czml_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prop_duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scene3d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">specificSats</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.generate_czml_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates CZML file for the constellation for plotting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fname</strong> (<em>string</em>) – File name (including path to file) for saved czml file. Currently plots in a directory czmlFiles</p></li>
+<li><p><strong>prop_duration</strong> (<em>astropy time</em>) – Time to propagate in simulation</p></li>
+<li><p><strong>sample_points</strong> (<em>int</em>) – Number of sample points</p></li>
+<li><p><strong>scene3d</strong> (<em>bool</em>) – Set to false for 2D plot</p></li>
+<li><p><strong>specificSats</strong> (<em>list of ints</em>) – List of satIDs to plot</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_ISL_maneuver">
+<span class="sig-name descname"><span class="pre">get_ISL_maneuver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Constellation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perturbation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'J2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plotFlag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savePlot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_ISL_maneuver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate potential ISL maneuvers between all satellites in current constellation with
+all satellites of another satellite</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>Constellation object</em>) – Constellation making the maneuvers</p></li>
+<li><p><strong>Constellation</strong> (<em>Constellation object</em>) – Constellation to intercept</p></li>
+<li><p><strong>perturbation</strong> (<em>string</em>) – ‘J2’ for J2 perturbation, else ‘none’</p></li>
+<li><p><strong>plotFlag</strong> (<em>boolean</em>) – plot if True</p></li>
+<li><p><strong>savePlot</strong> (<em>Bool</em>) – Saves plot if True</p></li>
+<li><p><strong>figName</strong> (<em>str</em>) – file name for figure</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl>
+<dt>tuple containing:</dt><dd><p>maneuverObjs [list] : list of maneuver objects to create ISL opportunity</p>
+<p>deltaVs [list] : list of total deltaVs</p>
+<p>timeOfISL [list] : list of times that ISL opportunity will happen</p>
+<p>paretoSats [list] : list of satellites on the pareto front</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_pass_maneuver">
+<span class="sig-name descname"><span class="pre">get_pass_maneuver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">GroundLoc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tInit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">useSatEpoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savePlot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_pass_maneuver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets set a maneuvers that will pass a specific ground location on
+select days</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>GroundLoc</strong> (<em>Obj</em>) – Ground location object to be passed over</p></li>
+<li><p><strong>tInit</strong> (<em>astropy time object</em>) – Time to initialize planner</p></li>
+<li><p><strong>days</strong> (<em>int</em>) – Amount of days ahead to for the scheduler to plan for</p></li>
+<li><p><strong>useSatEpoch</strong> (<em>Bool</em>) – If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner</p></li>
+<li><p><strong>task</strong> (<em>str</em>) – The assigned task for the desired satellite. Options: ‘Image’, ‘ISL’, ‘Downlink’</p></li>
+<li><p><strong>plot</strong> (<em>Bool</em>) – Plots maneuvers if True</p></li>
+<li><p><strong>savePlot</strong> (<em>Bool</em>) – Saves plot if True</p></li>
+<li><p><strong>figName</strong> (<em>str</em>) – file name for figure</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>tuple containing:</p>
+<blockquote>
+<div><p>maneuverPoolCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth),</p>
+<p>maneuverPoolAll (list of Maneuver objects): All potential maneuvers,</p>
+<p>paretoSats (list of pareto front satellites): Satellite objects on the pareto front,</p>
+<p>ghostSatsInitAll (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time,</p>
+<p>ghostSatsPassAll(array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_relative_velocity_analysis">
+<span class="sig-name descname"><span class="pre">get_relative_velocity_analysis</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_relative_velocity_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets relative velocities between satellites in the constellation</p>
+<p>Needs to run get_rv_from_propagate first to get position/velocity values first</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><dl>
+<dt>First layer key are the satellites being compared i.e. ‘4-10’</dt><dd><p>means that satellite 4 is compared to satellite 10. Secoond layer
+key are the specific data types described below</p>
+<p>LOS (Bool): Describes if there is a line of sight between the satellites</p>
+<p>pDiff : Relative position (xyz)</p>
+<p>pDiffNorm : magnitude of relative positions</p>
+<p>pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)</p>
+<p>flag180 : Flag to determine if there was a 180 degree ‘direct crossing’</p>
+<p>velDiffNorm : relative velocities</p>
+<p>slewRate : slew rates required to hold pointing between satellites</p>
+<p>dopplerShift : Effective doppler shifts due to relative velocities</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>outputData (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_rv_from_propagate">
+<span class="sig-name descname"><span class="pre">get_rv_from_propagate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeDeltas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'J2'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_rv_from_propagate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Propagates satellites and returns position (R) and Velocity (V) values
+at the specific timeDeltas input. Defaults to propagation using J2 perturbation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get position/velocity data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_sats">
+<span class="sig-name descname"><span class="pre">get_sats</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_sats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a list of all the satetllite objects in the constellation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.plan_reconfigure">
+<span class="sig-name descname"><span class="pre">plan_reconfigure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">GroundLoc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">GroundStation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tInit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selectionMethod</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selectionParams</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savePlot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.plan_reconfigure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plane reconfiguration of the constellation to visit and image a GroundLoc and downlink to a GroundStation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>GroundLoc</strong> (<em>GroundLoc class</em>) – Ground location to image</p></li>
+<li><p><strong>GroundStation</strong> (<em>GroundStation/GroundLoc class</em>) – Ground station to downlink data to</p></li>
+<li><p><strong>tInit</strong> (<em>astropy time object</em>) – Time to initialize planner</p></li>
+<li><p><strong>days</strong> (<em>int</em>) – Amount of days ahead to for the scheduler to plan for | TO DO: Determine if this is actually necessary in code</p></li>
+<li><p><strong>figName</strong> (<em>str</em>) – figname to save plots to</p></li>
+<li><p><strong>selectionMethod</strong> (<em>int</em>) – Determines how satellites are selected</p></li>
+<li><p><strong>selectionParams</strong> (<em>list of 2 element lists</em>) – Need 4 different weights, 1 to select imaging satellites, 2 to select ISL satellites, 3 to select downlink satellites, 4 to select missiions.
+Elements 5,6,7,8 are the number of selected satellites to move into the next round of the selection cycle.
+Example: [[1,1],[1,3],[1,5],[1,8] 5, 5, 5, 6]</p></li>
+<li><p><strong>plot</strong> (<em>Bool</em>) – Outputs plots if true</p></li>
+<li><p><strong>savePlot</strong> (<em>Bool</em>) – Save plot outputs</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Suggested missions</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot constellation using Poliastro interface</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.plot2D">
+<span class="sig-name descname"><span class="pre">plot2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeInts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pts</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.plot2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots 2D ground tracks</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>[</strong><strong>astropy object</strong><strong>]</strong> (<em>timeInts</em>) – time intervals to propagate where 0 refers to the epoch of the orb input variable</p></li>
+<li><p><strong>[</strong><strong>integer</strong><strong>]</strong> (<em>pts</em>) – Number of plot points</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.plot_sats">
+<span class="sig-name descname"><span class="pre">plot_sats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">satIDs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.plot_sats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot individual satellites using Poliastro interface</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>[</strong><strong>list</strong><strong>]</strong> (<em>satIDs</em>) – list of integers referring to satIDs to plot</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.propagate">
+<span class="sig-name descname"><span class="pre">propagate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.propagate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Propagates satellites in the constellation to a certain time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>time</strong> (<em>astropy time object</em>) – Time to propagate to</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.reassign_sat_ids">
+<span class="sig-name descname"><span class="pre">reassign_sat_ids</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.reassign_sat_ids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reassign satellite IDs, normally down after combining constellations</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.remove_comms_payload">
+<span class="sig-name descname"><span class="pre">remove_comms_payload</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.remove_comms_payload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes comms payload in each satellite in the constellation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.ManeuverObject">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">ManeuverObject</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deltaV</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time2Pass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">satID</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">planeID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mySat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mySatFin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.ManeuverObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Not to be confused with the poliastro class ‘Maneuver’</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.ManeuverObject.get_weighted_dist_from_utopia">
+<span class="sig-name descname"><span class="pre">get_weighted_dist_from_utopia</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">w_delv</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_t</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.ManeuverObject.get_weighted_dist_from_utopia" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get weighted distance from utopia point</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>w_delv</strong> – delV weight</p></li>
+<li><p><strong>w_t</strong> – time weight</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.MissionOption">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">MissionOption</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">listOfTransfers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maneuverGoal</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.MissionOption" title="Permalink to this definition">¶</a></dt>
+<dd><p>Holder for mission options</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.MissionOption.get_weighted_dist_from_utopia">
+<span class="sig-name descname"><span class="pre">get_weighted_dist_from_utopia</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">w_delv</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_t</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.MissionOption.get_weighted_dist_from_utopia" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get weighted distance from utopia point</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>w_delv</strong> – delV weight</p></li>
+<li><p><strong>w_t</strong> – time weight</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.Plane">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">Plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">i</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">planeID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">passDetails</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines an orbital plane object that holds a set of satellite objects</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Plane.add_sat">
+<span class="sig-name descname"><span class="pre">add_sat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sat</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Plane.add_sat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add satellite object to the plane</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Plane.from_list">
+<em class="property"><span class="pre">classmethod</span> </em><span class="sig-name descname"><span class="pre">from_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">satList</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">planeID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Plane.from_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create plane from a list of satellite objects</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Plane.get_pass_details">
+<span class="sig-name descname"><span class="pre">get_pass_details</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">GroundLoc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tInit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">useSatEpoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Plane.get_pass_details" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets set a maneuvers that will pass a specific ground location on
+select days</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>GroundLoc</strong> (<em>Obj</em>) – Ground location object to be passed over</p></li>
+<li><p><strong>tInit</strong> (<em>astropy time object</em>) – Time to initialize planner</p></li>
+<li><p><strong>days</strong> (<em>int</em>) – Amount of days ahead to for the scheduler to plan for</p></li>
+<li><p><strong>useSatEpoch</strong> (<em>Bool</em>) – If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner</p></li>
+<li><p><strong>task</strong> (<em>string</em>) – The assigned task for the desired satellite. Options: ‘Image’, ‘ISL’, ‘Downlink’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl>
+<dt>tuple containing:</dt><dd><p>maneuverListAll (list of Maneuver objects): All potential maneuvers</p>
+<p>maneuverListCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Plane.set_plane_parameters">
+<span class="sig-name descname"><span class="pre">set_plane_parameters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Plane.set_plane_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the plane parameters a, e, i, from the average orbital parameters
+of the satellites in the plane</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.Satellite">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">Satellite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">satID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataMem</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schedule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commsPayload</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previousTransfer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">planeID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previousSatInteractions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the satellite class</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.calc_link_budget_tx">
+<span class="sig-name descname"><span class="pre">calc_link_budget_tx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx_object</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_relative_position</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path_dist</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_atm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_pointing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_pol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rxID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drReq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.calc_link_budget_tx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate link budget with self as transmitter</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rx_object</strong> – Satellite or GroundStation Object</p></li>
+<li><p><strong>from_relative_position</strong> (<em>bool</em>) – Flag if True, calculates path propagation from given position (path_dist)</p></li>
+<li><p><strong>path_dist</strong> (<em>astropy distance</em>) – Distance between tx and rx antennas</p></li>
+<li><p><strong>l_atm</strong> (<em>dB</em>) – Atmospheric loss</p></li>
+<li><p><strong>l_pointing</strong> (<em>dB</em>) – pointing loss</p></li>
+<li><p><strong>l_pol</strong> (<em>dB</em>) – Polarization loss</p></li>
+<li><p><strong>txID</strong> (<em>int</em>) – Choose tx communications payload. Default to 0 since we will most likely just have 1 payload</p></li>
+<li><p><strong>rxID</strong> (<em>int</em>) – Choose rx communications payload. Default to 0 since we will most likely just have 1 payload</p></li>
+<li><p><strong>drReq</strong> (<em>bytes</em>) – Required data rate in bytes. Default to None</p></li>
+<li><p><strong>verbose</strong> (<em>Bool</em>) – If True, print components of link budget</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>P_rx (dBW): Received power</p>
+<p>ConN0 (dBHz): Signal to noise ratio</p>
+<p>EbN0 (dB): Energy per bit. Calculated if a required data rate is given “drReq”</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(dictionary)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.desired_raan_from_pass_time">
+<span class="sig-name descname"><span class="pre">desired_raan_from_pass_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tPass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">GroundLoc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.desired_raan_from_pass_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the desired orbit specifications from a desired pass time and groundstation
+Based on equations in section 3.1.2 in Legge’s thesis (2014)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tPass</strong> (<em>astropy time object</em>) – Desired time of pass. Local UTC time preferred</p></li>
+<li><p><strong>GroundLoc</strong> (<em>Obj</em>) – GroundLoc class. This is the ground location that you want to get a pass from</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>tuple containing:</dt><dd><dl class="simple">
+<dt>raans [List]: 2 element list where 1st element corresponding to RAAN in the ascending case</dt><dd><p>and the 2nd element correspond to RAAN in the descending case</p>
+</dd>
+<dt>Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)</dt><dd><p>of the ascending case and descending case respectively</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.get_desired_pass_orbs">
+<span class="sig-name descname"><span class="pre">get_desired_pass_orbs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">GroundLoc</span></em>, <em class="sig-param"><span class="pre">tInitSim</span></em>, <em class="sig-param"><span class="pre">days</span></em>, <em class="sig-param"><span class="pre">useSatEpoch</span></em>, <em class="sig-param"><span class="pre">task=None</span></em>, <em class="sig-param"><span class="pre">refVernalEquinox=&lt;Time</span> <span class="pre">object:</span> <span class="pre">scale='utc'</span> <span class="pre">format='isot'</span> <span class="pre">value=2021-03-20T00:00:00.000&gt;</span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.get_desired_pass_orbs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an orbit and ground site, gets the pass time and true anomaly
+required to complete a pass. This is a rough estimate of the time and good
+for quick but not perfectly accurate scheduling.
+Loosely based on Legge’s thesis section 3.1.2</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>GroundLoc</strong> (<em>Obj</em>) – GroundLoc class. This is the ground location that you want to get a pass from</p></li>
+<li><p><strong>tInit</strong> (<em>astropy time object</em>) – Time to initialize planner</p></li>
+<li><p><strong>days</strong> (<em>list of astropy.time obj</em>) – Amount of days ahead to for the scheduler to plan for</p></li>
+<li><p><strong>useSatEpoch</strong> (<em>Bool</em>) – Use satellite epoch for start of planner (useful for subsequent stages of planner)</p></li>
+<li><p><strong>task</strong> (<em>string</em>) – The assigned task for the desired satellite. Options: ‘Image’, ‘ISL’, ‘Downlink’</p></li>
+<li><p><strong>refVernalEquinox</strong> (<em>astropy time object</em>) – Date of vernal equinox. Default is for 2021</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl>
+<dt>tuple containing:</dt><dd><p>desiredGhostOrbits_atPass (array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)</p>
+<p>desiredGhostOrbits_tInit (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time</p>
+<p>maneuverObjects (array of Manuever objects): Maneuver object class that holds time and cost of maneuvers</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.get_nu_intercept">
+<span class="sig-name descname"><span class="pre">get_nu_intercept</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">satellite</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.get_nu_intercept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given two orbits, determine true anomaly (argument of latitude)
+of each circular orbit for the position of closest approach of the orbits
+themselves (not the individual satellites). This will help
+determine which point in the orbit is desired for rendezvous for ISL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>self</strong> (<em>Satellite object</em>) – Self, which is one of the satellites in question</p></li>
+<li><p><strong>satellite</strong> (<em>Satellite object</em>) – The target satellite of the reendezvous</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Set of 2 true anomalies for each respective orbit for optimal ISL distance closing</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.get_pass_from_plane">
+<span class="sig-name descname"><span class="pre">get_pass_from_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Plane</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.get_pass_from_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get pass details from plane (Also will output mean anomaly and time of pass)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.schedule_coplanar_intercept">
+<span class="sig-name descname"><span class="pre">schedule_coplanar_intercept</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">targetSat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ISL'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perturbation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'J2'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.schedule_coplanar_intercept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Schedule coplanar intercept (2 satellites are in the same orbital plane)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>targetSat</strong> (<em>Satellite object</em>) – Target satellite</p></li>
+<li><p><strong>task</strong> (<em>String</em>) – task to be completed, default is ISL</p></li>
+<li><p><strong>options</strong> (<em>perturbation</em>) – ‘none’, ‘J2’</p></li>
+<li><p><strong>no perturbation is currently implemented</strong> (<em>Only</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>maneuverObjects [ManeuverObjects]: Maneuver objects for both phasing burns
+deltaVTot : total deltaV of phasing maneuver
+islTime : time of ISL
+islOrb (Satellite object): Orbit after ISL maneuvers
+debug (optional if debug=True): list of satellites to plot to ensure ISL
+posDiff (optional if debug=True): difference in position between each of the satellites in debug and the initial satellite at time of maneuver</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(Dictionary)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.Transfer">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">Transfer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deltaV</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time2Pass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">satID</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">planeID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mySat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mySatFin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maneuvers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Transfer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to SatLib’s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">SatLib  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Welcome to SatLib’s documentation!</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021, Manwei Chan.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.0.3.
+    </div>
+  </body>
+</html>

@@ -60,18 +60,20 @@ class Constellation():
 		Generate a walker constellation
 		Outputs a set of satellite orbits 
 
-		Inputs:
-		i (rad)                  : inclination
-		t (int)                  : total number of satellites
-		p (int)                  : total number of planes
-		f (int between 0 and p-1): determines relative spacing between satellites in adjacent planes
-		alt (km)                 : altitude of orbit
-		epoch (astropy time)     : epoch to initiate satellites. Default of False defines satellites at J2000
-		raan_offset (astropy deg): offset the raan of the first satellite
+		Args:
+			i (rad)                  : inclination
+			t (int)                  : total number of satellites
+			p (int)                  : total number of planes
+			f (int between 0 and p-1): determines relative spacing between satellites in adjacent planes
+			alt (km)                 : altitude of orbit
+			epoch (astropy time)     : epoch to initiate satellites. Default of False defines satellites at J2000
+			raan_offset (astropy deg): offset the raan of the first satellite
 
-		Outputs:
-		sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
-		constClass (object)      : Constellation class from satClasses
+		Returns:
+			(tuple): tuple containing:
+				sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
+
+				constClass (object)      : Constellation class from satClasses
 		"""
 
 		#Check for astropy classes
@@ -128,21 +130,21 @@ class Constellation():
 		"""
 		Plane reconfiguration of the constellation to visit and image a GroundLoc and downlink to a GroundStation
 
-		Inputs
-		GroundLoc (GroundLoc class): Ground location to image
-		GroundStation (GroundStation/GroundLoc class): Ground station to downlink data to
-		tInit (astropy time object): Time to initialize planner
-		days (int): Amount of days ahead to for the scheduler to plan for | TO DO: Determine if this is actually necessary in code
-		figName (str): figname to save plots to
-		selectionMethod (int): Determines how satellites are selected
-		selectionParams (list of 2 element lists): Need 4 different weights, 1 to select imaging satellites, 2 to select ISL satellites, 3 to select downlink satellites, 4 to select missiions. 
-				Elements 5,6,7,8 are the number of selected satellites to move into the next round of the selection cycle.
-				Example: [[1,1],[1,3],[1,5],[1,8] 5, 5, 5, 6]
-		plot (Bool): Outputs plots if true
-		savePlot (Bool): Save plot outputs
+		Args:
+			GroundLoc (GroundLoc class): Ground location to image
+			GroundStation (GroundStation/GroundLoc class): Ground station to downlink data to
+			tInit (astropy time object): Time to initialize planner
+			days (int): Amount of days ahead to for the scheduler to plan for | TO DO: Determine if this is actually necessary in code
+			figName (str): figname to save plots to
+			selectionMethod (int): Determines how satellites are selected
+			selectionParams (list of 2 element lists): Need 4 different weights, 1 to select imaging satellites, 2 to select ISL satellites, 3 to select downlink satellites, 4 to select missiions. 
+					Elements 5,6,7,8 are the number of selected satellites to move into the next round of the selection cycle.
+					Example: [[1,1],[1,3],[1,5],[1,8] 5, 5, 5, 6]
+			plot (Bool): Outputs plots if true
+			savePlot (Bool): Save plot outputs
 
-		Outputs
-		suggestedMissions: Suggested mission
+		Returns:
+			List: Suggested missions
 		"""
 		if selectionMethod==1:
 			imageWeights = selectionParams[0]
@@ -381,23 +383,30 @@ class Constellation():
 		Gets set a maneuvers that will pass a specific ground location on
 		select days
 
-		Inputs:
-		GroundLoc (Obj): Ground location object to be passed over
-		tInit (astropy time object): Time to initialize planner
-		days (int): Amount of days ahead to for the scheduler to plan for
-		useSatEpoch (Bool): If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner
-		task (string): The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
-		plot (Bool): Plots maneuvers if True
-		savePlot(Bool): Saves plot if True
-		figName (str): file name for figure
+		Args:
+			GroundLoc (Obj): Ground location object to be passed over
+			tInit (astropy time object): Time to initialize planner
+			days (int): Amount of days ahead to for the scheduler to plan for
+			useSatEpoch (Bool): If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner
+			task (str): The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
+			plot (Bool): Plots maneuvers if True
+			savePlot(Bool): Saves plot if True
+			figName (str): file name for figure
 
 
-		Outputs:
-		maneuverPoolCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)
-		maneuverPoolAll (list of Maneuver objects): All potential maneuvers
-		paretoSats (list of pareto front satellites): Satellite objects on the pareto front
-		ghostSatsInitAll (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time
-		ghostSatsPassAll(array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
+		Returns:
+			(tuple): tuple containing:
+
+				maneuverPoolCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth),
+
+				maneuverPoolAll (list of Maneuver objects): All potential maneuvers,
+
+				paretoSats (list of pareto front satellites): Satellite objects on the pareto front,
+
+				ghostSatsInitAll (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time,
+
+				ghostSatsPassAll(array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
+
 		"""
 		if savePlot:
 			assert figName, "Need to name your figure using figName input"
@@ -471,19 +480,23 @@ class Constellation():
 		Calculate potential ISL maneuvers between all satellites in current constellation with
 		all satellites of another satellite
 		
-		Inputs
-		self (Constellation object): Constellation making the maneuvers
-		Constellation (Constellation object): Constellation to intercept
-		perturbation (string): 'J2' for J2 perturbation, else 'none'
-		plotFlag (boolean): plot if True
-		savePlot(Bool): Saves plot if True
-		figName (str): file name for figure
+		Args:
+			self (Constellation object): Constellation making the maneuvers
+			Constellation (Constellation object): Constellation to intercept
+			perturbation (string): 'J2' for J2 perturbation, else 'none'
+			plotFlag (boolean): plot if True
+			savePlot(Bool): Saves plot if True
+			figName (str): file name for figure
 
-		Output
-		maneuverObjs [list] : list of maneuver objects to create ISL opportunity
-		deltaVs [list] : list of total deltaVs
-		timeOfISL [list] : list of times that ISL opportunity will happen
-		paretoSats [list] : list of satellites on the pareto front
+		Returns:
+			(tuple): tuple containing:
+				maneuverObjs [list] : list of maneuver objects to create ISL opportunity
+
+				deltaVs [list] : list of total deltaVs
+
+				timeOfISL [list] : list of times that ISL opportunity will happen
+
+				paretoSats [list] : list of satellites on the pareto front
 		"""
 		if savePlot:
 			assert figName, "Need to name your figure using figName input"
@@ -555,8 +568,8 @@ class Constellation():
 		"""
 		Propagates satellites in the constellation to a certain time.
 
-		Inputs
-		time(astropy time object): Time to propagate to
+		Args:
+			time(astropy time object): Time to propagate to
 		"""
 		planes2const = []
 		for plane in self.planes:
@@ -575,8 +588,8 @@ class Constellation():
 		"""
 		Adds comms payload to each satellite in the constellation.
 
-		Inputs
-		commsPL (CommsPayload Object): Communications payload
+		Args:
+			commsPL (CommsPayload Object): Communications payload
 		"""
 		planes2const = []
 		for plane in self.planes:
@@ -613,8 +626,8 @@ class Constellation():
 		Propagates satellites and returns position (R) and Velocity (V) values
 		at the specific timeDeltas input. Defaults to propagation using J2 perturbation
 
-		Inputs
-		timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
+		Args:
+			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
 		"""
 		planes2const = []
 
@@ -646,7 +659,9 @@ class Constellation():
 						)
 
 				sat.rvCoords = coords
+				sat.rvTimeDeltas = timeDeltas
 				planeSats.append(sat)
+				sat.rvTimes = sat.epoch + timeDeltas
 			planes2append = Plane.from_list(planeSats)
 			planes2const.append(planes2append)
 			# breakpoint()
@@ -659,18 +674,26 @@ class Constellation():
 
 		Needs to run get_rv_from_propagate first to get position/velocity values first
 
-		Outputs
-		outputData (dict) : First layer key are the satellites being compared i.e. '4-10'
+		Returns:
+			outputData (dict) : First layer key are the satellites being compared i.e. '4-10'
 							means that satellite 4 is compared to satellite 10. Secoond layer
-							key are the specific data types described below:
-
+							key are the specific data types described below
+							
+							
 							LOS (Bool): Describes if there is a line of sight between the satellites
+
 							pDiff : Relative position (xyz)
+
 							pDiffNorm : magnitude of relative positions
-							pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossinig)
+
+							pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)
+
 							flag180 : Flag to determine if there was a 180 degree 'direct crossing'
+
 							velDiffNorm : relative velocities
+
 							slewRate : slew rates required to hold pointing between satellites
+
 							dopplerShift : Effective doppler shifts due to relative velocities
 		"""
 
@@ -794,7 +817,9 @@ class Constellation():
 							'relPosition':posDict,
 							'flag180': flag180,
 							'relVel': velDict,
-							'adjacent':adjacentFlag,	
+							'adjacent':adjacentFlag,
+							'timeDeltas':sat.rvTimeDeltas,
+							'times':sat.rvTimes,
 				}
 
 				dictKey = str(satRef.satID) + '-' + str(sat.satID)
@@ -807,13 +832,13 @@ class Constellation():
 		"""
 		Calculates the isl link performance between satellites in the constellation
 
-		Inputs:
-		l_atm (dB): Atmospheric loss
-		l_pointing (dB): pointing loss
-		l_pol (dB): Polarization loss
-		txID (int): Choose tx communications payload. Default to 0 since we will most likely just have 1 payload
-		rxID (int): Choose rx communications payload. Default to 0 since we will most likely just have 1 payload
-		drReq (bytes): Required data rate in bytes. Default to None
+		Args:
+			l_atm (dB): Atmospheric loss
+			l_pointing (dB): pointing loss
+			l_pol (dB): Polarization loss
+			txID (int): Choose tx communications payload. Default to 0 since we will most likely just have 1 payload
+			rxID (int): Choose rx communications payload. Default to 0 since we will most likely just have 1 payload
+			drReq (bytes): Required data rate in bytes. Default to None
 		"""
 		if not hasattr(self.planes[0].sats[0], 'commsPayload'):
 			print("Assign communications payload to satellites in constellation")
@@ -888,6 +913,8 @@ class Constellation():
 		"""
 		Combines two constellations by appending the first constellation with the planes
 		of a second constellation
+
+		Usually run reassign_sat_ids afterwards to reassign satellite Ids in the new constellation
 		"""
 		constellationID = 0
 		planes2append = constellation.planes
@@ -933,8 +960,8 @@ class Constellation():
 		"""
 		Plot individual satellites using Poliastro interface
 
-		Inputs
-		satIDs [list] : list of integers referring to satIDs to plot
+		Args:
+			satIDs [list] : list of integers referring to satIDs to plot
 		"""
 		sats = self.get_sats()
 		op = OrbitPlotter3D()
@@ -947,9 +974,9 @@ class Constellation():
 		"""
 		Plots 2D ground tracks
 
-		Inputs
-		timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
-		pts [integer] : Number of plot points
+		Args:
+			timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
+			pts [integer] : Number of plot points
 
 
 		"""
@@ -988,12 +1015,12 @@ class Constellation():
 		"""
 		Generates CZML file for the constellation for plotting
 
-		Inputs
-		fname (string): File name (including path to file) for saved czml file. Currently plots in a directory czmlFiles
-		prop_duration (astropy time): Time to propagate in simulation
-		sample_points (int): Number of sample points
-		scene3d (bool): Set to false for 2D plot
-		specificSats (list of ints) : List of satIDs to plot
+		Args:
+			fname (string): File name (including path to file) for saved czml file. Currently plots in a directory czmlFiles
+			prop_duration (astropy time): Time to propagate in simulation
+			sample_points (int): Number of sample points
+			scene3d (bool): Set to false for 2D plot
+			specificSats (list of ints) : List of satIDs to plot
 		"""
 		seedSat = self.get_sats()[0]
 		start_epoch = seedSat.epoch #iss.epoch
@@ -1101,16 +1128,18 @@ class Plane():
 		Gets set a maneuvers that will pass a specific ground location on
 		select days
 
-		Inputs:
-		GroundLoc (Obj): Ground location object to be passed over
-		tInit (astropy time object): Time to initialize planner
-		days (int): Amount of days ahead to for the scheduler to plan for
-		useSatEpoch (Bool): If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner
-		task (string): The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
+		Args:
+			GroundLoc (Obj): Ground location object to be passed over
+			tInit (astropy time object): Time to initialize planner
+			days (int): Amount of days ahead to for the scheduler to plan for
+			useSatEpoch (Bool): If true, uses individual satellite current epoch as tInit. Useful for downklink portion of planner
+			task (string): The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
 
-		Outputs:
-		maneuverListAll (list of Maneuver objects): All potential maneuvers
-		maneuverListCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)
+		Returns:
+			(tuple): tuple containing:
+				maneuverListAll (list of Maneuver objects): All potential maneuvers
+
+				maneuverListCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)
 		"""
 		maneuverListAll = []
 		maneuverListCut = []
@@ -1184,22 +1213,25 @@ class Satellite(Orbit):
 		"""
 		Calculate link budget with self as transmitter
 		
-		Inputs
-		rx_object: Satellite or GroundStation Object
-		from_relative_position (bool): Flag if True, calculates path propagation from given position (path_dist)
-		path_dist (astropy distance): Distance between tx and rx antennas
-		l_atm (dB): Atmospheric loss
-		l_pointing (dB): pointing loss
-		l_pol (dB): Polarization loss
-		txID (int): Choose tx communications payload. Default to 0 since we will most likely just have 1 payload
-		rxID (int): Choose rx communications payload. Default to 0 since we will most likely just have 1 payload
-		drReq (bytes): Required data rate in bytes. Default to None
-		verbose (Bool): If True, print components of link budget
+		Args:
+			rx_object: Satellite or GroundStation Object
+			from_relative_position (bool): Flag if True, calculates path propagation from given position (path_dist)
+			path_dist (astropy distance): Distance between tx and rx antennas
+			l_atm (dB): Atmospheric loss
+			l_pointing (dB): pointing loss
+			l_pol (dB): Polarization loss
+			txID (int): Choose tx communications payload. Default to 0 since we will most likely just have 1 payload
+			rxID (int): Choose rx communications payload. Default to 0 since we will most likely just have 1 payload
+			drReq (bytes): Required data rate in bytes. Default to None
+			verbose (Bool): If True, print components of link budget
 	
-		Outputs (dictionary)
-		P_rx (dBW): Received power
-		ConN0 (dBHz): Signal to noise ratio
-		EbN0 (dB): Energy per bit. Calculated if a required data rate is given "drReq"
+		Returns:
+			(dictionary):
+				P_rx (dBW): Received power
+
+				ConN0 (dBHz): Signal to noise ratio
+
+				EbN0 (dB): Energy per bit. Calculated if a required data rate is given "drReq"
 
 		"""
 		assert hasattr(self, 'commsPayload'), "Need to add rx_object to Transmitting Satellite"
@@ -1320,21 +1352,26 @@ class Satellite(Orbit):
 		for quick but not perfectly accurate scheduling. 
 		Loosely based on Legge's thesis section 3.1.2
 
-		Inputs:
-		GroundLoc (Obj): GroundLoc class. This is the ground location that you want to get a pass from
-		tInit (astropy time object): Time to initialize planner
-		days (list of astropy.time obj): Amount of days ahead to for the scheduler to plan for
-		useSatEpoch (Bool): Use satellite epoch for start of planner (useful for subsequent stages of planner)
-		task (string): The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
-		refVernalEquinox (astropy time object): Date of vernal equinox. Default is for 2021
+		Args:
+			GroundLoc (Obj): GroundLoc class. This is the ground location that you want to get a pass from
+			tInit (astropy time object): Time to initialize planner
+			days (list of astropy.time obj): Amount of days ahead to for the scheduler to plan for
+			useSatEpoch (Bool): Use satellite epoch for start of planner (useful for subsequent stages of planner)
+			task (string): The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
+			refVernalEquinox (astropy time object): Date of vernal equinox. Default is for 2021
 
-		Outputs:
-		desiredGhostOrbits_atPass (array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
-		desiredGhostOrbits_tInit (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time
-		maneuverObjects (array of Manuever objects): Maneuver object class that holds time and cost of maneuvers
+		Returns:
+			(tuple): tuple containing:
+				desiredGhostOrbits_atPass (array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
+
+				desiredGhostOrbits_tInit (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time
+
+				maneuverObjects (array of Manuever objects): Maneuver object class that holds time and cost of maneuvers
+
+		Todo:
+			Account for RAAN drift due to J2 perturbation
 		"""
 
-		## TODO: Doesn't yet account for RAAN drift due to J2 perturbation
 		if useSatEpoch:
 			tInit = self.epoch #Sets tInit to current satellite epoch
 			satInit = self
@@ -1407,7 +1444,6 @@ class Satellite(Orbit):
 		maneuverObjectsAll = []
 		maneuverObjectsCut = []
 		runningMissionCosts = []
-		## TODO: This will have to be redone once we get J2 perturbations in as RAAN will drift. We'll need multiple raans.
 		for idx, sch in enumerate(scheduleItms):
 			raans, anoms = self.desired_raan_from_pass_time(sch.time, GroundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
 			if sch.passType == 'a': #Ascending argument of latitude
@@ -1514,15 +1550,17 @@ class Satellite(Orbit):
 		"""        Gets the desired orbit specifications from a desired pass time and groundstation
 		Based on equations in section 3.1.2 in Legge's thesis (2014)
 
-		Inputs
-		tPass (astropy time object): Desired time of pass. Local UTC time preferred
-		GroundLoc (Obj): GroundLoc class. This is the ground location that you want to get a pass from
+		Args:
+			tPass (astropy time object): Desired time of pass. Local UTC time preferred
+			GroundLoc (Obj): GroundLoc class. This is the ground location that you want to get a pass from
 
-		Outputs
-		raans [List]: 2 element list where 1st element corresponding to RAAN in the ascending case
-						and the 2nd element correspond to RAAN in the descending case
-		Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)
-						of the ascending case and descending case respectively"""
+		Returns:
+			(tuple): tuple containing:
+				raans [List]: 2 element list where 1st element corresponding to RAAN in the ascending case
+								and the 2nd element correspond to RAAN in the descending case
+
+				Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)
+								of the ascending case and descending case respectively"""
 	
 		 ## Check if astropy class. Make astropy class if not
 		if not isinstance(GroundLoc.lat, astropy.units.quantity.Quantity):
@@ -1583,20 +1621,21 @@ class Satellite(Orbit):
 		Get time to phase, deltaV and semi-major axis of phasing orbit in a coplanar phasing maneuver (same altitude)
 		From Vallado section 6.6.1 Circular Coplanar Phasing. Algorithm 44
 
-		Inputs:
-		a_tgt (m) : semi-major axis of target orbit
-		theta (rad): phase angle measured from target to the interceptor. Positive in direction of target motion.
-		k_tgt : integer that corresponds to number of target satellite revolutions before rendezvous
-		k_int : integer that corresponds to number of interceptor satellite revolutions before rendezvous
-		mu (m^3 / s^2) : Gravitational constant of central body. Default is Earth
+		Args:
+			a_tgt (m) : semi-major axis of target orbit
+			theta (rad): phase angle measured from target to the interceptor. Positive in direction of target motion.
+			k_tgt : integer that corresponds to number of target satellite revolutions before rendezvous
+			k_int : integer that corresponds to number of interceptor satellite revolutions before rendezvous
+			mu (m^3 / s^2) : Gravitational constant of central body. Default is Earth
 
-		Outputs:
-		t_phase (s) : time to complete phasing maneuver
-		deltaV (m/s) : Delta V required to complete maneuver
-		delV1 (m/s) : Delta V of first burn (positive in direction of orbital velocity)
-		delV2 (m/s) : Delta V of second burn which recircularies (positive in direction of orbital velocity)
-		a_phase (m) : Semi-major axis of phasing orbit
-		passFlag (bool) : True if orbit is valid i.e. rp > rPlanet so satellite won't crash into Earth
+		Returns:
+			(tuple): tuple containing:
+				t_phase (s) : time to complete phasing maneuver
+				deltaV (m/s) : Delta V required to complete maneuver
+				delV1 (m/s) : Delta V of first burn (positive in direction of orbital velocity)
+				delV2 (m/s) : Delta V of second burn which recircularies (positive in direction of orbital velocity)
+				a_phase (m) : Semi-major axis of phasing orbit
+				passFlag (bool) : True if orbit is valid i.e. rp > rPlanet so satellite won't crash into Earth
 		"""
 		if not isinstance(a_tgt, u.quantity.Quantity):
 			a_tgt = a_tgt * u.m
@@ -1630,12 +1669,12 @@ class Satellite(Orbit):
 		themselves (not the individual satellites). This will help
 		determine which point in the orbit is desired for rendezvous for ISL.
 
-		Input
-		self (Satellite object): Self, which is one of the satellites in question
-		satellite (Satellite object): The target satellite of the reendezvous
+		Args:
+			self (Satellite object): Self, which is one of the satellites in question
+			satellite (Satellite object): The target satellite of the reendezvous
 
-		Output
-		nus: Set of 2 true anomalies for each respective orbit for optimal ISL distance closing
+		Returns:
+			Set of 2 true anomalies for each respective orbit for optimal ISL distance closing
 
 		"""
 
@@ -1697,20 +1736,20 @@ class Satellite(Orbit):
 		"""
 		Schedule coplanar intercept (2 satellites are in the same orbital plane)
 		
-		Inputs
-		targetSat (Satellite object): Target satellite
-		task (String): task to be completed, default is ISL
-		perturbation options (string): 'none', 'J2'
-		Only no perturbation is currently implemented
+		Args:
+			targetSat (Satellite object): Target satellite
+			task (String): task to be completed, default is ISL
+			perturbation options (string): 'none', 'J2'
+			Only no perturbation is currently implemented
 
-		Outputs
-		Dictionary with the following
-		maneuverObjects [ManeuverObjects]: Maneuver objects for both phasing burns
-		deltaVTot : total deltaV of phasing maneuver
-		islTime : time of ISL
-		islOrb (Satellite object): Orbit after ISL maneuvers 
-		debug (optional if debug=True): list of satellites to plot to ensure ISL
-		posDiff (optional if debug=True): difference in position between each of the satellites in debug and the initial satellite at time of maneuver
+		Returns:
+			(Dictionary):
+				maneuverObjects [ManeuverObjects]: Maneuver objects for both phasing burns
+				deltaVTot : total deltaV of phasing maneuver
+				islTime : time of ISL
+				islOrb (Satellite object): Orbit after ISL maneuvers 
+				debug (optional if debug=True): list of satellites to plot to ensure ISL
+				posDiff (optional if debug=True): difference in position between each of the satellites in debug and the initial satellite at time of maneuver
 		"""
 		if perturbation != 'J2':
 			nusInit, nusPass = self.get_nu_intercept(targetSat) #Get anomalies for intercept
@@ -1845,16 +1884,17 @@ class GroundLoc():
 	def __init__(self, lon, lat, h, groundID = None, name = None):
 		"""
 		Define a ground location. Requires astopy.coordinates.EarthLocation
-		lon (deg): longitude
-		lat (deg): latitude 
-		h (m): height above ellipsoid
-		loc (astropy object) : location in getdetic coordinates
 
-		name: is the name of a place (i.e. Boston)
+		Args:
+			lon (deg): longitude
+			lat (deg): latitude 
+			h (m): height above ellipsoid
+			loc (astropy object) : location in getdetic coordinates
+			name: is the name of a place (i.e. Boston)
 		
-		**Methods**
-		propagate_to_ECI(self, obstime)
-		get_ECEF(self)
+		Methods:
+			propagate_to_ECI(self, obstime)
+			get_ECEF(self)
 		"""
 		if not isinstance(lon, astropy.units.quantity.Quantity):
 			lon = lon * u.deg
@@ -1908,15 +1948,16 @@ class ManeuverObject(ManeuverSchedule):
 	def __init__(self, time, deltaV, time2Pass, satID, target, note=None, 
 				 planeID = None, mySat=None, mySatFin=None):
 		"""
-		time: time of maneuver
-		deltaV: cost of manuever (fuel)
-		time2Pass: time 
-		satID: satellite ID of satellite to make maneuver (TO DO, remove and just use mySat attribute)
-		target: target of manuever (ground location or satellite for ISL)
-		note: Any special notes to include
-		planeID: plane ID of satellite to make maneuver (TO DO, remove and just use mySat attribute)
-		mySat: points to the satellite object making the maneuver
-		mySatFin: Final orbit after maneuver
+		Args:
+			time: time of maneuver
+			deltaV: cost of manuever (fuel)
+			time2Pass: time 
+			satID: satellite ID of satellite to make maneuver (TO DO, remove and just use mySat attribute)
+			target: target of manuever (ground location or satellite for ISL)
+			note: Any special notes to include
+			planeID: plane ID of satellite to make maneuver (TO DO, remove and just use mySat attribute)
+			mySat: points to the satellite object making the maneuver
+			mySatFin: Final orbit after maneuver
 		"""
 		ManeuverSchedule.__init__(self, time, deltaV)
 		self.time2Pass = time2Pass
@@ -1936,9 +1977,9 @@ class ManeuverObject(ManeuverSchedule):
 		"""
 		Get weighted distance from utopia point 
 
-		Inputs
-		w_delv: delV weight
-		w_t: time weight
+		Args:
+			w_delv: delV weight
+			w_t: time weight
 		"""
 		squared = self.time2Pass.to(u.hr).value**2 * w_t + self.deltaV.to(u.m/u.s).value**2 * w_delv
 		dist = np.sqrt(squared)
@@ -1963,20 +2004,20 @@ class Data():
 ## CommsPayload class
 class CommsPayload():
 	"""
-	Inputs
-	freq : frequency (easier for rf payloads)
-	wavelength : wavelength (easier for optical payloads)
-	p_tx (W) : Transmit power
-	g_tx (dB) : Transmit gain
-	sysLoss_tx (dB) : Transmit system loss
-	l_tx (dB) : Other transmit loss
-	pointingErr (dB) : Pointing error
-	g_rx (dB) : Receive gain
-	tSys (K) : System temperature on receive side
-	sysLoss_rx (dB) : Recieve system loss
-	beamWidth (rad) : FWHM beam width for optical payload (Gaussian analysis)
-	aperture (m) : Optical recieve aperture diameter
-	l_line (dB) : Line loss on receive side
+	Args:
+		freq : frequency (easier for rf payloads)
+		wavelength : wavelength (easier for optical payloads)
+		p_tx (W) : Transmit power
+		g_tx (dB) : Transmit gain
+		sysLoss_tx (dB) : Transmit system loss
+		l_tx (dB) : Other transmit loss
+		pointingErr (dB) : Pointing error
+		g_rx (dB) : Receive gain
+		tSys (K) : System temperature on receive side
+		sysLoss_rx (dB) : Recieve system loss
+		beamWidth (rad) : FWHM beam width for optical payload (Gaussian analysis)
+		aperture (m) : Optical recieve aperture diameter
+		l_line (dB) : Line loss on receive side
 	"""
 	def __init__(self, freq = None, wavelength = None, p_tx = None, 
 				 g_tx = None, sysLoss_tx = 0, l_tx = 0, 
@@ -2023,11 +2064,11 @@ class CommsPayload():
 		Calculate system temperature. 
 		Reference: Section 5.5.5 of Maral "Satellite Communication Systems" pg 186
 
-		Inputs
-		T_ant (K) : Temperature of antenna
-		T_feeder (K) : Temperature of feeder
-		T_receiver (K) : Temperature of receiver
-		L_feeder (dB) : Feeder loss
+		Args:
+			T_ant (K) : Temperature of antenna
+			T_feeder (K) : Temperature of feeder
+			T_receiver (K) : Temperature of receiver
+			L_feeder (dB) : Feeder loss
 		"""
 		feederTerm = 10**(L_feeder/10) #Convert from dB
 		term1 = T_ant / feederTerm
@@ -2065,9 +2106,9 @@ class MissionOption():
 		"""
 		Get weighted distance from utopia point 
 
-		Inputs
-		w_delv: delV weight
-		w_t: time weight
+		Args:
+			w_delv: delV weight
+			w_t: time weight
 		"""
 		squared = self.dlTime.to(u.hr).value**2 * w_t + self.totalCost.to(u.m/u.s).value**2 * w_delv
 		dist = np.sqrt(squared)
