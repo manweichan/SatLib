@@ -70,10 +70,9 @@ class Constellation():
 			raan_offset (astropy deg): offset the raan of the first satellite
 
 		Returns:
-			(tuple): tuple containing:
-				sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
+			sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
 
-				constClass (object)      : Constellation class from satClasses
+			constClass (object)      : Constellation class from satClasses
 		"""
 
 		#Check for astropy classes
@@ -395,17 +394,16 @@ class Constellation():
 
 
 		Returns:
-			(tuple): tuple containing:
 
-				maneuverPoolCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth),
+			maneuverPoolCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth),
 
-				maneuverPoolAll (list of Maneuver objects): All potential maneuvers,
+			maneuverPoolAll (list of Maneuver objects): All potential maneuvers,
 
-				paretoSats (list of pareto front satellites): Satellite objects on the pareto front,
+			paretoSats (list of pareto front satellites): Satellite objects on the pareto front,
 
-				ghostSatsInitAll (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time,
+			ghostSatsInitAll (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time,
 
-				ghostSatsPassAll(array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
+			ghostSatsPassAll(array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
 
 		"""
 		if savePlot:
@@ -489,14 +487,13 @@ class Constellation():
 			figName (str): file name for figure
 
 		Returns:
-			(tuple): tuple containing:
-				maneuverObjs [list] : list of maneuver objects to create ISL opportunity
+			maneuverObjs [list] : list of maneuver objects to create ISL opportunity
 
-				deltaVs [list] : list of total deltaVs
+			deltaVs [list] : list of total deltaVs
 
-				timeOfISL [list] : list of times that ISL opportunity will happen
+			timeOfISL [list] : list of times that ISL opportunity will happen
 
-				paretoSats [list] : list of satellites on the pareto front
+			paretoSats [list] : list of satellites on the pareto front
 		"""
 		if savePlot:
 			assert figName, "Need to name your figure using figName input"
@@ -675,26 +672,26 @@ class Constellation():
 		Needs to run get_rv_from_propagate first to get position/velocity values first
 
 		Returns:
-			outputData (dict) : First layer key are the satellites being compared i.e. '4-10'
-							means that satellite 4 is compared to satellite 10. Secoond layer
-							key are the specific data types described below
-							
-							
-							LOS (Bool): Describes if there is a line of sight between the satellites
+			First layer key are the satellites being compared i.e. '4-10'
+			means that satellite 4 is compared to satellite 10. Secoond layer
+			key are the specific data types described below
+			
+			
+			LOS (Bool): Describes if there is a line of sight between the satellites
 
-							pDiff : Relative position (xyz)
+			pDiff : Relative position (xyz)
 
-							pDiffNorm : magnitude of relative positions
+			pDiffNorm : magnitude of relative positions
 
-							pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)
+			pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)
 
-							flag180 : Flag to determine if there was a 180 degree 'direct crossing'
+			flag180 : Flag to determine if there was a 180 degree 'direct crossing'
 
-							velDiffNorm : relative velocities
+			velDiffNorm : relative velocities
 
-							slewRate : slew rates required to hold pointing between satellites
+			slewRate : slew rates required to hold pointing between satellites
 
-							dopplerShift : Effective doppler shifts due to relative velocities
+			dopplerShift : Effective doppler shifts due to relative velocities
 		"""
 
 		#Check if first satellite has rvCoords Attribute
@@ -1136,10 +1133,9 @@ class Plane():
 			task (string): The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
 
 		Returns:
-			(tuple): tuple containing:
-				maneuverListAll (list of Maneuver objects): All potential maneuvers
+			maneuverListAll (list of Maneuver objects): All potential maneuvers
 
-				maneuverListCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)
+			maneuverListCut (list of Maneuver objects): Physically viable maneuvers (selected because some maneuvers would cause satellites to crash into Earth)
 		"""
 		maneuverListAll = []
 		maneuverListCut = []
@@ -1226,12 +1222,11 @@ class Satellite(Orbit):
 			verbose (Bool): If True, print components of link budget
 	
 		Returns:
-			(dictionary):
-				P_rx (dBW): Received power
+			P_rx (dBW): Received power
 
-				ConN0 (dBHz): Signal to noise ratio
+			ConN0 (dBHz): Signal to noise ratio
 
-				EbN0 (dB): Energy per bit. Calculated if a required data rate is given "drReq"
+			EbN0 (dB): Energy per bit. Calculated if a required data rate is given "drReq"
 
 		"""
 		assert hasattr(self, 'commsPayload'), "Need to add rx_object to Transmitting Satellite"
@@ -1361,12 +1356,11 @@ class Satellite(Orbit):
 			refVernalEquinox (astropy time object): Date of vernal equinox. Default is for 2021
 
 		Returns:
-			(tuple): tuple containing:
-				desiredGhostOrbits_atPass (array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
+			desiredGhostOrbits_atPass (array of Satellite objects): Orbit of satellite at ground pass (potential position aka ghost position)
 
-				desiredGhostOrbits_tInit (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time
+			desiredGhostOrbits_tInit (array of Satellite objects): Orbit of ghost satellite if it were propagated back to initial time
 
-				maneuverObjects (array of Manuever objects): Maneuver object class that holds time and cost of maneuvers
+			maneuverObjects (array of Manuever objects): Maneuver object class that holds time and cost of maneuvers
 
 		Todo:
 			Account for RAAN drift due to J2 perturbation
@@ -1555,12 +1549,11 @@ class Satellite(Orbit):
 			GroundLoc (Obj): GroundLoc class. This is the ground location that you want to get a pass from
 
 		Returns:
-			(tuple): tuple containing:
-				raans [List]: 2 element list where 1st element corresponding to RAAN in the ascending case
-								and the 2nd element correspond to RAAN in the descending case
+			raans [List]: 2 element list where 1st element corresponding to RAAN in the ascending case
+							and the 2nd element correspond to RAAN in the descending case
 
-				Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)
-								of the ascending case and descending case respectively"""
+			Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)
+							of the ascending case and descending case respectively"""
 	
 		 ## Check if astropy class. Make astropy class if not
 		if not isinstance(GroundLoc.lat, astropy.units.quantity.Quantity):
@@ -1629,13 +1622,12 @@ class Satellite(Orbit):
 			mu (m^3 / s^2) : Gravitational constant of central body. Default is Earth
 
 		Returns:
-			(tuple): tuple containing:
-				t_phase (s) : time to complete phasing maneuver
-				deltaV (m/s) : Delta V required to complete maneuver
-				delV1 (m/s) : Delta V of first burn (positive in direction of orbital velocity)
-				delV2 (m/s) : Delta V of second burn which recircularies (positive in direction of orbital velocity)
-				a_phase (m) : Semi-major axis of phasing orbit
-				passFlag (bool) : True if orbit is valid i.e. rp > rPlanet so satellite won't crash into Earth
+			t_phase (s) : time to complete phasing maneuver
+			deltaV (m/s) : Delta V required to complete maneuver
+			delV1 (m/s) : Delta V of first burn (positive in direction of orbital velocity)
+			delV2 (m/s) : Delta V of second burn which recircularies (positive in direction of orbital velocity)
+			a_phase (m) : Semi-major axis of phasing orbit
+			passFlag (bool) : True if orbit is valid i.e. rp > rPlanet so satellite won't crash into Earth
 		"""
 		if not isinstance(a_tgt, u.quantity.Quantity):
 			a_tgt = a_tgt * u.m
@@ -1743,13 +1735,12 @@ class Satellite(Orbit):
 			Only no perturbation is currently implemented
 
 		Returns:
-			(Dictionary):
-				maneuverObjects [ManeuverObjects]: Maneuver objects for both phasing burns
-				deltaVTot : total deltaV of phasing maneuver
-				islTime : time of ISL
-				islOrb (Satellite object): Orbit after ISL maneuvers 
-				debug (optional if debug=True): list of satellites to plot to ensure ISL
-				posDiff (optional if debug=True): difference in position between each of the satellites in debug and the initial satellite at time of maneuver
+			maneuverObjects [ManeuverObjects]: Maneuver objects for both phasing burns
+			deltaVTot : total deltaV of phasing maneuver
+			islTime : time of ISL
+			islOrb (Satellite object): Orbit after ISL maneuvers 
+			debug (optional if debug=True): list of satellites to plot to ensure ISL
+			posDiff (optional if debug=True): difference in position between each of the satellites in debug and the initial satellite at time of maneuver
 		"""
 		if perturbation != 'J2':
 			nusInit, nusPass = self.get_nu_intercept(targetSat) #Get anomalies for intercept
