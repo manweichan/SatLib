@@ -24,6 +24,8 @@ import OpticalLinkBudget.OLBtools as olb
 import utils as utils
 from copy import deepcopy
 
+import dill
+
 ## Constellation Class
 class Constellation():
 	"""
@@ -70,8 +72,6 @@ class Constellation():
 			raan_offset (astropy deg): offset the raan of the first satellite
 
 		Returns:
-			sats (list)              : List of satellite objects (SatClasses). Satellites organized by plane
-
 			constClass (object)      : Constellation class from satClasses
 		"""
 
@@ -1057,6 +1057,17 @@ class Constellation():
 		f = open(fileDir, "w")
 		f.write(toPrint)
 		f.close()
+
+	def dill_write(self, fname_prefix):
+		"""
+		Writes current constellation to a pickle file using the dill library
+
+		Args:
+			fname_prefix (string) : file name string, excluding the .pkl
+		"""
+		fname = fname_prefix + '.pkl'
+		with open(fname, 'wb') as f:
+			dill.dump(self, f)
 
 # ## Constellation data class that holds data from analyzing a constellation
 # class ConstellationData(Constellation):
