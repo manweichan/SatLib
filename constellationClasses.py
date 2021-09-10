@@ -622,6 +622,9 @@ class Constellation():
 		"""
 		Propagates satellites and returns position (R) and Velocity (V) values
 		at the specific timeDeltas input. Defaults to propagation using J2 perturbation
+		
+		Applies method of the same name in Satellite class to each satellite
+		in this constellation
 
 		Args:
 			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
@@ -1178,8 +1181,9 @@ class Satellite(Orbit):
 	Defines the satellite class
 	"""
 	def __init__(self, state, epoch, satID = None, dataMem = None, schedule = None, 
-				 commsPayload = None, previousTransfer = None, planeID = None,
-				 previousSatInteractions = None, note = None, task = None):
+				 commsPayload = None, remoteSensor = None, previousTransfer = None, 
+				 planeID = None, previousSatInteractions = None, note = None,
+				 task = None):
 		super().__init__(state, epoch) #Inherit class for Poliastro orbits (allows for creation of orbits)
 		self.satID = satID
 		self.planeID = planeID
@@ -1201,6 +1205,11 @@ class Satellite(Orbit):
 			self.commsPayload = []
 		else:
 			self.commsPayload = commsPayload
+
+		if remoteSensor is None: #Set up ability to hold an optical payload
+			self.remoteSensor = []
+		else:
+			self.remoteSensor = remoteSensor
 	
 		if previousTransfer is None: #Set up ability to hold potential maneuver schedule
 			self.previousTransfer = []
@@ -1212,7 +1221,40 @@ class Satellite(Orbit):
 		else:
 			self.previousSatInteractions = previousSatInteractions
 
-			
+	def get_rv_from_propagate(self, timeDeltas, method="J2"):		
+		"""
+		Propagates satellites and returns position (R) and Velocity (V) values
+		at the specific timeDeltas input. Defaults to propagation using J2 perturbation
+
+		Args:
+			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
+		"""
+		if method == "J2":
+			def f(t0, state, k): #Define J2 perturbation
+				du_kep = func_twobody(t0, state, k)
+				ax, ay, az = J2_perturbation(
+					t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
+				)
+				du_ad = np.array([0, 0, 0, ax, ay, az])
+
+				return du_kep + du_ad
+			coords = propagate(
+				self,
+				timeDeltas,
+				method=cowell,
+				f=f,
+				)
+		else:
+			coords = propagate(
+				self,
+				timeDeltas,
+				)
+
+		self.rvCoords = coords
+		self.rvTimeDeltas = timeDeltas
+		self.rvTimes = self.epoch + timeDeltas
+
+
 	def calc_link_budget_tx(self, rx_object, from_relative_position = False, path_dist = None,
 							 l_atm = 0, l_pointing = 0, 
 							 l_pol = 0, txID = 0, rxID = 0, 
@@ -1339,6 +1381,10 @@ class Satellite(Orbit):
 
 	def add_comms_payload(self, commsPL):
 		self.commsPayload.append(commsPL)
+		return self
+
+	def add_remote_sensor(self, remoteSensor):
+		self.remoteSensor.append(remoteSensor)
 		return self
 		
 	def reset_payload(self):
@@ -2084,6 +2130,14 @@ class CommsPayload():
 		T_dB = 10 * np.log10(self.t_sys)
 		GonT_dB = self.g_rx - T_dB - self.l_line
 		return GonT_dB  
+
+class RemoteSensor():
+	"""
+	Class to describe a remote sensor
+	"""
+	def __init__(self, fov, wavelength):
+		self.fov = fov
+		self.wavelength = wavelength
 
 class MissionOption():
 	"""
