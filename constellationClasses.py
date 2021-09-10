@@ -637,34 +637,10 @@ class Constellation():
 
 			planeSats = []
 			for satIdx, sat in enumerate(plane.sats):
-				if method == "J2":
-					def f(t0, state, k): #Define J2 perturbation
-						du_kep = func_twobody(t0, state, k)
-						ax, ay, az = J2_perturbation(
-							t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
-						)
-						du_ad = np.array([0, 0, 0, ax, ay, az])
-
-						return du_kep + du_ad
-					coords = propagate(
-						sat,
-						timeDeltas,
-						method=cowell,
-						f=f,
-						)
-				else:
-					coords = propagate(
-						sat,
-						timeDeltas,
-						)
-
-				sat.rvCoords = coords
-				sat.rvTimeDeltas = timeDeltas
+				sat.get_rv_from_propagate(timeDeltas, method=method)
 				planeSats.append(sat)
-				sat.rvTimes = sat.epoch + timeDeltas
 			planes2append = Plane.from_list(planeSats)
 			planes2const.append(planes2append)
-			# breakpoint()
 		return Constellation.from_list(planes2const)
 
 
