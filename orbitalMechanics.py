@@ -305,7 +305,7 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth,
 ####################### Keplarian Orbital Mechanics #######################
 
 
-def precRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(u.m).value):
+def precRate_RAAN(a, e, w, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m).value):
     """
     https://en.wikipedia.org/wiki/Nodal_precession
     Calculates right ascension nodal precession rate of a satellite around a body
@@ -327,7 +327,7 @@ def precRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(u.m
     return wp
 
 
-def delPrecRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(u.m).value):
+def delPrecRate_RAAN(a, e, w, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m).value):
     """
     Calculates differential right ascension nodal precession rate of a satellite around a body
     with respect to a change in inclination
@@ -348,7 +348,7 @@ def delPrecRate_RAAN(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(
     return delWP
 
 
-def delPrecRateDelA_Raan(a, e, w, i, J2=1.08262668e-3, rPlanet=constants.R_earth.to(u.m).value):
+def delPrecRateDelA_Raan(a, e, w, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m).value):
     """
     Calculates differential right ascension nodal precession rate of a satellite around a body
     with respect to a change in semi major axis
