@@ -125,6 +125,22 @@ def plotGroundTrack(lon, lat, style):
     ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
     return fig, ax
 
+
+def ground_range_spherical(lat1, lon1, lat2, lon2):
+    """
+    Get ground range between two points on a sphere
+    Vallado 4th edition eqn 11-2 pg 854
+    
+    Corresponding latitudes to Vallado's equations
+    subscript 1 is tgt
+    subscript 2 is lch
+    
+    Inputs must be in radians
+    """
+    delLon = lon1 - lon2
+    ground_range = np.arccos(np.sin(lat1) * np.sin(lat2) + 
+              np.cos(lat1) * np.cos(lat2) * np.cos(delLon))
+    return ground_range
 # def get_constellation_constraints(dataDict):
 #     """
 #     Gets constellation constraints given data of the form of a dictionary

@@ -2,6 +2,7 @@ import os
 import numpy as np
 from poliastro import constants
 from poliastro.earth import Orbit
+from poliastro.earth.sensors import min_and_max_ground_range, ground_range_diff_at_azimuth
 from poliastro.bodies import Earth
 from poliastro.maneuver import Maneuver
 from poliastro.twobody.propagation import propagate, func_twobody
@@ -1197,7 +1198,7 @@ class Satellite(Orbit):
 		else:
 			self.previousSatInteractions = previousSatInteractions
 
-	def get_rv_from_propagate(self, timeDeltas, method="J2"):		
+	def get_rv_from_propagate(self, timeDeltas, method="J2"):       
 		"""
 		Propagates satellites and returns position (R) and Velocity (V) values
 		at the specific timeDeltas input. Defaults to propagation using J2 perturbation
@@ -1226,9 +1227,80 @@ class Satellite(Orbit):
 				timeDeltas,
 				)
 
+		# print("working")
 		self.rvCoords = coords
 		self.rvTimeDeltas = timeDeltas
 		self.rvTimes = self.epoch + timeDeltas
+
+	def get_access(self, groundLoc, timeDeltas=None, fastRun=True, 
+		re = constants.R_earth):
+		"""
+		Calculates access between a satellite and ground location using lat/long/alt
+		parameters and the ground range along a sphere (Earth)
+		ASSUMES spherical earth
+		
+		Args:
+			groundLoc (GroundLoc object): ground location object from constellationClasses
+			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
+			fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
+			re (astropy distance quantity): Radius of body (default Earth)
+
+		Returns:
+			access_mask (numpy array): 0 when access unavailable, 1 when available 
+		"""
+		
+		## Check if the satellite has been propagated before
+		if not hasattr(self, 'rvCoords') and timeDeltas==None:
+			print("WARNING: Satellite has no rvCoords attribute:\n"
+			"EITHER input timeDeltas (astropy quantity) as timeDeltas argument OR\n" 
+			"run sat.get_rv_from_propagate(timeDeltas) before inputting satellite object into this function\n"
+			"breaking")
+			return None
+		elif not hasattr(self, 'rvCoords'):
+			self.get_rv_from_propagate(timeDeltas)
+			tofs = timeDeltas
+		else:
+			tofs = self.rvTimeDeltas
+			print('satellite object input ok')
+
+		## Check is sensor has been input
+		if not self.remoteSensor:
+			print("Satellite has no sensor \n"
+				"1) create a sensor using the RemoteSensor class\n"
+				"2) add the sensor to the satellite using sat.add_remote_sensor")
+
+			
+		satCoords = self.rvCoords
+		
+		## Turn coordinates into an EarthLocation object
+		satEL = EarthLocation.from_geocentric(satCoords.x, satCoords.y, satCoords.z)
+		
+		## Turn coordinates into ecef frame
+		satEL.get_itrs(self.epoch + tofs) #ECEF frame
+
+		## Convert to LLA
+		lla_sat = satEL.to_geodetic() #to LLA
+		
+		## Calculate ground range (great circle arc) between the satellite nadir
+		## point and the ground location
+		groundRanges = utils.ground_range_spherical(lla_sat.lat, lla_sat.lon, groundLoc.lat, groundLoc.lon)
+		
+		
+		## Calculate the max ground range given the satellite sensor FOV
+		if fastRun:
+			sat_h_ave = lla_sat.height.mean()
+			lam_min_all, lam_max_all = min_and_max_ground_range(sat_h_ave, self.remoteSensor[0].fov, 0*u.deg, re)
+			
+			access_mask = groundRanges < abs(lam_max_all)
+		else:
+			lam_min_all = []
+			lam_max_all = []
+			for height in lla_sat.height:
+				lam_min, lam_max = min_and_max_ground_range(height, self.remoteSensor[0].fov, 0*u.deg, re)
+				lam_min_all.append(lam_min)
+				lam_max_all.append(lam_max)
+		
+		return access_mask
 
 
 	def calc_link_budget_tx(self, rx_object, from_relative_position = False, path_dist = None,
