@@ -559,8 +559,23 @@ class Constellation():
 
 		return maneuverObjs, transfers, timeOfISL, paretoSats, missionOptions
 
-	def calc_access(self, GroundLoc):
+	def get_access(self, GroundLoc, timeDeltas=None, fastRun=True):
 		pass
+
+	def __get_access(self, GroundLoc, timeDeltas=None, fastRun=True):
+		"""
+		Private method to calculate access for cleaner code
+		"""
+		accessList = []
+		for plane in self.planes:
+			if not plane: #Continue if empty
+				continue
+
+			planeSats = []
+			for satIdx, sat in enumerate(plane.sats):
+				access = sat.get_access(groundLoc, timeDeltas, fastRun)
+				accessList.append(access)
+		accessData = DataAccessConstellation(accessList)
 	
 	def propagate(self, time):
 		"""
@@ -1267,41 +1282,12 @@ class Satellite(Orbit):
 		if not self.remoteSensor:
 			print("Satellite has no sensor \n"
 				"1) create a sensor using the RemoteSensor class\n"
-				"2) add the sensor to the satellite using sat.add_remote_sensor")
+				"2) add the sensor to the satellite using sat.add_remote_sensor()")
 
-			
-		satCoords = self.rvCoords
-		
-		## Turn coordinates into an EarthLocation object
-		satEL = EarthLocation.from_geocentric(satCoords.x, satCoords.y, satCoords.z)
-		
-		## Turn coordinates into ecef frame
-		satEL.get_itrs(self.epoch + tofs) #ECEF frame
+		data_access = DataAccessSat(self, groundLoc, fastRun)
+		data_access.process_data()
 
-		## Convert to LLA
-		lla_sat = satEL.to_geodetic() #to LLA
-		
-		## Calculate ground range (great circle arc) between the satellite nadir
-		## point and the ground location
-		groundRanges = utils.ground_range_spherical(lla_sat.lat, lla_sat.lon, groundLoc.lat, groundLoc.lon)
-		
-		
-		## Calculate the max ground range given the satellite sensor FOV
-		if fastRun:
-			sat_h_ave = lla_sat.height.mean()
-			lam_min_all, lam_max_all = min_and_max_ground_range(sat_h_ave, self.remoteSensor[0].fov, 0*u.deg, re)
-			
-			access_mask = groundRanges < abs(lam_max_all)
-		else:
-			lam_min_all = []
-			lam_max_all = []
-			for height in lla_sat.height:
-				lam_min, lam_max = min_and_max_ground_range(height, self.remoteSensor[0].fov, 0*u.deg, re)
-				lam_min_all.append(lam_min)
-				lam_max_all.append(lam_max)
-		
-		return access_mask
-
+		return data_access	
 
 	def calc_link_budget_tx(self, rx_object, from_relative_position = False, path_dist = None,
 							 l_atm = 0, l_pointing = 0, 
@@ -2217,3 +2203,125 @@ class MissionOption():
 		squared = self.dlTime.to(u.hr).value**2 * w_t + self.totalCost.to(u.m/u.s).value**2 * w_delv
 		dist = np.sqrt(squared)
 		self.utopDistWeighted = dist
+
+
+class DataAccessSat():
+	"""
+	Data object that holds information on access between satellites and ground locations
+
+	INTENDED to be run with only satellite objects
+	"""
+	def __init__(self, Sat, GroundLoc, fastRun):
+		"""
+		Args:
+			Sat (Satellite Object): Satellite object that has been propagated
+			GroundLoc (GroundLoc Object): Ground Location object
+			fastRun (Boolean): True for a faster run that uses average altitude of satellite instead of using altitude of each time step
+								Assumes a circular orbit
+
+		"""
+		self.sat = Sat
+		self.groundLoc = GroundLoc
+		self.fastRun = fastRun
+
+		##Extract IDs for easy calling
+		self.satID = Sat.satID
+		self.groundLocID = GroundLoc.groundID
+
+	def process_data(self, re = constants.R_earth):
+		satCoords = self.sat.rvCoords
+		tofs = self.sat.rvTimeDeltas
+		
+		## Turn coordinates into an EarthLocation object
+		satEL = EarthLocation.from_geocentric(satCoords.x, satCoords.y, satCoords.z)
+		
+		## Turn coordinates into ecef frame
+		satEL.get_itrs(self.sat.epoch + tofs) #ECEF frame
+
+		## Convert to LLA
+		lla_sat = satEL.to_geodetic() #to LLA
+		
+		## Calculate ground range (great circle arc) between the satellite nadir
+		## point and the ground location
+		groundRanges = utils.ground_range_spherical(lla_sat.lat, lla_sat.lon, self.groundLoc.lat, self.groundLoc.lon)
+		
+		
+		## Calculate the max ground range given the satellite sensor FOV
+		if self.fastRun:
+			sat_h_ave = lla_sat.height.mean()
+			lam_min_all, lam_max_all = min_and_max_ground_range(sat_h_ave, self.sat.remoteSensor[0].fov, 0*u.deg, re)
+			
+			access_mask = groundRanges < abs(lam_max_all)
+		else:
+			lam_min_all = []
+			lam_max_all = []
+			for height in lla_sat.height:
+				lam_min, lam_max = min_and_max_ground_range(height, self.sat.remoteSensor[0].fov, 0*u.deg, re)
+				lam_min_all.append(lam_min)
+				lam_max_all.append(lam_max)
+		
+
+		accDiff = np.diff(access_mask*1) #multiply by one to turn booleans into int
+		access_maskEnd = np.squeeze(np.where(accDiff==-1))
+		access_maskStart = np.squeeze(np.where(accDiff==1))
+		if access_mask[0] == 1 and access_mask[-1] == 1: #Begin and end on an access_mask
+		    startIdx = np.concatenate((np.array([0]), access_maskStart))
+		    endIdx = np.concatenate((access_maskEnd, len(tofs.value)))
+		    startTimes = tofs[startIdx]
+		    endTimes = tofs[endIdx]
+		elif access_mask[0] == 1 and access_mask[-1] == 0: #Begin on access_mask and end in no access_mask
+		#     access_start = np.squeeze(np.insert(access_maskStart, 0, 0, axis=1))
+		    startIdx = np.concatenate((np.array([0]), access_maskStart))
+		    endIdx = access_maskEnd
+		    startTimes = tofs[startIdx]
+		    endTimes = tofs[endIdx]
+		elif access_mask[0] == 0 and access_mask[-1] == 1:
+		    startIdx = access_maskStart
+		    endIdxnp.concatenate((access_maskEnd, len(tofs.value)))
+		    startTimes = tofs[startIdx]
+		    endTimes = tofs[endIdx]
+		elif access_mask[0] == 0 and access_mask[-1] == 0:
+		    startIdx = access_maskStart
+		    endIdx = access_maskEnd
+		    startTimes = tofs[startIdx]
+		    endTimes = tofs[endIdx]
+		    pass
+		else:
+		    print("check function")
+		    
+		accessIntervals = list(zip(startTimes, endTimes))
+		self.accessIntervals = accessIntervals
+		self.accessMask = access_mask
+
+	def plot_access(self, absolute_time = True):
+		"""
+		plots access
+
+		Args:
+			absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
+		"""
+		if not hasattr(self, 'accessIntervals'):
+			print("data not processed yet\n"
+				  "run self.process_data()")
+
+		if absolute_time:
+			timePlot = self.sat.rvTimes.datetime
+		else:
+			timePlot = self.sat.rvTimeDeltas.to_value('sec')
+
+		fig, ax = plt.subplots()
+		fig.suptitle(f'Access for Satellite {self.satID}\n and GS {self.groundLocID}')
+		ax.plot(timePlot, self.accessMask)
+		ax.set_xlabel('Date Time')
+		ax.set_ylabel('1 if access')
+		fig.autofmt_xdate()	
+		fig.show()
+
+class DataAccessConstellation():
+	"""
+	access data for a constellation objects
+
+	INTENDED to be run with constellation objects
+	"""
+	def __init__(self, accessList):
+		self.accessList = accessList
