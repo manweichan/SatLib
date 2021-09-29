@@ -9,7 +9,7 @@ from poliastro.twobody.propagation import propagate, func_twobody
 from poliastro.twobody.propagation import cowell
 from poliastro.core.perturbations import J2_perturbation
 from poliastro.util import norm
-from poliastro.frames.equatorial import GCRS
+# from poliastro.frames.equatorial import GCRS
 from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 from poliastro.plotting.static import StaticOrbitPlotter
@@ -20,7 +20,7 @@ import seaborn as sns
 import astropy.units as u
 import astropy
 from astropy import time
-from astropy.coordinates import EarthLocation
+from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord
 import OpticalLinkBudget.OLBtools as olb
 import utils as utils
 from copy import deepcopy
@@ -559,12 +559,34 @@ class Constellation():
 
 		return maneuverObjs, transfers, timeOfISL, paretoSats, missionOptions
 
-	def get_access(self, GroundLoc, timeDeltas=None, fastRun=True):
-		pass
-
-	def __get_access(self, GroundLoc, timeDeltas=None, fastRun=True):
+	def get_access(self, groundLoc, timeDeltas=None, fastRun=True):
 		"""
-		Private method to calculate access for cleaner code
+		Calculate access for an entire constellation and list of ground locations
+
+		Args:
+			groundLoc (GroundLoc object or list of GroundLoc objects): ground location object from constellationClasses
+			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
+			fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
+		"""
+		allAccessData = []
+		if isinstance(groundLoc, list):
+			for groundLocation in groundLoc:
+				accessData = self.__get_access(groundLoc, timeDeltas, fastRun)
+				allAccessData.extend(accessData)
+		elif isinstance(groundLoc, GroundLoc):
+			accessData = self.__get_access(groundLoc, timeDeltas, fastRun)
+			allAccessData.append(accessData)
+		return allAccessData
+
+	def __get_access(self, groundLoc, timeDeltas, fastRun):
+		"""
+		Private method to calculate access for individual sat/groundLoc pairs
+		for cleaner code
+		
+		Args:
+			groundLoc (GroundLoc object): ground location object from constellationClasses
+			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
+			fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit	
 		"""
 		accessList = []
 		for plane in self.planes:
@@ -573,9 +595,25 @@ class Constellation():
 
 			planeSats = []
 			for satIdx, sat in enumerate(plane.sats):
+
+				if not hasattr(sat, 'rvCoords') and timeDeltas==None:
+					print("WARNING: Satellite has no rvCoords attribute:\n"
+					"EITHER input timeDeltas (astropy quantity) as timeDeltas argument OR\n" 
+					"run sat.get_rv_from_propagate(timeDeltas) before inputting satellite object into this function\n"
+					"breaking")
+					return None
+				elif not hasattr(sat, 'rvCoords'):
+					print(f"Propagating satellite loop {satIdx}")
+					sat.get_rv_from_propagate(timeDeltas)
+					tofs = timeDeltas
+				else:
+					tofs = sat.rvTimeDeltas
+				
+				print('satellite object input ok')
 				access = sat.get_access(groundLoc, timeDeltas, fastRun)
 				accessList.append(access)
 		accessData = DataAccessConstellation(accessList)
+		return accessData
 	
 	def propagate(self, time):
 		"""
@@ -1098,11 +1136,17 @@ class Plane():
 			plane = []
 			print("Empty list entered")
 		else:
-			for idx, sat in enumerate(satList):
-				if idx == 0:
-					plane = cls(sat, planeID = planeID)
-				else:
-					plane.add_sat(sat)
+			if isinstance(satList, Satellite):
+				plane = cls(satList, planeID = planeID)
+				# plane.add_sat(sat)
+			elif isinstance(satList, list):
+				for idx, sat in enumerate(satList):
+					if idx == 0:
+						plane = cls(sat, planeID = planeID)
+					else:
+						plane.add_sat(sat)
+			else:
+				print("satList type not recognized")
 		return plane
 	
 	def set_plane_parameters(self):
@@ -2211,40 +2255,51 @@ class DataAccessSat():
 
 	INTENDED to be run with only satellite objects
 	"""
-	def __init__(self, Sat, GroundLoc, fastRun):
+	def __init__(self, Sat, groundLoc, fastRun):
 		"""
 		Args:
 			Sat (Satellite Object): Satellite object that has been propagated
-			GroundLoc (GroundLoc Object): Ground Location object
+			groundLoc (rroundLoc Object): Ground Location object
 			fastRun (Boolean): True for a faster run that uses average altitude of satellite instead of using altitude of each time step
 								Assumes a circular orbit
 
 		"""
 		self.sat = Sat
-		self.groundLoc = GroundLoc
+		self.groundLoc = groundLoc
 		self.fastRun = fastRun
 
 		##Extract IDs for easy calling
 		self.satID = Sat.satID
-		self.groundLocID = GroundLoc.groundID
+		self.groundLocID = groundLoc.groundID
 
 	def process_data(self, re = constants.R_earth):
 		satCoords = self.sat.rvCoords
 		tofs = self.sat.rvTimeDeltas
 		
+		# breakpoint()	
+		satECI = GCRS(satCoords.x, satCoords.y, satCoords.z, representation_type="cartesian", obstime = self.sat.epoch + tofs)
+		satECISky = SkyCoord(satECI)
+		satECEF = satECISky.transform_to(ITRS)
 		## Turn coordinates into an EarthLocation object
-		satEL = EarthLocation.from_geocentric(satCoords.x, satCoords.y, satCoords.z)
-		
+		satEL = EarthLocation.from_geocentric(satECEF.x, satECEF.y, satECEF.z)
+
 		## Turn coordinates into ecef frame
-		satEL.get_itrs(self.sat.epoch + tofs) #ECEF frame
+		# satECEF2 = satEL.get_itrs(self.sat.epoch + tofs) #ECEF frame
 
 		## Convert to LLA
 		lla_sat = satEL.to_geodetic() #to LLA
-		
+
+
+		# breakpoint()
+
 		## Calculate ground range (great circle arc) between the satellite nadir
 		## point and the ground location
 		groundRanges = utils.ground_range_spherical(lla_sat.lat, lla_sat.lon, self.groundLoc.lat, self.groundLoc.lon)
-		
+		# plt.figure()
+		# plt.plot(tofs.value, lla_sat.lat, '.', label='latitude')
+		# plt.plot(tofs.value, lla_sat.lon, '.', label='longitude')
+		# plt.ylabel('longitude')
+		# plt.legend()
 		
 		## Calculate the max ground range given the satellite sensor FOV
 		if self.fastRun:
@@ -2259,7 +2314,10 @@ class DataAccessSat():
 				lam_min, lam_max = min_and_max_ground_range(height, self.sat.remoteSensor[0].fov, 0*u.deg, re)
 				lam_min_all.append(lam_min)
 				lam_max_all.append(lam_max)
-		
+		# plt.figure()
+		# plt.hlines(lam_max_all.value, tofs.value[0], tofs.value[-1])
+		# plt.plot(tofs.value, groundRanges, label='ground range')
+
 
 		accDiff = np.diff(access_mask*1) #multiply by one to turn booleans into int
 		access_maskEnd = np.squeeze(np.where(accDiff==-1))
@@ -2289,6 +2347,11 @@ class DataAccessSat():
 		else:
 		    print("check function")
 		    
+		if not isinstance(startTimes, list):
+			startTimes = [startTimes]
+
+		if not isinstance(endTimes, list):
+			endTimes = [endTimes]
 		accessIntervals = list(zip(startTimes, endTimes))
 		self.accessIntervals = accessIntervals
 		self.accessMask = access_mask
@@ -2302,7 +2365,8 @@ class DataAccessSat():
 		"""
 		if not hasattr(self, 'accessIntervals'):
 			print("data not processed yet\n"
-				  "run self.process_data()")
+				  "running self.process_data()")
+			self.process_data()
 
 		if absolute_time:
 			timePlot = self.sat.rvTimes.datetime
@@ -2325,3 +2389,35 @@ class DataAccessConstellation():
 	"""
 	def __init__(self, accessList):
 		self.accessList = accessList
+
+	def plot_all(self, absolute_time = True):
+		"""
+		Plots all access combinations of satellites and ground stations
+
+		Args:
+			absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
+		"""
+
+		numPlots = len(self.accessList)
+		fig = plt.figure()
+		gs. fig.add_gridspec(numPlots, hspace=0)
+		axs = gs.subplots(sharex=True, sharey=True)
+		fig.suptitle('Tombstone plots for satellite access')
+		# fig, axs = plt.subplot(numPlots, sharex=True, sharey=True)
+
+		for accessIdx, access in enumerate(self.accessList):
+			if absolute_time:
+				timePlot = access.sat.rvTimes.datetime
+			else:
+				timePlot = access.sat.rvTimeDeltas.to_value('sec')
+			ax[accessID].plot(timePlot, access.accessMask)
+			ax.set_xlabel('Date Time')
+			ax.set_ylabel('1 if access')
+			fig.autofmt_xdate()	
+			fig.show()
+
+
+
+	##Todo: create function that plots total coverage of ground station
+	##Todo: create function that plots coverage of select satellites with a gs
+	##Todo: create function that plots access for select ground stations
