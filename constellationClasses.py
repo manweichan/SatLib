@@ -2414,6 +2414,39 @@ class DataAccessConstellation():
 	def __init__(self, accessList):
 		self.accessList = accessList
 
+	def plot_total_access(self, gLocs, absolute_time = True):
+		"""
+		plots total coverage (satellite agnostic) for a particular
+		groundLocation (gLocs) or a list of gLocs
+
+		Args:
+			gLocs [list] : list of groundLocation IDs to plot
+			absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
+		"""
+
+		if not isinstance(gLocs, list):
+			gLocs = [gLocs] #Turn into list
+
+		#extract accessMasks into a list
+		accessMasks = [data.accessMask for data in self.accessList if data.groundLocID in gLocs]
+
+		totalAccess = [any(t) for t in zip(*accessMasks)]
+
+		percCoverage = sum(totalAccess) / len(totalAccess) * 100
+
+		if absolute_time: #Choose time scale to be the first satellite
+			timePlot = self.accessList[0].sat.rvTimes.datetime
+		else:
+			timePlot = self.accessList[0].to_value('sec')
+		fig, ax = plt.subplots()
+		ax.plot(timePlot, totalAccess)
+		ax.set_xlabel('Date Time')
+		ax.set_yticks([])
+		fig.autofmt_xdate()	
+		fig.suptitle(f'Total access for Ground Location(s): {gLocs}\n'
+						f'Coverage Percentage: {percCoverage:.1f} %')		
+		fig.supylabel('Access')
+
 	def plot_all(self, absolute_time = True, legend = False):
 		"""
 		Plots all access combinations of satellites and ground stations
@@ -2442,9 +2475,7 @@ class DataAccessConstellation():
 			ax.plot(timePlot, access.accessMask, label=lab)
 
 			ax.set_xlabel('Date Time')
-			# ax.get_yaxis().set_visible(False)
 			ax.set_yticks([])
-			# plt.ylabel(lab, rotation=0)
 			ylab = ax.set_ylabel(lab) #makes y label horizontal
 			ylab.set_rotation(0)
 			if legend:
@@ -2465,6 +2496,12 @@ class DataAccessConstellation():
 			absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
 			legend (Bool): Plot legend if true
 		"""
+
+		if not isinstance(sats, list):
+			sats = [sats]
+		if not isinstance(gLocs, list):
+			gLocs = [gLocs]
+
 		numSats = len(sats)
 		numGs = len(gLocs)
 		numTot = numSats * numGs
@@ -2502,5 +2539,3 @@ class DataAccessConstellation():
 				accessCounter += 1
 		plt.tight_layout()
 	##Todo: create function that plots total coverage of ground station
-	##Todo: create function that plots coverage of select satellites with a gs
-	##Todo: create function that plots access for select ground stations
