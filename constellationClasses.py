@@ -570,13 +570,17 @@ class Constellation():
 		"""
 		allAccessData = []
 		if isinstance(groundLoc, list):
-			for groundLocation in groundLoc:
-				accessData = self.__get_access(groundLoc, timeDeltas, fastRun)
-				allAccessData.extend(accessData)
+			print('calculating access...')
+			for gIdx, groundLocation in enumerate(groundLoc):
+				print(f'location {gIdx+1} out of {len(groundLoc)}')
+				accessList = self.__get_access(groundLocation, timeDeltas, fastRun)
+				allAccessData.extend(accessList)
 		elif isinstance(groundLoc, GroundLoc):
-			accessData = self.__get_access(groundLoc, timeDeltas, fastRun)
-			allAccessData.append(accessData)
-		return allAccessData
+			accessList = self.__get_access(groundLoc, timeDeltas, fastRun)
+			# allAccessData.append(accessList)
+			allAccessData = accessList
+		dataObjOut = DataAccessConstellation(allAccessData)
+		return dataObjOut
 
 	def __get_access(self, groundLoc, timeDeltas, fastRun):
 		"""
@@ -589,13 +593,13 @@ class Constellation():
 			fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit	
 		"""
 		accessList = []
-		for plane in self.planes:
+		for planeIdx, plane in enumerate(self.planes):
 			if not plane: #Continue if empty
 				continue
-
+			print(f'plane {planeIdx + 1} out of {len(self.planes)}')
 			planeSats = []
 			for satIdx, sat in enumerate(plane.sats):
-
+				print(f'sat {satIdx + 1} out of {len(plane.sats)}')
 				if not hasattr(sat, 'rvCoords') and timeDeltas==None:
 					print("WARNING: Satellite has no rvCoords attribute:\n"
 					"EITHER input timeDeltas (astropy quantity) as timeDeltas argument OR\n" 
@@ -603,17 +607,17 @@ class Constellation():
 					"breaking")
 					return None
 				elif not hasattr(sat, 'rvCoords'):
-					print(f"Propagating satellite loop {satIdx}")
+					print(f"Propagating Plane {planeIdx}\nSatellite {satIdx}")
 					sat.get_rv_from_propagate(timeDeltas)
 					tofs = timeDeltas
 				else:
 					tofs = sat.rvTimeDeltas
 				
-				print('satellite object input ok')
+				# print('satellite object input ok')
 				access = sat.get_access(groundLoc, timeDeltas, fastRun)
 				accessList.append(access)
-		accessData = DataAccessConstellation(accessList)
-		return accessData
+		# accessData = DataAccessConstellation(accessList)
+		return accessList
 	
 	def propagate(self, time):
 		"""
@@ -651,6 +655,26 @@ class Constellation():
 			for satIdx, sat in enumerate(plane.sats):
 				satComms = sat.add_comms_payload(commsPL)
 				planeSats.append(satComms)
+			plane2append = Plane.from_list(planeSats)
+			planes2const.append(plane2append)
+		return Constellation.from_list(planes2const)
+
+	def add_sensor_payload(self, sensorPL):
+		"""
+		Adds sensor payload to each satellite in the constellation.
+
+		Args:
+			sensorPL (RemoteSensor Object): Remote Sensor payload
+		"""
+		planes2const = []
+		for plane in self.planes:
+			if not plane: #Continue if empty
+				continue
+
+			planeSats = []
+			for satIdx, sat in enumerate(plane.sats):
+				satSens = sat.add_remote_sensor(sensorPL)
+				planeSats.append(satSens)
 			plane2append = Plane.from_list(planeSats)
 			planes2const.append(plane2append)
 		return Constellation.from_list(planes2const)
@@ -1320,7 +1344,7 @@ class Satellite(Orbit):
 			tofs = timeDeltas
 		else:
 			tofs = self.rvTimeDeltas
-			print('satellite object input ok')
+			# print('satellite object input ok')
 
 		## Check is sensor has been input
 		if not self.remoteSensor:
@@ -2390,34 +2414,93 @@ class DataAccessConstellation():
 	def __init__(self, accessList):
 		self.accessList = accessList
 
-	def plot_all(self, absolute_time = True):
+	def plot_all(self, absolute_time = True, legend = False):
 		"""
 		Plots all access combinations of satellites and ground stations
 
 		Args:
 			absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
+			legend (Bool): Plot legend if true
 		"""
 
 		numPlots = len(self.accessList)
 		fig = plt.figure()
-		gs. fig.add_gridspec(numPlots, hspace=0)
+		gs=fig.add_gridspec(numPlots, hspace=0)
 		axs = gs.subplots(sharex=True, sharey=True)
 		fig.suptitle('Tombstone plots for satellite access')
 		# fig, axs = plt.subplot(numPlots, sharex=True, sharey=True)
+		# axs[0].set_ylabel('1 if access')
+		fig.supylabel('Access')
 
 		for accessIdx, access in enumerate(self.accessList):
 			if absolute_time:
 				timePlot = access.sat.rvTimes.datetime
 			else:
 				timePlot = access.sat.rvTimeDeltas.to_value('sec')
-			ax[accessID].plot(timePlot, access.accessMask)
+			ax = axs[accessIdx]
+			lab = f'Sat: {access.satID} | GS: {access.groundLocID}'
+			ax.plot(timePlot, access.accessMask, label=lab)
+
 			ax.set_xlabel('Date Time')
-			ax.set_ylabel('1 if access')
+			# ax.get_yaxis().set_visible(False)
+			ax.set_yticks([])
+			# plt.ylabel(lab, rotation=0)
+			ylab = ax.set_ylabel(lab) #makes y label horizontal
+			ylab.set_rotation(0)
+			if legend:
+				ax.legend()
+
 			fig.autofmt_xdate()	
-			fig.show()
+			# fig.grid()
 
+			# fig.show()
+		plt.tight_layout()
 
+	def plot_some(self, sats, gLocs, absolute_time=True, legend=False):
+		"""
+		plots a selection of sats and ground locations
+		Args:
+			sats [list] : list of satellite IDs to plot
+			gLocs [list] : list of groundLocation IDs to plot
+			absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
+			legend (Bool): Plot legend if true
+		"""
+		numSats = len(sats)
+		numGs = len(gLocs)
+		numTot = numSats * numGs
 
+		fig = plt.figure()
+		gs=fig.add_gridspec(numTot, hspace=0)
+		axs = gs.subplots(sharex=True, sharey=True)
+		fig.suptitle('Tombstone plots for satellite access')
+		fig.supylabel('Access')
+
+		accessCounter = 0
+		for accessIdx, access in enumerate(self.accessList):
+			if access.satID not in sats or access.groundLocID not in gLocs:
+				pass
+			else:
+				if absolute_time:
+					timePlot = access.sat.rvTimes.datetime
+				else:
+					timePlot = access.sat.rvTimeDeltas.to_value('sec')
+				if numTot == 1:
+					ax = axs
+				else:
+					ax = axs[accessCounter]
+				lab = f'Sat: {access.satID} | GS: {access.groundLocID}'
+				ax.plot(timePlot, access.accessMask, label=lab)
+
+				ax.set_xlabel('Date Time')
+				ax.set_yticks([])
+				ylab = ax.set_ylabel(lab) #makes y label horizontal
+				ylab.set_rotation(0)
+				if legend:
+					ax.legend()
+
+				fig.autofmt_xdate()	
+				accessCounter += 1
+		plt.tight_layout()
 	##Todo: create function that plots total coverage of ground station
 	##Todo: create function that plots coverage of select satellites with a gs
 	##Todo: create function that plots access for select ground stations
