@@ -22,6 +22,12 @@ from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 
 def find_non_dominated_time_deltaV(flatArray):
+    """
+    Find non-dominated trade space instances when looking at time to pass and delta V value
+    of manuever to achieve the pass
+
+    ToDo: Need to look back in code to figure out what this is doing in more detail
+    """
     keyfun = operator.attrgetter('time2Pass.value')
     flatSort = copy.deepcopy(flatArray)
     flatSort.sort(key=keyfun) # Sort list by key value (usually time2Pass.value)
@@ -35,6 +41,12 @@ def find_non_dominated_time_deltaV(flatArray):
     return paretoSats
 
 def find_non_dominated(flatArray, attribute1, attribute2):
+    """
+    find non-dominated trade space instances between two attributes, attribute 1 and attribute 2
+    
+    ToDo: Need to look back in code to figure out how this is working
+
+    """
     keyfun = operator.attrgetter(attribute1)
     flatSort = copy.deepcopy(flatArray)
     flatSort.sort(key=keyfun) # Sort list by key value (usually time2Pass.value)

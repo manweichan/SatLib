@@ -1357,6 +1357,22 @@ class Satellite(Orbit):
 
 		return data_access	
 
+	def __get_srt_no_isl(self, groundTarget, groundLocs):
+		"""
+		Get system response time metrics given a target to image
+		and a list of ground locations for downlinking
+		
+		This particular private version is for testing when no ISLs are involved
+		
+		ToDo: Include tasking in srt calculation
+
+		Args:
+			groundTarget (GroundLoc object): Target to image
+			groundLocs (list of GroundLoc objects): Possible downlink locations
+		"""
+		pass
+
+
 	def calc_link_budget_tx(self, rx_object, from_relative_position = False, path_dist = None,
 							 l_atm = 0, l_pointing = 0, 
 							 l_pol = 0, txID = 0, rxID = 0, 
@@ -1459,6 +1475,81 @@ class Satellite(Orbit):
 
 		return output
 	
+	def get_srt(self, groundTarget, groundLocs, timeDeltas=None, fastRun=True):
+		"""
+		Get the system response time for this satellite given a ground target to image
+		and a list of ground locations to donwlink the information to		
+		
+		ToDo: optimize time of access calculations by finding the first access and then
+				stopping the calculation
+		ToDo: optimize time for downlink access, by finding shortest time and comparing them
+				, stopping if the time is over the current shortest time
+
+		Args:
+			groundTarget (GroundLoc object) : ground location to image
+			groundLocs (list of GroundLoc objects) : list of available downlink locations
+			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
+			fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
+		"""
+
+		if not isinstance(groundLocs, list): #Check if groundLocs is a list, and if not make it a list
+			print("Turning downlink location (arg2) into list")
+			groundLocs = [groundLocs]
+
+		#Get access for the groundTarget
+		targetAccess = self.get_access(groundTarget, timeDeltas, fastRun)
+
+		firstTargetAccess = targetAccess.accessIntervals[0][0]
+
+		#get accesses for downlinks
+		downlinkAccessArr = []
+		for dlStation in groundLocs:
+			dlAccess = self.get_access(dlStation, timeDeltas, fastRun)
+			downlinkAccessArr.append(dlAccess)
+
+		epoch = self.epoch
+		maxSimTime = self.rvTimes[-1]
+		downlinkFound = False
+		currentEarliestDL = maxSimTime #earlist downlink
+		for dlOptions in downlinkAccessArr:
+			dlTimes = dlOptions.accessIntervals[:,0] #gets all times that begin an access interval
+
+			idx_timesAfterTargetAccess = np.where(dlTimes > firstTargetAccess.value)
+			if idx_timesAfterTargetAccess[0].size == 0: #check if no access
+				continue
+			idx_firstDLTime = idx_timesAfterTargetAccess[0][0];
+			earliestDLTime = dlTimes[idx_firstDLTime] #valid downlink times
+
+
+			# earliestDLTime = validDLTimes[0][0] #Get first available downlink
+
+			if currentEarliestDL > (self.epoch + earliestDLTime): #Change to earlier downlink time
+				if not downlinkFound:
+					downlinkFound = True #mark that downlink was found
+				currentEarliestDL = earliestDLTime
+
+		if not downlinkFound:
+			print("No downlink found")
+
+		time_image2dl = currentEarliestDL - firstTargetAccess #Time from imaging to downlink
+
+		outputData = {
+					"targetAccess": firstTargetAccess,
+					"downlinkTime": currentEarliestDL,
+					"time2dl"     : time_image2dl	
+		}
+		return outputData
+
+
+
+
+
+
+
+
+
+		
+
 	def schedule_intercept(sat):
 		pass
 	
@@ -2376,7 +2467,7 @@ class DataAccessSat():
 
 		if not isinstance(endTimes, list):
 			endTimes = [endTimes]
-		accessIntervals = list(zip(startTimes, endTimes))
+		accessIntervals = np.column_stack((startTimes[0], endTimes[0]))#list(zip(startTimes, endTimes))
 		self.accessIntervals = accessIntervals
 		self.accessMask = access_mask
 
