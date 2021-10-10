@@ -1475,7 +1475,7 @@ class Satellite(Orbit):
 
 		return output
 	
-	def get_srt(self, groundTarget, groundLocs, timeDeltas=None, fastRun=True):
+	def get_srt(self, groundTarget, groundLocs, targetAccess=None, timeDeltas=None, fastRun=True):
 		"""
 		Get the system response time for this satellite given a ground target to image
 		and a list of ground locations to donwlink the information to		
@@ -1488,6 +1488,7 @@ class Satellite(Orbit):
 		Args:
 			groundTarget (GroundLoc object) : ground location to image
 			groundLocs (list of GroundLoc objects) : list of available downlink locations
+			targetAccess (DataAccessSat object) : Default is none, and method calculates access. If DataAccess already calculated can input here instead to skip access calculation
 			timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
 			fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
 		"""
@@ -1497,7 +1498,8 @@ class Satellite(Orbit):
 			groundLocs = [groundLocs]
 
 		#Get access for the groundTarget
-		targetAccess = self.get_access(groundTarget, timeDeltas, fastRun)
+		if targetAccess==None:
+			targetAccess = self.get_access(groundTarget, timeDeltas, fastRun)
 
 		firstTargetAccess = targetAccess.accessIntervals[0][0]
 
