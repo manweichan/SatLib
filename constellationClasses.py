@@ -1514,7 +1514,7 @@ class Satellite(Orbit):
 		for dlOptions in downlinkAccessArr:
 			dlTimes = dlOptions.accessIntervals[:,0] #gets all times that begin an access interval
 
-			idx_timesAfterTargetAccess = np.where(dlTimes > firstTargetAccess.value)
+			idx_timesAfterTargetAccess = np.where(dlTimes > firstTargetAccess)
 			if idx_timesAfterTargetAccess[0].size == 0: #check if no access
 				continue
 			idx_firstDLTime = idx_timesAfterTargetAccess[0][0];
@@ -1523,7 +1523,7 @@ class Satellite(Orbit):
 
 			# earliestDLTime = validDLTimes[0][0] #Get first available downlink
 
-			if currentEarliestDL > (self.epoch + earliestDLTime): #Change to earlier downlink time
+			if currentEarliestDL > (earliestDLTime): #Change to earlier downlink time
 				if not downlinkFound:
 					downlinkFound = True #mark that downlink was found
 				currentEarliestDL = earliestDLTime
@@ -1532,7 +1532,6 @@ class Satellite(Orbit):
 			print("No downlink found")
 
 		time_image2dl = currentEarliestDL - firstTargetAccess #Time from imaging to downlink
-
 		outputData = {
 					"targetAccess": firstTargetAccess,
 					"downlinkTime": currentEarliestDL,
@@ -2390,9 +2389,10 @@ class DataAccessSat():
 	def process_data(self, re = constants.R_earth):
 		satCoords = self.sat.rvCoords
 		tofs = self.sat.rvTimeDeltas
+		absTime = self.sat.epoch + tofs #absolute time from time deltas
 		
 		# breakpoint()	
-		satECI = GCRS(satCoords.x, satCoords.y, satCoords.z, representation_type="cartesian", obstime = self.sat.epoch + tofs)
+		satECI = GCRS(satCoords.x, satCoords.y, satCoords.z, representation_type="cartesian", obstime = absTime)
 		satECISky = SkyCoord(satECI)
 		satECEF = satECISky.transform_to(ITRS)
 		## Turn coordinates into an EarthLocation object
@@ -2439,25 +2439,25 @@ class DataAccessSat():
 		access_maskStart = np.squeeze(np.where(accDiff==1))
 		if access_mask[0] == 1 and access_mask[-1] == 1: #Begin and end on an access_mask
 		    startIdx = np.concatenate((np.array([0]), access_maskStart))
-		    endIdx = np.concatenate((access_maskEnd, len(tofs.value)))
-		    startTimes = tofs[startIdx]
-		    endTimes = tofs[endIdx]
+		    endIdx = np.concatenate((access_maskEnd, len(absTime.value)))
+		    startTimes = absTime[startIdx]
+		    endTimes = absTime[endIdx]
 		elif access_mask[0] == 1 and access_mask[-1] == 0: #Begin on access_mask and end in no access_mask
 		#     access_start = np.squeeze(np.insert(access_maskStart, 0, 0, axis=1))
 		    startIdx = np.concatenate((np.array([0]), access_maskStart))
 		    endIdx = access_maskEnd
-		    startTimes = tofs[startIdx]
-		    endTimes = tofs[endIdx]
+		    startTimes = absTime[startIdx]
+		    endTimes = absTime[endIdx]
 		elif access_mask[0] == 0 and access_mask[-1] == 1:
 		    startIdx = access_maskStart
-		    endIdxnp.concatenate((access_maskEnd, len(tofs.value)))
-		    startTimes = tofs[startIdx]
-		    endTimes = tofs[endIdx]
+		    endIdxnp.concatenate((access_maskEnd, len(absTime.value)))
+		    startTimes = absTime[startIdx]
+		    endTimes = absTime[endIdx]
 		elif access_mask[0] == 0 and access_mask[-1] == 0:
 		    startIdx = access_maskStart
 		    endIdx = access_maskEnd
-		    startTimes = tofs[startIdx]
-		    endTimes = tofs[endIdx]
+		    startTimes = absTime[startIdx]
+		    endTimes = absTime[endIdx]
 		    pass
 		else:
 		    print("check function")
@@ -2578,6 +2578,8 @@ class DataAccessConstellation():
 			# fig.show()
 		plt.tight_layout()
 
+		return axs
+
 	def plot_some(self, sats, gLocs, absolute_time=True, legend=False):
 		"""
 		plots a selection of sats and ground locations
@@ -2621,12 +2623,13 @@ class DataAccessConstellation():
 
 				ax.set_xlabel('Date Time')
 				ax.set_yticks([])
-				ylab = ax.set_ylabel(lab) #makes y label horizontal
-				ylab.set_rotation(0)
+				ylab = ax.set_ylabel(lab)
+				ylab.set_rotation(0) #makes y label horizontal
 				if legend:
 					ax.legend()
 
 				fig.autofmt_xdate()	
 				accessCounter += 1
 		plt.tight_layout()
-	##Todo: create function that plots total coverage of ground station
+
+		return axs
