@@ -619,7 +619,7 @@ class Constellation():
         # accessData = DataAccessConstellation(accessList)
         return accessList
 
-    def __get_srt_no_isl(self, groundTarget, groundLocs, dataAccessConstellation = None, 
+    def get_srt_no_isl(self, groundTarget, groundLocs, dataAccessConstellation = None, 
                         timeDeltas=None, fastRun=True):  
         """
         Get the system response time for this satellite given a ground target to image
@@ -777,7 +777,7 @@ class Constellation():
 
         Returns:
             First layer key are the satellites being compared i.e. '4-10'
-            means that satellite 4 is compared to satellite 10. Secoond layer
+            means that satellite 4 is compared to satellite 10. Second layer
             key are the specific data types described below
             
             
@@ -793,7 +793,7 @@ class Constellation():
 
             velDiffNorm : relative velocities
 
-            slewRate : slew rates required to hold pointing between satellites
+            slewRate : slew rates required to hold pointing between satellites (rad/s)
 
             dopplerShift : Effective doppler shifts due to relative velocities
         """

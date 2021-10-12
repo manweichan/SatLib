@@ -22,7 +22,7 @@ def getLonLat(orb, timeInts, pts, J2 = True):
     
     Inputs
     orb [poliastro orbit object]
-    timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
+    timeInts [astropy object time delta] : time intervals to propagate where 0 refers to the epoch of the orb input variable
     pts [integer] : Number of plot points
     J2 : If True, orbits propagate with J2 perturbation
     
