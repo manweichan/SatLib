@@ -559,7 +559,7 @@ class Constellation():
 
         return maneuverObjs, transfers, timeOfISL, paretoSats, missionOptions
 
-    def get_access(self, groundLoc, timeDeltas=None, fastRun=True):
+    def get_access(self, groundLoc, timeDeltas=None, fastRun=True, verbose=False):
         """
         Calculate access for an entire constellation and list of ground locations
 
@@ -572,17 +572,18 @@ class Constellation():
         if isinstance(groundLoc, list):
             print('calculating access...')
             for gIdx, groundLocation in enumerate(groundLoc):
-                print(f'location {gIdx+1} out of {len(groundLoc)}')
+                if verbose:
+                    print(f'location {gIdx+1} out of {len(groundLoc)}')
                 accessList = self.__get_access(groundLocation, timeDeltas, fastRun)
                 allAccessData.extend(accessList)
         elif isinstance(groundLoc, GroundLoc):
-            accessList = self.__get_access(groundLoc, timeDeltas, fastRun)
+            accessList = self.__get_access(groundLoc, timeDeltas, fastRun, verbose=verbose)
             # allAccessData.append(accessList)
             allAccessData = accessList
         dataObjOut = DataAccessConstellation(allAccessData)
         return dataObjOut
 
-    def __get_access(self, groundLoc, timeDeltas, fastRun):
+    def __get_access(self, groundLoc, timeDeltas, fastRun, verbose=False):
         """
         Private method to calculate access for individual sat/groundLoc pairs
         for cleaner code
@@ -596,10 +597,12 @@ class Constellation():
         for planeIdx, plane in enumerate(self.planes):
             if not plane: #Continue if empty
                 continue
-            print(f'plane {planeIdx + 1} out of {len(self.planes)}')
+            if verbose:
+                print(f'plane {planeIdx + 1} out of {len(self.planes)}')
             planeSats = []
             for satIdx, sat in enumerate(plane.sats):
-                print(f'sat {satIdx + 1} out of {len(plane.sats)}')
+                if verbose:
+                    print(f'sat {satIdx + 1} out of {len(plane.sats)}')
                 if not hasattr(sat, 'rvCoords') and timeDeltas==None:
                     print("WARNING: Satellite has no rvCoords attribute:\n"
                     "EITHER input timeDeltas (astropy quantity) as timeDeltas argument OR\n" 
@@ -614,7 +617,7 @@ class Constellation():
                     tofs = sat.rvTimeDeltas
                 
                 # print('satellite object input ok')
-                access = sat.get_access(groundLoc, timeDeltas, fastRun)
+                access = sat.get_access_sat(groundLoc, timeDeltas, fastRun)
                 accessList.append(access)
         # accessData = DataAccessConstellation(accessList)
         return accessList
@@ -633,7 +636,7 @@ class Constellation():
         Args:
             groundTarget (GroundLoc object) : ground location to image
             groundLocs (list of GroundLoc objects) : list of available downlink locations
-            targetAccess (DataAccessSat object) : Default is none, and method calculates access. If DataAccess already calculated can input here instead to skip access calculation
+            dataAccessConstellation (DataAccessSat object) : Default is none, and method calculates access. If DataAccess already calculated can input here instead to skip access calculation
             timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
             fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
         """
@@ -659,12 +662,80 @@ class Constellation():
                     satAccess['satID'] = sat.satID
                     satAccess['satIdxOfPlane'] = satIdx
                     accessData.append(satAccess)
-
+            else: #TODO Check to see that this works
+                for dataA in dataAccessConstellation:
+                    accessData.append(dataA)
 
         lowest_srt = min(accessData, key=lambda x:x['time2dl']) 
         return lowest_srt
 
+    def get_srt_isl(self, groundTarget, groundLocs, dataAccessConstellation=None, 
+                        timeDeltas=None, fastRun=True, verbose=False,
+                        relativeData=None, **kwargs):
+        """
+        Get the system response time taking into account ISL opportunities
+        Args:
+            groundTarget (GroundLoc object) : ground location to image
+            groundLocs (list of GroundLoc objects) : list of available downlink
+                locations
+            dataAccessConstellation (DataAccessSat object) : Default is none, 
+                and method calculates access. If DataAccess already calculated can input here instead to skip access calculation
+            timeDeltas (astropy TimeDelta object): Time intervals to get 
+                position/velocity data
+            fastRun (Bool) : Takes satellite height average to calculate 
+                max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
+            verbose (Bool) : Prints status updates if true
 
+        
+        """
+
+        # Check if constellation has been propagated
+        if not hasattr(self.planes[0].sats[0], 'rvCoords'):
+            print("Run self.get_rv_from_propagate first to get rv values")
+            return
+        # Check to make sure groundLocs is a list
+        if not isinstance(groundLocs, list): #Check if groundLocs is a list, and if not make it a list
+            print("Turning downlink location (arg2) into list")
+            groundLocs = [groundLocs]
+
+        # Gets access status for constellation
+        accessData = []
+        print('Calculating...')
+        numPlanes = len(self.planes)
+        for planeIdx, plane in enumerate(self.planes):
+            numSats = len(plane.sats)
+            if verbose:
+                print(f'planeID {planeIdx + 1} of {numPlanes}')
+            if not plane: #Continue if empty
+                continue
+            if dataAccessConstellation==None:
+                for satIdx, sat in enumerate(plane.sats):
+                    if verbose:
+                        print(f'satellite {satIdx + 1} of {numSats}')
+                    satAccessTarget = sat.get_access_sat(groundTarget,
+                                            timeDeltas = timeDeltas, fastRun = fastRun,
+                                            verbose=verbose)
+                    for dlIdx, dlStation in enumerate(groundLocs):
+                        if verbose:
+                            print(f'Calculating access for Ground DL Location {dlIdx+1} of {len(groundLocs)}')
+                        satAccessDL = sat.get_access_sat(dlStation, timeDeltas=timeDeltas, fastRun=fastRun)
+                    satAccess['planeID'] = plane.planeID
+                    satAccess['satID'] = sat.satID
+                    satAccess['satIdxOfPlane'] = satIdx
+                    accessData.append(satAccess)
+            else: #TODO Check to see that this works
+                for dataA in dataAccessConstellation:
+                    accessData.append(dataA)
+
+        # Get data relative motion data
+        if relativeData is None:
+            relativeData = self.get_relative_velocity_analysis(verbose=True)
+        satDataKeys = list(relativeData['satData'].keys())
+        if 'islFeasibility' not in relativeData['satData'][satDataKeys[0]]:
+            utils.get_isl_feasibility(relativeData, **kwargs) 
+
+
+        breakpoint()
 
     def propagate(self, time):
         """
@@ -769,17 +840,20 @@ class Constellation():
         return Constellation.from_list(planes2const)
 
 
-    def get_relative_velocity_analysis(self):
+    def get_relative_velocity_analysis(self, verbose=False):
         """
         Gets relative velocities between satellites in the constellation
 
-        Needs to run get_rv_from_propagate first to get position/velocity values first
+        Needs to run get_rv_from_propagate first to get position/velocity 
+        values first
+
+        Args:
+            verbose: prints loop status updates
 
         Returns:
             First layer key are the satellites being compared i.e. '4-10'
             means that satellite 4 is compared to satellite 10. Second layer
             key are the specific data types described below
-            
             
             LOS (Bool): Describes if there is a line of sight between the satellites
 
@@ -813,11 +887,14 @@ class Constellation():
         outputData['numSats'] = numSats
         outputData['satData'] = {}
         for satRef in sats:
+            if verbose:
+                print(f'Reference sat {satRef.satID} out of {numSats}')
             for sat in sats:
 
                 if satRef.satID == sat.satID:
                     continue
-
+                if verbose:
+                    print(f'Refererence compared to {sat.satID}')
                 #Reference orbit RV values
                 satRef_r = satRef.rvCoords.without_differentials()
                 satRef_v = satRef.rvCoords.differentials                
@@ -1362,8 +1439,8 @@ class Satellite(Orbit):
         self.rvTimeDeltas = timeDeltas
         self.rvTimes = self.epoch + timeDeltas
 
-    def get_access(self, groundLoc, timeDeltas=None, fastRun=True, 
-        re = constants.R_earth):
+    def get_access_sat(self, groundLoc, timeDeltas=None, fastRun=True, 
+        re = constants.R_earth, verbose=False):
         """
         Calculates access between a satellite and ground location using lat/long/alt
         parameters and the ground range along a sphere (Earth)
@@ -1387,11 +1464,11 @@ class Satellite(Orbit):
             "breaking")
             return None
         elif not hasattr(self, 'rvCoords'):
+            print('getting pos/vel vectors through propagation')
             self.get_rv_from_propagate(timeDeltas)
             tofs = timeDeltas
         else:
             tofs = self.rvTimeDeltas
-            # print('satellite object input ok')
 
         ## Check is sensor has been input
         if not self.remoteSensor:
@@ -1506,11 +1583,13 @@ class Satellite(Orbit):
 
         return output
     
-    def get_srt(self, groundTarget, groundLocs, targetAccess=None, timeDeltas=None, fastRun=True):
+    def get_srt(self, groundTarget, groundLocs, targetAccess=None, timeDeltas=None, 
+                fastRun=True, verbose=False):
         """
         Get the system response time for this satellite given a ground target to image
         and a list of ground locations to donwlink the information to       
         
+        ToDo: Test get_srt_no_isl with more than 1 groundLocs
         ToDo: optimize time of access calculations by finding the first access and then
                 stopping the calculation
         ToDo: optimize time for downlink access, by finding shortest time and comparing them
@@ -1522,6 +1601,7 @@ class Satellite(Orbit):
             targetAccess (DataAccessSat object) : Default is none, and method calculates access. If DataAccess for groundTarget already calculated can input here instead to skip access calculation
             timeDeltas (astropy TimeDelta object): Time intervals to get position/velocity data
             fastRun (Bool) : Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
+            verbose (Bool) : Prints statements if true
         """
 
         if not isinstance(groundLocs, list): #Check if groundLocs is a list, and if not make it a list
@@ -1530,21 +1610,24 @@ class Satellite(Orbit):
 
         #Get access for the groundTarget
         if targetAccess==None:
-            targetAccess = self.get_access(groundTarget, timeDeltas = timeDeltas, fastRun = fastRun)
+            targetAccess = self.get_access_sat(groundTarget, timeDeltas = timeDeltas, fastRun = fastRun)
 
         firstTargetAccess = targetAccess.accessIntervals[0][0]
 
         #get accesses for downlinks
         downlinkAccessArr = []
-        for dlStation in groundLocs:
-            dlAccess = self.get_access(dlStation,  timeDeltas = timeDeltas, fastRun = fastRun)
+        for dlIdx, dlStation in enumerate(groundLocs):
+            if verbose:
+                print(f'Calculating access for Ground DL Location {dlIdx+1} of {len(groundLocs)}')
+            dlAccess = self.get_access_sat(dlStation,  timeDeltas = timeDeltas, fastRun = fastRun)
             downlinkAccessArr.append(dlAccess)
 
         epoch = self.epoch
         maxSimTime = self.rvTimes[-1]
         downlinkFound = False
         currentEarliestDL = maxSimTime #earlist downlink
-        for dlOptions in downlinkAccessArr:
+        for dlOptIdx, dlOptions in enumerate(downlinkAccessArr):
+            print(f'Calculating best dlTime for {dlOptIdx+1} out of {len(downlinkAccessArr)}')
             dlTimes = dlOptions.accessIntervals[:,0] #gets all times that begin an access interval
 
             idx_timesAfterTargetAccess = np.where(dlTimes > firstTargetAccess)
@@ -2154,7 +2237,7 @@ class Satellite(Orbit):
 
 ## Ground location class
 class GroundLoc():
-    def __init__(self, lon, lat, h, groundID = None, name = None):
+    def __init__(self, lon, lat, h, groundID = None, name = None, identifier=None):
         """
         Define a ground location. Requires astopy.coordinates.EarthLocation
 
@@ -2162,8 +2245,11 @@ class GroundLoc():
             lon (deg): longitude
             lat (deg): latitude 
             h (m): height above ellipsoid
-            loc (astropy object) : location in getdetic coordinates
             name: is the name of a place (i.e. Boston)
+            identifier (string): identifies purpose of GroundLoc
+                Current options
+                * 'target' -  Location to image
+                * 'downlink' - Location to downlink data
         
         Methods:
             propagate_to_ECI(self, obstime)
@@ -2180,6 +2266,7 @@ class GroundLoc():
         self.h = h
         self.loc = EarthLocation.from_geodetic(lon, lat, height=h, ellipsoid='WGS84')
         self.groundID = groundID
+        self.identifier = identifier
         
         def propagate_to_ECI(self, obstime): #Gets GCRS coordinates (ECI)
             return self.loc.get_gcrs(obstime) 
@@ -2418,6 +2505,7 @@ class DataAccessSat():
         ##Extract IDs for easy calling
         self.satID = Sat.satID
         self.groundLocID = groundLoc.groundID
+        self.groundIdentifier = groundLoc.identifier
 
     def process_data(self, re = constants.R_earth):
         satCoords = self.sat.rvCoords
@@ -2570,6 +2658,7 @@ class DataAccessConstellation():
         fig.suptitle(f'Total access for Ground Location(s): {gLocs}\n'
                         f'Coverage Percentage: {percCoverage:.1f} %')       
         fig.supylabel('Access')
+        return ax, fig
 
     def plot_all(self, absolute_time = True, legend = False):
         """
@@ -2611,7 +2700,7 @@ class DataAccessConstellation():
             # fig.show()
         plt.tight_layout()
 
-        return axs
+        return axs, fig
 
     def plot_some(self, sats, gLocs, absolute_time=True, legend=False):
         """

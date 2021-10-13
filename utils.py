@@ -212,59 +212,5 @@ def get_isl_feasibility(dataDict, distanceConstraint = None, slewRateConstraint 
 
 
 
-    ## Find satellites that are adjacent (in sat ID)
 
-    # adjacentSatKeys = []
-    # for key in satKeys:
-    #     keySplit = key.split('-')
-    #     satID1 = int(keySplit[0])
-    #     satID2 = int(keySplit[1])
-    #     satIDDiff = satID1 - satID2
-    #     satDiffAbs = abs(satIDDiff)
-    #     if satDiffAbs == 1 or satDiffAbs == numSats - 1:
-    #         satData[key]['adjacent'] = 1 #1 for adjacent satellites figure 8
-    #         keyStr = f'{satID1}-{satID2}'
-    #         adjacentSatKeys.append(keyStr)
-    #     else:
-    #         satData[key]['adjacent'] = 0
-
-    # ## Get minimum/maximum distances between satellites in the constellation
-    # for key in satKeys:
-    #     pairData = satData[key] #data pertaining to this particular satellite pair
-
-    #     ## Get distances
-    #     distances = satData[key]['pDiffNorm']
-    #     maxDist = max(distances)
-    #     minDist = min(distances)
-
-    #     pairData['pDiffNormMax'] = maxDist
-    #     pairData['pDiffNormMin'] = minDist
-
-    #     ## Get velocities
-    #     velocities = satData[key]['pDiffDot']
-    #     maxVel = max(velocities)
-    #     minVel = min(velocities)
-
-    #     pairData['pDiffDotMax'] = maxVel
-    #     pairData['pDiffDotMin'] = minVel
-
-
-    #     ## Get slew rates
-    #     slewRates = satData[key]['slewRate']
-    #     maxSlew = max(slewRates)
-    #     minSlew = min(slewRates)
-
-    #     pairData['slewRateMax'] = maxSlew
-    #     pairData['slewRateMin'] = minSlew
-
-    #     ## Get doppler shifts
-    #     doppler = satData[key]['dopplerShift']
-    #     maxDoppler = max(doppler)
-    #     minDoppler = min(doppler)
-
-    #     pairData['dopplerMax'] = maxDoppler
-    #     pairData['dopplerMin'] = minDoppler
-
-
-    # return dataDict
 
