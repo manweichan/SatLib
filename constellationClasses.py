@@ -773,13 +773,16 @@ class Constellation():
 
                 while len(routesToInvestigate) >= 1 and routeFound == False:
 
-                    if verbose:
-                        print(f'len routestoinvestigate: {len(routesToInvestigate)}')
-                        print(f'len routeEndTimes : {len(routeEndTimes)}')
 
                     currentRoute = routesToInvestigate[0]
                     if verbose:
                         print(f'Current Route: ', currentRoute)
+                        print(f'Routes to Investigate', routesToInvestigate)
+                        print(f'Routes Investigated', routesInvestigated)
+                    if currentRoute in routesInvestigated: #Don't want to redo something already done
+                        continue
+                    routesInvestigated.append(currentRoute) #append satellite node to route
+                    
                     requiredStartTime = routeEndTimes[0]
                     routesToInvestigate.pop(0) #remove from queue
                     routeEndTimes.pop(0)
@@ -792,6 +795,9 @@ class Constellation():
                     dlTrialIdx = np.where(relativeSatData[islKey]['times']==requiredStartTime)
                     targetTrialIdx = np.where(relativeSatData[islKey]['times']==imgTime)
                     
+                    if dlTrialIdx < targetTrialIdx: #dowlink op is before target image op
+                        continue
+
                     #Get isl opportunities and times
                     islOpps = pairData['islFeasible'][targetTrialIdx[0][0]:dlTrialIdx[0][0]]
                     islOppsTimes = pairData['times'][targetTrialIdx[0][0]:dlTrialIdx[0][0]]
@@ -821,7 +827,6 @@ class Constellation():
                                                                     -np.inf).argmax()
                             dataTransferStart = islOppsTimes[beginningOfTransferWindowIdx]
                             visitedSats.append(txSat) #If link is available, no need to revisit this node
-                            routesInvestigated.append(currentRoute) #append satellite node to route
                             
                             newKeys = utils.get_potential_isl_keys(int(txSat), 
                                                             relativeSatData.keys(),
