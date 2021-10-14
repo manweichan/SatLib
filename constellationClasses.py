@@ -669,7 +669,8 @@ class Constellation():
         lowest_srt = min(accessData, key=lambda x:x['time2dl']) 
         return lowest_srt
 
-    def get_srt_isl(self, groundTarget, groundLocs, dataAccessConstellation=None, 
+    def get_srt_isl(self, groundTarget, groundLocs, dataRateXLink, imageSize,
+                         dataAccessConstellation=None, 
                         timeDeltas=None, fastRun=True, verbose=False,
                         relativeData=None, **kwargs):
         """
@@ -678,6 +679,8 @@ class Constellation():
             groundTarget (GroundLoc object) : ground location to image
             groundLocs (list of GroundLoc objects) : list of available downlink
                 locations
+            dataRateXLink (int) : Data rate achievable in Xlink (bits per sec)
+            imageSize (bits) : Size of image needed to be transferred over XLink
             dataAccessConstellation (DataAccessSat object) : Default is none, 
                 and method calculates access. If DataAccess already calculated can input here instead to skip access calculation
             timeDeltas (astropy TimeDelta object): Time intervals to get 
@@ -690,7 +693,7 @@ class Constellation():
         """
 
         # Check if constellation has been propagated
-        if not hasattr(self.planes[0].sats[0], 'rvCoords'):
+        if not hasattr(self.planes[0].sats[0], 'rvCoords') and relativeData is None:
             print("Run self.get_rv_from_propagate first to get rv values")
             return
         # Check to make sure groundLocs is a list
@@ -698,44 +701,149 @@ class Constellation():
             print("Turning downlink location (arg2) into list")
             groundLocs = [groundLocs]
 
-        # Gets access status for constellation
-        accessData = []
-        print('Calculating...')
-        numPlanes = len(self.planes)
-        for planeIdx, plane in enumerate(self.planes):
-            numSats = len(plane.sats)
-            if verbose:
-                print(f'planeID {planeIdx + 1} of {numPlanes}')
-            if not plane: #Continue if empty
-                continue
-            if dataAccessConstellation==None:
-                for satIdx, sat in enumerate(plane.sats):
-                    if verbose:
-                        print(f'satellite {satIdx + 1} of {numSats}')
-                    satAccessTarget = sat.get_access_sat(groundTarget,
-                                            timeDeltas = timeDeltas, fastRun = fastRun,
-                                            verbose=verbose)
-                    for dlIdx, dlStation in enumerate(groundLocs):
-                        if verbose:
-                            print(f'Calculating access for Ground DL Location {dlIdx+1} of {len(groundLocs)}')
-                        satAccessDL = sat.get_access_sat(dlStation, timeDeltas=timeDeltas, fastRun=fastRun)
-                    satAccess['planeID'] = plane.planeID
-                    satAccess['satID'] = sat.satID
-                    satAccess['satIdxOfPlane'] = satIdx
-                    accessData.append(satAccess)
-            else: #TODO Check to see that this works
-                for dataA in dataAccessConstellation:
-                    accessData.append(dataA)
+        ##Calculate access if needed
+        if dataAccessConstellation is None:
+            dataAccessConstellation = self.get_access([groundTarget].extend(groundLocs),
+                verbose=verbose)
 
         # Get data relative motion data
         if relativeData is None:
-            relativeData = self.get_relative_velocity_analysis(verbose=True)
+            relativeData = self.get_relative_velocity_analysis(verbose=verbose)
         satDataKeys = list(relativeData['satData'].keys())
         if 'islFeasibility' not in relativeData['satData'][satDataKeys[0]]:
             utils.get_isl_feasibility(relativeData, **kwargs) 
 
+        relativeSatData = relativeData['satData']
 
-        breakpoint()
+        # import ipdb; ipdb.set_trace()
+
+        ## Extract all target passes
+        targetAccess = [access for access in dataAccessConstellation.accessList
+                       if access.groundIdentifier=='target']
+        dlAccess = [access for access in dataAccessConstellation.accessList
+                   if access.groundIdentifier=='downlink'] 
+
+
+        ## Sort accesses and affiliated satellite IDs
+
+        #lambda function to extract first downlink time
+        accessExtract = lambda x: [t[0] for t in x.accessIntervals]
+        #lambda function to extract satID
+        IDExtract = lambda x: [x.satID for t in x.accessIntervals]
+        accessTimes = [accessExtract(access) for access in dlAccess]
+        targetTimes = [accessExtract(access) for access in targetAccess]
+
+
+        accessIDs = [IDExtract(access) for access in dlAccess]
+        targetIDs = [IDExtract(access) for access in targetAccess]
+
+        accessTimesFlat = np.concatenate(accessTimes).flat
+        accessIDsFlat = np.concatenate(accessIDs).flat
+        targetTimesFlat = np.concatenate(targetTimes).flat
+        targetIDsFlat = np.concatenate(targetIDs).flat
+
+        #Sort dlTimes from earliest to latest
+        sortArgAccess= np.argsort(accessTimesFlat)
+        accessTimesSorted = accessTimesFlat[sortArgAccess]
+        accessIDsSorted = accessIDsFlat[sortArgAccess]
+
+        sortArgTarget = np.argsort(targetTimesFlat)
+        targetTimesSorted = targetTimesFlat[sortArgTarget]
+        targetIDsSorted = targetIDsFlat[sortArgTarget]
+
+
+        routeFound = False #Haven't found ISL route yet
+
+        for imgIdx, imgTime in enumerate(targetTimesSorted):
+            imgSat = targetIDsSorted[imgIdx]
+            for dlIdx, dlTime in enumerate(accessTimesSorted):
+                
+                ## Reset lists
+                visitedSats = [] #Reset visited Sats
+                routesToInvestigate = []
+                routeEndTimes = [] #Time at which route must start (previous transmission must finish)
+                routesInvestigated = []
+                
+                currentNode = accessIDsSorted[dlIdx]
+
+                islOppsKeys = utils.get_potential_isl_keys(currentNode, relativeSatData.keys())
+                previousRouteEnd = [dlTime] * len(islOppsKeys)
+                routesToInvestigate.extend(islOppsKeys)
+                routeEndTimes.extend(previousRouteEnd)
+
+                while len(routesToInvestigate) >= 1 and routeFound == False:
+
+                    if verbose:
+                        print(f'len routestoinvestigate: {len(routesToInvestigate)}')
+                        print(f'len routeEndTimes : {len(routeEndTimes)}')
+
+                    currentRoute = routesToInvestigate[0]
+                    if verbose:
+                        print(f'Current Route: ', currentRoute)
+                    requiredStartTime = routeEndTimes[0]
+                    routesToInvestigate.pop(0) #remove from queue
+                    routeEndTimes.pop(0)
+                    rxSat = currentRoute.split('-')[-2] #satellite to send data
+                    txSat = currentRoute.split('-')[-1] #satellite to receive data
+                    if txSat in visitedSats: #Already visited this node
+                        continue
+                    islKey = rxSat + '-' + txSat #Remake to ensure only 2 satellites in link
+                    pairData = relativeSatData[islKey]
+                    dlTrialIdx = np.where(relativeSatData[islKey]['times']==requiredStartTime)
+                    targetTrialIdx = np.where(relativeSatData[islKey]['times']==imgTime)
+                    
+                    #Get isl opportunities and times
+                    islOpps = pairData['islFeasible'][targetTrialIdx[0][0]:dlTrialIdx[0][0]]
+                    islOppsTimes = pairData['times'][targetTrialIdx[0][0]:dlTrialIdx[0][0]]
+
+                    ## Check if there are ISL opportunities here. Continue if now
+                    if max(islOpps) == False:
+                        continue
+                    
+                    # Get link intervals (when link can start/stop)
+                    xLinkIntervals = utils.get_start_stop_intervals(islOpps, islOppsTimes)
+
+                    for interval in reversed(xLinkIntervals):
+                        endTime = interval[1]
+                        startTime = interval[0]
+
+                        transferInterval = endTime - startTime
+
+                        #check if interval is long enough for a data transfer
+                        dataTransferTime = imageSize/dataRateXLink * u.s
+                        if dataTransferTime > transferInterval: #takes too long to transfer
+                            continue
+                        else:
+                            beginningOfTransferWindow = endTime - dataTransferTime
+                            diffTimes = islOppsTimes - beginningOfTransferWindow
+                            beginningOfTransferWindowIdx = np.where(diffTimes.value < 0, 
+                                                                    diffTimes.value, 
+                                                                    -np.inf).argmax()
+                            dataTransferStart = islOppsTimes[beginningOfTransferWindowIdx]
+                            visitedSats.append(txSat) #If link is available, no need to revisit this node
+                            routesInvestigated.append(currentRoute) #append satellite node to route
+                            
+                            newKeys = utils.get_potential_isl_keys(int(txSat), 
+                                                            relativeSatData.keys(),
+                                                            visitedSats)
+                            previousRouteEnd = [dataTransferStart] * len(newKeys)
+                            newRoutes = [currentRoute[:-1]+key for key in newKeys]
+                            routesToInvestigate.extend(newRoutes)
+                            routeEndTimes.extend(previousRouteEnd)
+                            # import ipdb;ipdb.set_trace()
+
+                            if txSat == str(imgSat):
+                                print('route found ', currentRoute)
+                                srt = dlTime - imgTime
+                                print(f'SRT: {srt}')
+                                routeFound = True
+                                return srt
+                                break
+        print('No ISLs Found')
+        srt = None
+        return srt 
+
+
 
     def propagate(self, time):
         """
