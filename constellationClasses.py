@@ -543,7 +543,6 @@ class Constellation():
                     label = f'{clrIdx}'
                     lgdCheck.append(clrIdx)
                 timeAtPass = man.time - tInit #man.time gets time at ISL, tInit is the current time
-                # import ipdb; ipdb.set_trace()
                 plt.plot(timeAtPass.to(u.hr), man.deltaV, 'o',color = colors[clrIdx],
                         label = label)
             paretoTimes = [(p.time-tInit).to(u.hr).value for p in paretoSats]
@@ -662,11 +661,14 @@ class Constellation():
                     satAccess['satID'] = sat.satID
                     satAccess['satIdxOfPlane'] = satIdx
                     accessData.append(satAccess)
+                    breakpoint()
             else: #TODO Check to see that this works
                 for dataA in dataAccessConstellation:
                     accessData.append(dataA)
 
         lowest_srt = min(accessData, key=lambda x:x['time2dl']) 
+        if lowest_srt['time2dl'] == astropy.time.TimeDelta(9999 * u.yr):
+            lowest_srt = "No Access"
         return lowest_srt
 
     def get_srt_isl(self, groundTarget, groundLocs, dataRateXLink, imageSize,
@@ -688,7 +690,13 @@ class Constellation():
             fastRun (Bool) : Takes satellite height average to calculate 
                 max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
             verbose (Bool) : Prints status updates if true
+        
+        Returns:
+            srt : System response time (time between image and downlink)
 
+            TODO: Add check that checks if there are any ISLs at all (check last DL time and first image time). If there are none, skip
+            TODO: Add check that allows srt to be calculated if same satellite picks images and downlinks
+            TODO: Add check to make sure downlink interval is wide enough for downlink
         
         """
 
@@ -715,7 +723,16 @@ class Constellation():
 
         relativeSatData = relativeData['satData']
 
-        # import ipdb; ipdb.set_trace()
+        ## Check if there are ISL capabilities in constellation
+        relSatKeys = relativeSatData.keys()
+        for idx, key in enumerate(relSatKeys):
+            islMask = relativeSatData[key]['islFeasible']
+            if any(islMask):
+                break
+            if idx == len(relSatKeys)-1: #Last loop
+                print('No ISLs in constellation')
+                srt = None
+                return srt 
 
         ## Extract all target passes
         targetAccess = [access for access in dataAccessConstellation.accessList
@@ -753,11 +770,21 @@ class Constellation():
 
 
         routeFound = False #Haven't found ISL route yet
+        # noAvailableRoutes = False #Bool to catch if there are no available links throughout simulation (can skip rest of search)
+
+        # latestDL = accessTimesSorted[-1] #Get latest downlink
+        # earliestImage = targetTimesSorted[0] #get earliest image
+
 
         for imgIdx, imgTime in enumerate(targetTimesSorted):
+            if verbose:
+                print('######## STARTING NEW IMAGE LOOOP ########')
+                print(f'running imaging idx {imgIdx} out of {len(targetTimesSorted)}')
             imgSat = targetIDsSorted[imgIdx]
             for dlIdx, dlTime in enumerate(accessTimesSorted):
-                
+                if verbose:
+                    print('--------STARTING NEW DL LOOOP--------')
+                    print(f'running downlink idx {dlIdx} out of {len(accessTimesSorted)}')
                 ## Reset lists
                 visitedSats = [] #Reset visited Sats
                 routesToInvestigate = []
@@ -782,7 +809,7 @@ class Constellation():
                     if currentRoute in routesInvestigated: #Don't want to redo something already done
                         continue
                     routesInvestigated.append(currentRoute) #append satellite node to route
-                    
+
                     requiredStartTime = routeEndTimes[0]
                     routesToInvestigate.pop(0) #remove from queue
                     routeEndTimes.pop(0)
@@ -833,9 +860,9 @@ class Constellation():
                                                             visitedSats)
                             previousRouteEnd = [dataTransferStart] * len(newKeys)
                             newRoutes = [currentRoute[:-1]+key for key in newKeys]
-                            routesToInvestigate.extend(newRoutes)
-                            routeEndTimes.extend(previousRouteEnd)
-                            # import ipdb;ipdb.set_trace()
+                            if newRoutes not in routesToInvestigate or newRoutes not in routesInvestigated:
+                                routesToInvestigate.extend(newRoutes)
+                                routeEndTimes.extend(previousRouteEnd)
 
                             if txSat == str(imgSat):
                                 print('route found ', currentRoute)
@@ -1725,6 +1752,13 @@ class Satellite(Orbit):
         if targetAccess==None:
             targetAccess = self.get_access_sat(groundTarget, timeDeltas = timeDeltas, fastRun = fastRun)
 
+        if targetAccess.accessIntervals.size == 0: #No access
+            outputData = {
+            "targetAccess": float("nan"),
+            "downlinkTime": float("nan"),
+            "time2dl"     : astropy.time.TimeDelta(9999 * u.yr), # Set max time to 9999 years if no access   
+            }
+            return outputData
         firstTargetAccess = targetAccess.accessIntervals[0][0]
 
         #get accesses for downlinks
@@ -1740,8 +1774,13 @@ class Satellite(Orbit):
         downlinkFound = False
         currentEarliestDL = maxSimTime #earlist downlink
         for dlOptIdx, dlOptions in enumerate(downlinkAccessArr):
-            print(f'Calculating best dlTime for {dlOptIdx+1} out of {len(downlinkAccessArr)}')
+            if verbose:
+                print(f'Calculating best dlTime for {dlOptIdx+1} out of {len(downlinkAccessArr)}')
             dlTimes = dlOptions.accessIntervals[:,0] #gets all times that begin an access interval
+
+            #Check that there are times to compare
+            if dlTimes.size == 0 or firstTargetAccess.size == 0:
+                continue
 
             idx_timesAfterTargetAccess = np.where(dlTimes > firstTargetAccess)
             if idx_timesAfterTargetAccess[0].size == 0: #check if no access
@@ -1760,7 +1799,13 @@ class Satellite(Orbit):
         if not downlinkFound:
             print("No downlink found")
 
+        #Catch no downlink
         time_image2dl = currentEarliestDL - firstTargetAccess #Time from imaging to downlink
+
+        if currentEarliestDL == maxSimTime: #No downlink found
+            currentEarliestDL = float("nan")
+            time_image2dl = astropy.time.TimeDelta(9999 * u.yr) # Set max time to 9999 years if no access   
+
         outputData = {
                     "targetAccess": firstTargetAccess,
                     "downlinkTime": currentEarliestDL,
@@ -2639,7 +2684,6 @@ class DataAccessSat():
         lla_sat = satEL.to_geodetic() #to LLA
 
 
-        # breakpoint()
 
         ## Calculate ground range (great circle arc) between the satellite nadir
         ## point and the ground location
@@ -2757,7 +2801,12 @@ class DataAccessConstellation():
 
         totalAccess = [any(t) for t in zip(*accessMasks)]
 
-        percCoverage = sum(totalAccess) / len(totalAccess) * 100
+        if not any(totalAccess):
+            percCoverage = 0
+            print('No Coverage')
+            return
+        else:
+            percCoverage = sum(totalAccess) / len(totalAccess) * 100
 
         if absolute_time: #Choose time scale to be the first satellite
             timePlot = self.accessList[0].sat.rvTimes.datetime
