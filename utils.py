@@ -249,8 +249,9 @@ def get_start_stop_intervals(mask, refArray):
         startTimes = refArray[startIdx]
         endTimes = refArray[endIdx]
     elif mask[0] == 0 and mask[-1] == 0 and any(mask)==False:
-        startStopIntervals == None
+        startStopIntervals = [(None, None)]
         print('No Intervals Found')
+        return startStopIntervals
     elif mask[0] == 0 and mask[-1] == 0:
         startIdx = maskStart
         endIdx = maskEnd
@@ -288,3 +289,39 @@ def get_potential_isl_keys(satID, keys, excludeList = None):
         islOppsKeys = [x for x in islOppsAll if x.split('-')[0]==str(satID)]
     return islOppsKeys
 
+def get_divisors(t):
+    """
+    Gets divisors for integer t. Useful to determine number of planes in 
+    a walker constellation with total satellites, t.
+    """
+    if t%2 == 0: #even
+        endRange = int(t/2 + 1)
+    elif t%2 == 1:
+        endRange = int(np.ceil(t/2))
+    divisors = []
+    for i in range(1, endRange):
+        if t%i==0:
+            divisors.append(i)
+    return divisors
+
+def get_walker_params(t):
+    """
+    Gets walker parameters t/p/f given a total number of satellites
+    
+    Args:
+        t (int) : total number of satellites
+        
+    Returns:
+        walkerParams (list) : list of walker constellation parameters
+    """
+    walkerParams = []
+    planes = get_divisors(t)
+    planes.append(t) #each satellite with own plane
+    
+    for p in planes:
+        fRange = range(0, p)
+        for f in fRange:
+            paramTuple = (t, p, f)
+            walkerParams.append(paramTuple)
+    
+    return walkerParams

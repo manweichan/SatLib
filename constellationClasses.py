@@ -744,7 +744,7 @@ class Constellation():
         ## Sort accesses and affiliated satellite IDs
 
         #lambda function to extract first downlink time
-        accessExtract = lambda x: [t[0] for t in x.accessIntervals]
+        accessExtract = lambda x: [t[0] for t in x.accessIntervals]# if x.accessIntervals is not None]
         #lambda function to extract satID
         IDExtract = lambda x: [x.satID for t in x.accessIntervals]
         accessTimes = [accessExtract(access) for access in dlAccess]
@@ -759,14 +759,22 @@ class Constellation():
         targetTimesFlat = np.concatenate(targetTimes).flat
         targetIDsFlat = np.concatenate(targetIDs).flat
 
-        #Sort dlTimes from earliest to latest
-        sortArgAccess= np.argsort(accessTimesFlat)
-        accessTimesSorted = accessTimesFlat[sortArgAccess]
-        accessIDsSorted = accessIDsFlat[sortArgAccess]
+        ##Remove Nones
+        noneIdxAccess = np.where(accessTimesFlat == None)
+        cleanAccessTimesFlat = np.delete(accessTimesFlat, noneIdxAccess)
+        cleanAccessIdsFlat = np.delete(accessIDsFlat, noneIdxAccess)
+        noneIdxTarget = np.where(targetTimesFlat == None)
+        cleanTargetTimesFlat = np.delete(targetTimesFlat, noneIdxTarget)
+        cleanTargetIdsFlat = np.delete(targetIDsFlat, noneIdxTarget)
 
-        sortArgTarget = np.argsort(targetTimesFlat)
-        targetTimesSorted = targetTimesFlat[sortArgTarget]
-        targetIDsSorted = targetIDsFlat[sortArgTarget]
+        #Sort dlTimes from earliest to latest
+        sortArgAccess= np.argsort(cleanAccessTimesFlat)
+        accessTimesSorted = cleanAccessTimesFlat[sortArgAccess]
+        accessIDsSorted = cleanAccessIdsFlat[sortArgAccess]
+
+        sortArgTarget = np.argsort(cleanTargetTimesFlat)
+        targetTimesSorted = cleanTargetTimesFlat[sortArgTarget]
+        targetIDsSorted = cleanTargetIdsFlat[sortArgTarget]
 
 
         routeFound = False #Haven't found ISL route yet
@@ -797,11 +805,13 @@ class Constellation():
                 previousRouteEnd = [dlTime] * len(islOppsKeys)
                 routesToInvestigate.extend(islOppsKeys)
                 routeEndTimes.extend(previousRouteEnd)
+                # routeEndTimes = list(np.concatenate(routeEndTimes).flat) #ensure list is flat
 
                 while len(routesToInvestigate) >= 1 and routeFound == False:
 
-
                     currentRoute = routesToInvestigate[0]
+                    # if len(currentRoute)>3:
+                    #     import ipdb; ipdb.set_trace()
                     if verbose:
                         print(f'Current Route: ', currentRoute)
                         print(f'Routes to Investigate', routesToInvestigate)
@@ -810,7 +820,7 @@ class Constellation():
                         continue
                     routesInvestigated.append(currentRoute) #append satellite node to route
 
-                    requiredStartTime = routeEndTimes[0]
+                    previousEndTime = routeEndTimes[0] #Time previous route ends at
                     routesToInvestigate.pop(0) #remove from queue
                     routeEndTimes.pop(0)
                     rxSat = currentRoute.split('-')[-2] #satellite to send data
@@ -819,9 +829,20 @@ class Constellation():
                         continue
                     islKey = rxSat + '-' + txSat #Remake to ensure only 2 satellites in link
                     pairData = relativeSatData[islKey]
-                    dlTrialIdx = np.where(relativeSatData[islKey]['times']==requiredStartTime)
+                    dlTrialIdx = np.where(relativeSatData[islKey]['times']==previousEndTime)
                     targetTrialIdx = np.where(relativeSatData[islKey]['times']==imgTime)
                     
+                    #Reached beginning of time frame and data is still on different satellites
+                    if previousEndTime == imgTime and txSat != str(imgSat): 
+                        continue
+                    #Reached end of time interval at the right satellite
+                    elif previousEndTime == imgTime and txSat == str(imgSat):
+                        print('route found ', currentRoute)
+                        srt = dlTime - imgTime
+                        print(f'SRT: {srt}')
+                        routeFound = True
+                        return srt
+
                     if dlTrialIdx < targetTrialIdx: #dowlink op is before target image op
                         continue
 
@@ -830,19 +851,21 @@ class Constellation():
                     islOppsTimes = pairData['times'][targetTrialIdx[0][0]:dlTrialIdx[0][0]]
 
                     ## Check if there are ISL opportunities here. Continue if now
-                    if max(islOpps) == False:
-                        continue
+                    if islOpps.size != 0:
+                        if max(islOpps) == False:
+                            continue
                     
                     # Get link intervals (when link can start/stop)
                     xLinkIntervals = utils.get_start_stop_intervals(islOpps, islOppsTimes)
 
+                    # if len(routesToInvestigate) > 15:
+                    #     import ipdb; ipdb.set_trace()
                     for interval in reversed(xLinkIntervals):
                         endTime = interval[1]
                         startTime = interval[0]
 
                         transferInterval = endTime - startTime
 
-                        #check if interval is long enough for a data transfer
                         dataTransferTime = imageSize/dataRateXLink * u.s
                         if dataTransferTime > transferInterval: #takes too long to transfer
                             continue
@@ -859,10 +882,15 @@ class Constellation():
                                                             relativeSatData.keys(),
                                                             visitedSats)
                             previousRouteEnd = [dataTransferStart] * len(newKeys)
-                            newRoutes = [currentRoute[:-1]+key for key in newKeys]
-                            if newRoutes not in routesToInvestigate or newRoutes not in routesInvestigated:
-                                routesToInvestigate.extend(newRoutes)
-                                routeEndTimes.extend(previousRouteEnd)
+                            newRoutes = [currentRoute.split('-')[-1]+ '-' +key for key in newKeys]
+
+                            ## Make sure routes are not repeated
+                            for route in newRoutes:
+                                if route == '44-0':
+                                    import ipdb; ipdb.set_trace()
+                                if route not in routesToInvestigate and route not in routesInvestigated:
+                                    routesToInvestigate.append(route)
+                                    routeEndTimes.extend(previousRouteEnd)
 
                             if txSat == str(imgSat):
                                 print('route found ', currentRoute)
@@ -1752,7 +1780,7 @@ class Satellite(Orbit):
         if targetAccess==None:
             targetAccess = self.get_access_sat(groundTarget, timeDeltas = timeDeltas, fastRun = fastRun)
 
-        if targetAccess.accessIntervals.size == 0: #No access
+        if targetAccess.accessIntervals is None: #No access
             outputData = {
             "targetAccess": float("nan"),
             "downlinkTime": float("nan"),
@@ -2711,41 +2739,41 @@ class DataAccessSat():
         # plt.hlines(lam_max_all.value, tofs.value[0], tofs.value[-1])
         # plt.plot(tofs.value, groundRanges, label='ground range')
 
-
-        accDiff = np.diff(access_mask*1) #multiply by one to turn booleans into int
-        access_maskEnd = np.squeeze(np.where(accDiff==-1))
-        access_maskStart = np.squeeze(np.where(accDiff==1))
-        if access_mask[0] == 1 and access_mask[-1] == 1: #Begin and end on an access_mask
-            startIdx = np.concatenate((np.array([0]), access_maskStart))
-            endIdx = np.concatenate((access_maskEnd, len(absTime.value)))
-            startTimes = absTime[startIdx]
-            endTimes = absTime[endIdx]
-        elif access_mask[0] == 1 and access_mask[-1] == 0: #Begin on access_mask and end in no access_mask
-        #     access_start = np.squeeze(np.insert(access_maskStart, 0, 0, axis=1))
-            startIdx = np.concatenate((np.array([0]), access_maskStart))
-            endIdx = access_maskEnd
-            startTimes = absTime[startIdx]
-            endTimes = absTime[endIdx]
-        elif access_mask[0] == 0 and access_mask[-1] == 1:
-            startIdx = access_maskStart
-            endIdxnp.concatenate((access_maskEnd, len(absTime.value)))
-            startTimes = absTime[startIdx]
-            endTimes = absTime[endIdx]
-        elif access_mask[0] == 0 and access_mask[-1] == 0:
-            startIdx = access_maskStart
-            endIdx = access_maskEnd
-            startTimes = absTime[startIdx]
-            endTimes = absTime[endIdx]
-            pass
-        else:
-            print("check function")
+        accessIntervals = utils.get_start_stop_intervals(access_mask, absTime)
+        # accDiff = np.diff(access_mask*1) #multiply by one to turn booleans into int
+        # access_maskEnd = np.squeeze(np.where(accDiff==-1))
+        # access_maskStart = np.squeeze(np.where(accDiff==1))
+        # if access_mask[0] == 1 and access_mask[-1] == 1: #Begin and end on an access_mask
+        #     startIdx = np.concatenate((np.array([0]), access_maskStart))
+        #     endIdx = np.concatenate((access_maskEnd, len(absTime.value)))
+        #     startTimes = absTime[startIdx]
+        #     endTimes = absTime[endIdx]
+        # elif access_mask[0] == 1 and access_mask[-1] == 0: #Begin on access_mask and end in no access_mask
+        # #     access_start = np.squeeze(np.insert(access_maskStart, 0, 0, axis=1))
+        #     startIdx = np.concatenate((np.array([0]), access_maskStart))
+        #     endIdx = access_maskEnd
+        #     startTimes = absTime[startIdx]
+        #     endTimes = absTime[endIdx]
+        # elif access_mask[0] == 0 and access_mask[-1] == 1:
+        #     startIdx = access_maskStart
+        #     endIdxnp.concatenate((access_maskEnd, len(absTime.value)))
+        #     startTimes = absTime[startIdx]
+        #     endTimes = absTime[endIdx]
+        # elif access_mask[0] == 0 and access_mask[-1] == 0:
+        #     startIdx = access_maskStart
+        #     endIdx = access_maskEnd
+        #     startTimes = absTime[startIdx]
+        #     endTimes = absTime[endIdx]
+        #     pass
+        # else:
+        #     print("check function")
             
-        if not isinstance(startTimes, list):
-            startTimes = [startTimes]
+        # if not isinstance(startTimes, list):
+        #     startTimes = [startTimes]
 
-        if not isinstance(endTimes, list):
-            endTimes = [endTimes]
-        accessIntervals = np.column_stack((startTimes[0], endTimes[0]))#list(zip(startTimes, endTimes))
+        # if not isinstance(endTimes, list):
+        #     endTimes = [endTimes]
+        # accessIntervals = np.column_stack((startTimes[0], endTimes[0]))#list(zip(startTimes, endTimes))
         self.accessIntervals = accessIntervals
         self.accessMask = access_mask
 
