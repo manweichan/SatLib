@@ -694,7 +694,6 @@ class Constellation():
         Returns:
             srt : System response time (time between image and downlink)
 
-            TODO: Add check that checks if there are any ISLs at all (check last DL time and first image time). If there are none, skip
             TODO: Add check that allows srt to be calculated if same satellite picks images and downlinks
             TODO: Add check to make sure downlink interval is wide enough for downlink
         
@@ -810,8 +809,6 @@ class Constellation():
                 while len(routesToInvestigate) >= 1 and routeFound == False:
 
                     currentRoute = routesToInvestigate[0]
-                    # if len(currentRoute)>3:
-                    #     import ipdb; ipdb.set_trace()
                     if verbose:
                         print(f'Current Route: ', currentRoute)
                         print(f'Routes to Investigate', routesToInvestigate)
@@ -882,12 +879,12 @@ class Constellation():
                                                             relativeSatData.keys(),
                                                             visitedSats)
                             previousRouteEnd = [dataTransferStart] * len(newKeys)
-                            newRoutes = [currentRoute.split('-')[-1]+ '-' +key for key in newKeys]
-
+                            currentRouteSplit = currentRoute.split('-')
+                            currentRouteSplit.pop(-1) #Remove last satellite because it is the same as first satellite in newKeys
+                            routePrefix = '-'.join(currentRouteSplit)
+                            newRoutes = [(routePrefix + '-' + key) for key in newKeys]
                             ## Make sure routes are not repeated
                             for route in newRoutes:
-                                if route == '44-0':
-                                    import ipdb; ipdb.set_trace()
                                 if route not in routesToInvestigate and route not in routesInvestigated:
                                     routesToInvestigate.append(route)
                                     routeEndTimes.extend(previousRouteEnd)
@@ -2740,40 +2737,6 @@ class DataAccessSat():
         # plt.plot(tofs.value, groundRanges, label='ground range')
 
         accessIntervals = utils.get_start_stop_intervals(access_mask, absTime)
-        # accDiff = np.diff(access_mask*1) #multiply by one to turn booleans into int
-        # access_maskEnd = np.squeeze(np.where(accDiff==-1))
-        # access_maskStart = np.squeeze(np.where(accDiff==1))
-        # if access_mask[0] == 1 and access_mask[-1] == 1: #Begin and end on an access_mask
-        #     startIdx = np.concatenate((np.array([0]), access_maskStart))
-        #     endIdx = np.concatenate((access_maskEnd, len(absTime.value)))
-        #     startTimes = absTime[startIdx]
-        #     endTimes = absTime[endIdx]
-        # elif access_mask[0] == 1 and access_mask[-1] == 0: #Begin on access_mask and end in no access_mask
-        # #     access_start = np.squeeze(np.insert(access_maskStart, 0, 0, axis=1))
-        #     startIdx = np.concatenate((np.array([0]), access_maskStart))
-        #     endIdx = access_maskEnd
-        #     startTimes = absTime[startIdx]
-        #     endTimes = absTime[endIdx]
-        # elif access_mask[0] == 0 and access_mask[-1] == 1:
-        #     startIdx = access_maskStart
-        #     endIdxnp.concatenate((access_maskEnd, len(absTime.value)))
-        #     startTimes = absTime[startIdx]
-        #     endTimes = absTime[endIdx]
-        # elif access_mask[0] == 0 and access_mask[-1] == 0:
-        #     startIdx = access_maskStart
-        #     endIdx = access_maskEnd
-        #     startTimes = absTime[startIdx]
-        #     endTimes = absTime[endIdx]
-        #     pass
-        # else:
-        #     print("check function")
-            
-        # if not isinstance(startTimes, list):
-        #     startTimes = [startTimes]
-
-        # if not isinstance(endTimes, list):
-        #     endTimes = [endTimes]
-        # accessIntervals = np.column_stack((startTimes[0], endTimes[0]))#list(zip(startTimes, endTimes))
         self.accessIntervals = accessIntervals
         self.accessMask = access_mask
 
