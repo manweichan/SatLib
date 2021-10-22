@@ -602,13 +602,13 @@ class Constellation():
             for satIdx, sat in enumerate(plane.sats):
                 if verbose:
                     print(f'sat {satIdx + 1} out of {len(plane.sats)}')
-                if not hasattr(sat, 'rvCoords') and timeDeltas==None:
-                    print("WARNING: Satellite has no rvCoords attribute:\n"
+                if not hasattr(sat, 'rvECI') and timeDeltas==None:
+                    print("WARNING: Satellite has no rvECI attribute:\n"
                     "EITHER input timeDeltas (astropy quantity) as timeDeltas argument OR\n" 
                     "run sat.get_rv_from_propagate(timeDeltas) before inputting satellite object into this function\n"
                     "breaking")
                     return None
-                elif not hasattr(sat, 'rvCoords'):
+                elif not hasattr(sat, 'rvECI'):
                     print(f"Propagating Plane {planeIdx}\nSatellite {satIdx}")
                     sat.get_rv_from_propagate(timeDeltas)
                     tofs = timeDeltas
@@ -661,7 +661,6 @@ class Constellation():
                     satAccess['satID'] = sat.satID
                     satAccess['satIdxOfPlane'] = satIdx
                     accessData.append(satAccess)
-                    breakpoint()
             else: #TODO Check to see that this works
                 for dataA in dataAccessConstellation:
                     accessData.append(dataA)
@@ -701,7 +700,7 @@ class Constellation():
         """
 
         # Check if constellation has been propagated
-        if not hasattr(self.planes[0].sats[0], 'rvCoords') and relativeData is None:
+        if not hasattr(self.planes[0].sats[0], 'rvECI') and relativeData is None:
             print("Run self.get_rv_from_propagate first to get rv values")
             return
         # Check to make sure groundLocs is a list
@@ -1038,9 +1037,9 @@ class Constellation():
             dopplerShift : Effective doppler shifts due to relative velocities
         """
 
-        #Check if first satellite has rvCoords Attribute
-        # assert self.planes[0].sats[0].rvCoords, "Run self.get_rv_from_propagate first to get rv values"
-        if not hasattr(self.planes[0].sats[0], 'rvCoords'):
+        #Check if first satellite has rvECI Attribute
+        # assert self.planes[0].sats[0].rvECI, "Run self.get_rv_from_propagate first to get rv values"
+        if not hasattr(self.planes[0].sats[0], 'rvECI'):
             print("Run self.get_rv_from_propagate first to get rv values")
             return
         c = 3e8 * u.m / u.s
@@ -1062,12 +1061,12 @@ class Constellation():
                 if verbose:
                     print(f'Refererence compared to {sat.satID}')
                 #Reference orbit RV values
-                satRef_r = satRef.rvCoords.without_differentials()
-                satRef_v = satRef.rvCoords.differentials                
+                satRef_r = satRef.rvECI.without_differentials()
+                satRef_v = satRef.rvECI.differentials                
 
                 #Comparison orbit RV values
-                sat_r = sat.rvCoords.without_differentials()
-                sat_v = sat.rvCoords.differentials
+                sat_r = sat.rvECI.without_differentials()
+                sat_v = sat.rvECI.differentials
 
                 #Determine LOS availability (Vallado pg 306 5.3)
                 adotb = sat_r.dot(satRef_r)
@@ -1188,7 +1187,7 @@ class Constellation():
             print("Assign communications payload to satellites in constellation")
             return
 
-        if not hasattr(self.planes[0].sats[0], 'rvCoords'):
+        if not hasattr(self.planes[0].sats[0], 'rvECI'):
             print("Run self.get_rv_from_propagate first to get rv values")
             return
         sats = self.get_sats()
@@ -1202,12 +1201,12 @@ class Constellation():
                     continue
 
                 #Reference orbit RV values
-                satRef_r = satRef.rvCoords.without_differentials()
-                satRef_v = satRef.rvCoords.differentials                
+                satRef_r = satRef.rvECI.without_differentials()
+                satRef_v = satRef.rvECI.differentials                
 
                 #Comparison orbit RV values
-                sat_r = sat.rvCoords.without_differentials()
-                sat_v = sat.rvCoords.differentials
+                sat_r = sat.rvECI.without_differentials()
+                sat_v = sat.rvECI.differentials
 
                 #Determine LOS availability (Vallado pg 306 5.3)
                 adotb = sat_r.dot(satRef_r)
@@ -1600,10 +1599,19 @@ class Satellite(Orbit):
                 timeDeltas,
                 )
 
-        # print("working")
-        self.rvCoords = coords
-        self.rvTimeDeltas = timeDeltas
-        self.rvTimes = self.epoch + timeDeltas
+        absTime = self.epoch + timeDeltas
+        satECI = GCRS(coords.x, coords.y, coords.z, representation_type="cartesian", obstime = absTime)
+        satECISky = SkyCoord(satECI)
+        satECEF = satECISky.transform_to(ITRS)
+        ## Turn coordinates into an EarthLocation object
+        satEL = EarthLocation.from_geocentric(satECEF.x, satECEF.y, satECEF.z)
+        ## Convert to LLA
+        lla_sat = satEL.to_geodetic() #to LLA
+        self.rvECI = coords #ECI coordinates
+        self.rvTimeDeltas = timeDeltas #Time deltas
+        self.rvTimes = absTime #times
+        self.LLA = lla_sat #Lat long alt of satellite
+        self.rvECEF = satECEF #ECEF coordinates
 
     def get_access_sat(self, groundLoc, timeDeltas=None, fastRun=True, 
         re = constants.R_earth, verbose=False):
@@ -1623,13 +1631,13 @@ class Satellite(Orbit):
         """
         
         ## Check if the satellite has been propagated before
-        if not hasattr(self, 'rvCoords') and timeDeltas==None:
-            print("WARNING: Satellite has no rvCoords attribute:\n"
+        if not hasattr(self, 'rvECI') and timeDeltas==None:
+            print("WARNING: Satellite has no rvECI attribute:\n"
             "EITHER input timeDeltas (astropy quantity) as timeDeltas argument OR\n" 
             "run sat.get_rv_from_propagate(timeDeltas) before inputting satellite object into this function\n"
             "breaking")
             return None
-        elif not hasattr(self, 'rvCoords'):
+        elif not hasattr(self, 'rvECI'):
             print('getting pos/vel vectors through propagation')
             self.get_rv_from_propagate(timeDeltas)
             tofs = timeDeltas
@@ -1885,9 +1893,6 @@ class Satellite(Orbit):
     # def set_task(self, task):
     #   self.task = task
 
-    def calc_access(self, GroundLoc, timeSpan):
-        pass
-    
     def get_desired_pass_orbs(self, GroundLoc, tInitSim, days, useSatEpoch, task = None,
                                  refVernalEquinox = astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
         """
@@ -2694,7 +2699,7 @@ class DataAccessSat():
         self.groundIdentifier = groundLoc.identifier
 
     def process_data(self, re = constants.R_earth):
-        satCoords = self.sat.rvCoords
+        satCoords = self.sat.rvECI
         tofs = self.sat.rvTimeDeltas
         absTime = self.sat.epoch + tofs #absolute time from time deltas
         
@@ -2742,6 +2747,8 @@ class DataAccessSat():
         accessIntervals = utils.get_start_stop_intervals(access_mask, absTime)
         self.accessIntervals = accessIntervals
         self.accessMask = access_mask
+        self.lam_max = lam_max_all
+        self.groundRanges = groundRanges
 
     def plot_access(self, absolute_time = True):
         """
@@ -2791,8 +2798,7 @@ class DataAccessConstellation():
             gLocs = [gLocs] #Turn into list
 
         #extract accessMasks into a list
-        accessMasks = [data.accessMask for data in self.accessList if data.groundLocID in gLocs]
-
+        accessMasks = [data.accessMask for data in self.accessList if data.groundLoc in gLocs]
         totalAccess = [any(t) for t in zip(*accessMasks)]
 
         if not any(totalAccess):

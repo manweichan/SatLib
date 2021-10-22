@@ -2,7 +2,7 @@ import operator
 import copy
 import collections
 
-import cartopy.crs as ccrs
+# import cartopy.crs as ccrs
 import numpy as np
 import poliastro
 from astropy.coordinates import (
@@ -117,25 +117,25 @@ def getLonLat(orb, timeInts, pts, J2 = True):
     return lon, lat, height
 
 
-def plotGroundTrack(lon, lat, style):
-    """
-    Plots ground tracks on map using cartopy
+# def plotGroundTrack(lon, lat, style):
+#     """
+#     Plots ground tracks on map using cartopy
 
-    Inputs
-    lon (deg): Longitude
-    lat (deg): Latitude
-    style (string): linestyle from matplotlib
+#     Inputs
+#     lon (deg): Longitude
+#     lat (deg): Latitude
+#     style (string): linestyle from matplotlib
 
-    Outputs
-    fig: matplotlib fig object
-    ax: matplotlib ax object
-    """
-    fig = plt.figure(figsize=(15, 25))
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.stock_img()
-    ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
-    ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
-    return fig, ax
+#     Outputs
+#     fig: matplotlib fig object
+#     ax: matplotlib ax object
+#     """
+#     fig = plt.figure(figsize=(15, 25))
+#     ax = plt.axes(projection=ccrs.PlateCarree())
+#     ax.stock_img()
+#     ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
+#     ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
+#     return fig, ax
 
 
 def ground_range_spherical(lat1, lon1, lat2, lon2):
