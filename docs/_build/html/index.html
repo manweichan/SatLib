@@ -40,7 +40,8 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="constellationClasses.CommsPayload">
 <em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">CommsPayload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wavelength</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sysLoss_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_tx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pointingErr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g_rx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t_sys</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sysLoss_rx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beamWidth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aperture</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_line</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.CommsPayload" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Define a communications payload.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>freq</strong> – frequency (easier for rf payloads)</p></li>
@@ -100,6 +101,17 @@ Reference: Section 5.5.5 of Maral “Satellite Communication Systems” pg 186</
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.add_sensor_payload">
+<span class="sig-name descname"><span class="pre">add_sensor_payload</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sensorPL</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.add_sensor_payload" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds sensor payload to each satellite in the constellation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sensorPL</strong> (<em>RemoteSensor Object</em>) – Remote Sensor payload</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="constellationClasses.Constellation.calc_isl_link_performance">
 <span class="sig-name descname"><span class="pre">calc_isl_link_performance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l_atm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_pointing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">l_pol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">txID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rxID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drReq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.calc_isl_link_performance" title="Permalink to this definition">¶</a></dt>
 <dd><p>Calculates the isl link performance between satellites in the constellation</p>
@@ -126,6 +138,17 @@ of a second constellation</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.dill_write">
+<span class="sig-name descname"><span class="pre">dill_write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname_prefix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.dill_write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes current constellation to a pickle file using the dill library</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fname_prefix</strong> (<em>string</em>) – file name string, excluding the .pkl</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="constellationClasses.Constellation.from_list">
 <em class="property"><span class="pre">classmethod</span> </em><span class="sig-name descname"><span class="pre">from_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">planes</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.from_list" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create constellation object from a list of plane objects</p>
@@ -149,10 +172,7 @@ Outputs a set of satellite orbits</p>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>sats</strong> (<em>list</em>) – List of satellite objects (SatClasses). Satellites organized by plane</p></li>
-<li><p><strong>constClass</strong> (<em>object</em>) – Constellation class from satClasses</p></li>
-</ul>
+<dd class="field-even"><p><strong>constClass</strong> (<em>object</em>) – Constellation class from satClasses</p>
 </dd>
 </dl>
 </dd></dl>
@@ -202,6 +222,21 @@ all satellites of another satellite</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_access">
+<span class="sig-name descname"><span class="pre">get_access</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groundLoc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeDeltas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fastRun</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_access" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate access for an entire constellation and list of ground locations</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>groundLoc</strong> (<em>GroundLoc object</em><em> or </em><em>list of GroundLoc objects</em>) – ground location object from constellationClasses</p></li>
+<li><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get position/velocity data</p></li>
+<li><p><strong>fastRun</strong> (<em>Bool</em>) – Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="constellationClasses.Constellation.get_pass_maneuver">
 <span class="sig-name descname"><span class="pre">get_pass_maneuver</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">GroundLoc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tInit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">days</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">useSatEpoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savePlot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">figName</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_pass_maneuver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets set a maneuvers that will pass a specific ground location on
@@ -233,14 +268,18 @@ select days</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="constellationClasses.Constellation.get_relative_velocity_analysis">
-<span class="sig-name descname"><span class="pre">get_relative_velocity_analysis</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_relative_velocity_analysis" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">get_relative_velocity_analysis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_relative_velocity_analysis" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets relative velocities between satellites in the constellation</p>
-<p>Needs to run get_rv_from_propagate first to get position/velocity values first</p>
+<p>Needs to run get_rv_from_propagate first to get position/velocity
+values first</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><ul class="simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>verbose</strong> – prints loop status updates</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><ul class="simple">
 <li><p><strong>First layer key are the satellites being compared i.e. ‘4-10’</strong></p></li>
-<li><p><strong>means that satellite 4 is compared to satellite 10. Secoond layer</strong></p></li>
+<li><p><strong>means that satellite 4 is compared to satellite 10. Second layer</strong></p></li>
 <li><p><strong>key are the specific data types described below</strong></p></li>
 <li><p><strong>LOS</strong> (<em>Bool</em>) – Describes if there is a line of sight between the satellites</p></li>
 <li><p><strong>pDiff</strong> – Relative position (xyz)</p></li>
@@ -248,7 +287,7 @@ select days</p>
 <li><p><strong>pDiffDot</strong> – dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)</p></li>
 <li><p><strong>flag180</strong> – Flag to determine if there was a 180 degree ‘direct crossing’</p></li>
 <li><p><strong>velDiffNorm</strong> – relative velocities</p></li>
-<li><p><strong>slewRate</strong> – slew rates required to hold pointing between satellites</p></li>
+<li><p><strong>slewRate</strong> – slew rates required to hold pointing between satellites (rad/s)</p></li>
 <li><p><strong>dopplerShift</strong> – Effective doppler shifts due to relative velocities</p></li>
 </ul>
 </dd>
@@ -260,6 +299,8 @@ select days</p>
 <span class="sig-name descname"><span class="pre">get_rv_from_propagate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeDeltas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'J2'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_rv_from_propagate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Propagates satellites and returns position (R) and Velocity (V) values
 at the specific timeDeltas input. Defaults to propagation using J2 perturbation</p>
+<p>Applies method of the same name in Satellite class to each satellite
+in this constellation</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get position/velocity data</p>
@@ -271,6 +312,61 @@ at the specific timeDeltas input. Defaults to propagation using J2 perturbation<
 <dt class="sig sig-object py" id="constellationClasses.Constellation.get_sats">
 <span class="sig-name descname"><span class="pre">get_sats</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_sats" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets a list of all the satetllite objects in the constellation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_srt_isl">
+<span class="sig-name descname"><span class="pre">get_srt_isl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groundTarget</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groundLocs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataRateXLink</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">imageSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataAccessConstellation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeDeltas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fastRun</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">relativeData</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_srt_isl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the system response time taking into account ISL opportunities</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>groundTarget</strong> (<em>GroundLoc object</em>) – ground location to image</p></li>
+<li><p><strong>groundLocs</strong> (<em>list of GroundLoc objects</em>) – list of available downlink</p></li>
+<li><p><strong>locations</strong> – </p></li>
+<li><p><strong>dataRateXLink</strong> (<em>int</em>) – Data rate achievable in Xlink (bits per sec)</p></li>
+<li><p><strong>imageSize</strong> (<em>bits</em>) – Size of image needed to be transferred over XLink</p></li>
+<li><p><strong>dataAccessConstellation</strong> (<em>DataAccessSat object</em>) – Default is none,</p></li>
+<li><p><strong>method calculates access. If DataAccess already calculated can input here instead to skip access calculation</strong> (<em>and</em>) – </p></li>
+<li><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get</p></li>
+<li><p><strong>data</strong> (<em>position/velocity</em>) – </p></li>
+<li><p><strong>fastRun</strong> (<em>Bool</em>) – Takes satellite height average to calculate</p></li>
+<li><p><strong>ground range. Assumes circular orbit and neglects small changes in altitude over an orbit</strong> (<em>max/min</em>) – </p></li>
+<li><p><strong>verbose</strong> (<em>Bool</em>) – Prints status updates if true</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>srt</strong> – System response time (time between image and downlink)</p></li>
+<li><p><strong>TODO</strong> – Add check that allows srt to be calculated if same satellite picks images and downlinks</p></li>
+<li><p><strong>TODO</strong> – Add check to make sure downlink interval is wide enough for downlink</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Constellation.get_srt_no_isl">
+<span class="sig-name descname"><span class="pre">get_srt_no_isl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groundTarget</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groundLocs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataAccessConstellation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeDeltas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fastRun</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.get_srt_no_isl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the system response time for this satellite given a ground target to image
+and a list of ground locations to donwlink the information to</p>
+<dl class="simple">
+<dt>ToDo: optimize time of access calculations by finding the first access and then</dt><dd><p>stopping the calculation</p>
+</dd>
+<dt>ToDo: optimize time for downlink access, by finding shortest time and comparing them</dt><dd><p>, stopping if the time is over the current shortest time</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>groundTarget</strong> (<em>GroundLoc object</em>) – ground location to image</p></li>
+<li><p><strong>groundLocs</strong> (<em>list of GroundLoc objects</em>) – list of available downlink locations</p></li>
+<li><p><strong>dataAccessConstellation</strong> (<em>DataAccessSat object</em>) – Default is none, and method calculates access. If DataAccess already calculated can input here instead to skip access calculation</p></li>
+<li><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get position/velocity data</p></li>
+<li><p><strong>fastRun</strong> (<em>Bool</em>) – Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -351,6 +447,72 @@ Example: [[1,1],[1,3],[1,5],[1,8] 5, 5, 5, 6]</p></li>
 <dt class="sig sig-object py" id="constellationClasses.Constellation.remove_comms_payload">
 <span class="sig-name descname"><span class="pre">remove_comms_payload</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Constellation.remove_comms_payload" title="Permalink to this definition">¶</a></dt>
 <dd><p>Removes comms payload in each satellite in the constellation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.DataAccessConstellation">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">DataAccessConstellation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">accessList</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.DataAccessConstellation" title="Permalink to this definition">¶</a></dt>
+<dd><p>access data for a constellation objects</p>
+<p>INTENDED to be run with constellation objects</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.DataAccessConstellation.plot_all">
+<span class="sig-name descname"><span class="pre">plot_all</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">absolute_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.DataAccessConstellation.plot_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots all access combinations of satellites and ground stations</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>absolute_time</strong> (<em>Bool</em>) – If true, plots time in UTC, else plots in relative time (i.e. from sim start)</p></li>
+<li><p><strong>legend</strong> (<em>Bool</em>) – Plot legend if true</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.DataAccessConstellation.plot_some">
+<span class="sig-name descname"><span class="pre">plot_some</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gLocs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absolute_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.DataAccessConstellation.plot_some" title="Permalink to this definition">¶</a></dt>
+<dd><p>plots a selection of sats and ground locations
+:param sats [list]: list of satellite IDs to plot
+:param gLocs [list]: list of groundLocation IDs to plot
+:param absolute_time: If true, plots time in UTC, else plots in relative time (i.e. from sim start)
+:type absolute_time: Bool
+:param legend: Plot legend if true
+:type legend: Bool</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.DataAccessConstellation.plot_total_access">
+<span class="sig-name descname"><span class="pre">plot_total_access</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gLocs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">absolute_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.DataAccessConstellation.plot_total_access" title="Permalink to this definition">¶</a></dt>
+<dd><p>plots total coverage (satellite agnostic) for a particular
+groundLocation (gLocs) or a list of gLocs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>[</strong><strong>list</strong><strong>]</strong> (<em>gLocs</em>) – list of groundLocation IDs to plot</p></li>
+<li><p><strong>absolute_time</strong> (<em>Bool</em>) – If true, plots time in UTC, else plots in relative time (i.e. from sim start)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.DataAccessSat">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">DataAccessSat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Sat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groundLoc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fastRun</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.DataAccessSat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Data object that holds information on access between satellites and ground locations</p>
+<p>INTENDED to be run with only satellite objects</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.DataAccessSat.plot_access">
+<span class="sig-name descname"><span class="pre">plot_access</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">absolute_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.DataAccessSat.plot_access" title="Permalink to this definition">¶</a></dt>
+<dd><p>plots access</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>absolute_time</strong> (<em>Bool</em>) – If true, plots time in UTC, else plots in relative time (i.e. from sim start)</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -445,8 +607,14 @@ of the satellites in the plane</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="constellationClasses.RemoteSensor">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">RemoteSensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fov</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wavelength</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.RemoteSensor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to describe a remote sensor</p>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="constellationClasses.Satellite">
-<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">Satellite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">satID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataMem</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schedule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commsPayload</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previousTransfer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">planeID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previousSatInteractions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">constellationClasses.</span></span><span class="sig-name descname"><span class="pre">Satellite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">satID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataMem</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">schedule</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">commsPayload</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remoteSensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previousTransfer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">planeID</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">previousSatInteractions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">note</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">task</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite" title="Permalink to this definition">¶</a></dt>
 <dd><p>Defines the satellite class</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="constellationClasses.Satellite.calc_link_budget_tx">
@@ -496,6 +664,27 @@ and the 2nd element correspond to RAAN in the descending case</p></li>
 <li><p><strong>Anoms [List]</strong> – 2 element list where the elements corresponds to true Anomalies (circular orbit)
 of the ascending case and descending case respectively</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.get_access_sat">
+<span class="sig-name descname"><span class="pre">get_access_sat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">groundLoc</span></em>, <em class="sig-param"><span class="pre">timeDeltas=None</span></em>, <em class="sig-param"><span class="pre">fastRun=True</span></em>, <em class="sig-param"><span class="pre">re=&lt;&lt;class</span> <span class="pre">'astropy.constants.constant.Constant'&gt;</span> <span class="pre">name='Earth</span> <span class="pre">equatorial</span> <span class="pre">radius'</span> <span class="pre">value=6378136.6</span> <span class="pre">uncertainty=0.1</span> <span class="pre">unit='m'</span> <span class="pre">reference='IAU</span> <span class="pre">Working</span> <span class="pre">Group</span> <span class="pre">on</span> <span class="pre">Cartographic</span> <span class="pre">Coordinates</span> <span class="pre">and</span> <span class="pre">Rotational</span> <span class="pre">Elements:</span> <span class="pre">2015'&gt;</span></em>, <em class="sig-param"><span class="pre">verbose=False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.get_access_sat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates access between a satellite and ground location using lat/long/alt
+parameters and the ground range along a sphere (Earth)
+ASSUMES spherical earth</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>groundLoc</strong> (<em>GroundLoc object</em>) – ground location object from constellationClasses</p></li>
+<li><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get position/velocity data</p></li>
+<li><p><strong>fastRun</strong> (<em>Bool</em>) – Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit</p></li>
+<li><p><strong>re</strong> (<em>astropy distance quantity</em>) – Radius of body (default Earth)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>access_mask</strong> (<em>numpy array</em>) – 0 when access unavailable, 1 when available</p>
 </dd>
 </dl>
 </dd></dl>
@@ -552,6 +741,37 @@ determine which point in the orbit is desired for rendezvous for ISL.</p>
 <dt class="sig sig-object py" id="constellationClasses.Satellite.get_pass_from_plane">
 <span class="sig-name descname"><span class="pre">get_pass_from_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Plane</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.get_pass_from_plane" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get pass details from plane (Also will output mean anomaly and time of pass)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.get_rv_from_propagate">
+<span class="sig-name descname"><span class="pre">get_rv_from_propagate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeDeltas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'J2'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.get_rv_from_propagate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Propagates satellites and returns position (R) and Velocity (V) values
+at the specific timeDeltas input. Defaults to propagation using J2 perturbation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get position/velocity data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="constellationClasses.Satellite.get_srt">
+<span class="sig-name descname"><span class="pre">get_srt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groundTarget</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groundLocs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targetAccess</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeDeltas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fastRun</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#constellationClasses.Satellite.get_srt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the system response time for this satellite given a ground target to image
+and a list of ground locations to donwlink the information to</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>groundTarget</strong> (<em>GroundLoc object</em>) – ground location to image</p></li>
+<li><p><strong>groundLocs</strong> (<em>list of GroundLoc objects</em>) – list of available downlink locations</p></li>
+<li><p><strong>targetAccess</strong> (<em>DataAccessSat object</em>) – Default is none, and method calculates access. If DataAccess for groundTarget already calculated can input here instead to skip access calculation</p></li>
+<li><p><strong>timeDeltas</strong> (<em>astropy TimeDelta object</em>) – Time intervals to get position/velocity data</p></li>
+<li><p><strong>fastRun</strong> (<em>Bool</em>) – Takes satellite height average to calculate max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit</p></li>
+<li><p><strong>verbose</strong> (<em>Bool</em>) – Prints statements if true</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">

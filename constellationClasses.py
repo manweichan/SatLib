@@ -14,14 +14,14 @@ from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 from poliastro.plotting.static import StaticOrbitPlotter
 from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
-import cartopy.crs as ccrs
+# import cartopy.crs as ccrs
 
 import seaborn as sns
 import astropy.units as u
 import astropy
 from astropy import time
 from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord
-import OpticalLinkBudget.OLBtools as olb
+# import OpticalLinkBudget.OLBtools as olb
 import utils as utils
 from copy import deepcopy
 
@@ -677,18 +677,19 @@ class Constellation():
                         relativeData=None, **kwargs):
         """
         Get the system response time taking into account ISL opportunities
+
         Args:
             groundTarget (GroundLoc object) : ground location to image
             groundLocs (list of GroundLoc objects) : list of available downlink
-                locations
+            locations
             dataRateXLink (int) : Data rate achievable in Xlink (bits per sec)
             imageSize (bits) : Size of image needed to be transferred over XLink
             dataAccessConstellation (DataAccessSat object) : Default is none, 
-                and method calculates access. If DataAccess already calculated can input here instead to skip access calculation
+            and method calculates access. If DataAccess already calculated can input here instead to skip access calculation
             timeDeltas (astropy TimeDelta object): Time intervals to get 
-                position/velocity data
+            position/velocity data
             fastRun (Bool) : Takes satellite height average to calculate 
-                max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
+            max/min ground range. Assumes circular orbit and neglects small changes in altitude over an orbit
             verbose (Bool) : Prints status updates if true
         
         Returns:
@@ -1313,41 +1314,41 @@ class Constellation():
                 op.plot(sat, label=f"ID {sat.satID:.0f}")
         return op
 
-    def plot2D(self, timeInts, pts):
-        """
-        Plots 2D ground tracks
+    # def plot2D(self, timeInts, pts):
+    #     """
+    #     Plots 2D ground tracks
 
-        Args:
-            timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
-            pts [integer] : Number of plot points
+    #     Args:
+    #         timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
+    #         pts [integer] : Number of plot points
 
 
-        """
-        sats = self.get_sats()
+    #     """
+    #     sats = self.get_sats()
 
-        fig = plt.figure()
-        ax = plt.axes(projection=ccrs.PlateCarree())
-        ax.stock_img()
+    #     fig = plt.figure()
+    #     ax = plt.axes(projection=ccrs.PlateCarree())
+    #     ax.stock_img()
 
-        plottedConstellationIds = [] #Constellation IDs that have been plotted
+    #     plottedConstellationIds = [] #Constellation IDs that have been plotted
 
-        cmap = ['k', 'b', 'g', 'p']
-        cmapIdx = -1
-        for sat in sats:
-            lon, lat, h = utils.getLonLat(sat, timeInts, pts)
-            if hasattr(sat, 'constellationID'):#sat.constellationID is not None:
+    #     cmap = ['k', 'b', 'g', 'p']
+    #     cmapIdx = -1
+    #     for sat in sats:
+    #         lon, lat, h = utils.getLonLat(sat, timeInts, pts)
+    #         if hasattr(sat, 'constellationID'):#sat.constellationID is not None:
                 
-                if sat.constellationID not in plottedConstellationIds:
-                    plottedConstellationIds.append(sat.constellationID)
-                    cmapIdx += 1
-                    # print(cmapIdx)
-                    # breakpoint()
-                ax.plot(lon, lat, cmap[cmapIdx], transform=ccrs.Geodetic())
-                ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
-            else:
-                ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
-                ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
-        return fig, ax
+    #             if sat.constellationID not in plottedConstellationIds:
+    #                 plottedConstellationIds.append(sat.constellationID)
+    #                 cmapIdx += 1
+    #                 # print(cmapIdx)
+    #                 # breakpoint()
+    #             ax.plot(lon, lat, cmap[cmapIdx], transform=ccrs.Geodetic())
+    #             ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
+    #         else:
+    #             ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
+    #             ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
+    #     return fig, ax
 
         
     def __eq__(self, other): 
@@ -1754,11 +1755,6 @@ class Satellite(Orbit):
         Get the system response time for this satellite given a ground target to image
         and a list of ground locations to donwlink the information to       
         
-        ToDo: Test get_srt_no_isl with more than 1 groundLocs
-        ToDo: optimize time of access calculations by finding the first access and then
-                stopping the calculation
-        ToDo: optimize time for downlink access, by finding shortest time and comparing them
-                , stopping if the time is over the current shortest time
 
         Args:
             groundTarget (GroundLoc object) : ground location to image
@@ -1769,6 +1765,11 @@ class Satellite(Orbit):
             verbose (Bool) : Prints statements if true
         """
 
+        # ToDo: Test get_srt_no_isl with more than 1 groundLocs
+        # ToDo: optimize time of access calculations by finding the first access and then
+                # stopping the calculation
+        # ToDo: optimize time for downlink access, by finding shortest time and comparing them
+                # , stopping if the time is over the current shortest time
         if not isinstance(groundLocs, list): #Check if groundLocs is a list, and if not make it a list
             print("Turning downlink location (arg2) into list")
             groundLocs = [groundLocs]
@@ -2547,6 +2548,8 @@ class Data():
 ## CommsPayload class
 class CommsPayload():
     """
+    Define a communications payload.
+
     Args:
         freq : frequency (easier for rf payloads)
         wavelength : wavelength (easier for optical payloads)
