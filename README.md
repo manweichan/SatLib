@@ -2,7 +2,7 @@
 
 Running the example notebook
 
-This tutorial assumes working knowledge of the terminal. There are many [resources](https://www.makeuseof.com/tag/beginners-guide-mac-terminal/) online to learn from if you need. You should also have a working version of python. This tutorial was written using python 3.7.3
+This tutorial assumes working knowledge of the terminal with [git installed](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git). There are many [resources](https://www.makeuseof.com/tag/beginners-guide-mac-terminal/) online to learn from if you need. You should also have a working version of python, or you can download it [here](https://www.python.org/downloads/). This tutorial was written using python 3.7.3
 
 Begin by moving to a directory that you want to work in and initialize git if needed `git init`
 
@@ -23,10 +23,15 @@ Install the relevant packages using:
 
 Alternatively, install each library individually
 `pip install notebook`
+
 `pip install numpy`
+
 `pip install poliastro`
+
 `pip install poliastro czml3`
+
 `pip install seaborn`
+
 `pip install dill`
 
 Once the libraries are installed, open up a jupyter notebook with the command:
