@@ -4,24 +4,24 @@ Running the example notebook
 
 This tutorial assumes working knowledge of the terminal with [git installed](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git). There are many [resources](https://www.makeuseof.com/tag/beginners-guide-mac-terminal/) online to learn from if you need. You should also have a working version of python, or you can download it [here](https://www.python.org/downloads/). This tutorial was written using python 3.7.3
 
-1. Begin by moving to a directory that you want to work in and initialize git if needed `git init`
+## Begin by moving to a directory that you want to work in and initialize git if needed `git init`
 
-2. I suggest creating a [virtual environment](https://docs.python.org/3/library/venv.html)
+## I suggest creating a [virtual environment](https://docs.python.org/3/library/venv.html)
 Example: `python3 -m venv satelliteExample`, which you type in the terminal
 
-3. Activate your environment: 
+## Activate your environment: 
 `source satelliteExample/bin/activate`
 
-4. Clone the library: 
+## Clone the library: 
 `git clone https://github.com/manweichan/SatLib.git`
 
-5. Change to the SatLab directory: 
+## Change to the SatLab directory: 
 `cd SatLib`
 
-6. Install the relevant packages using:
+## Install the relevant packages using:
 `pip install -r requirements.txt`
 
-Alternatively, install each library individually
+### Alternatively, install each library individually
 `pip install notebook`
 
 `pip install numpy`
@@ -34,9 +34,9 @@ Alternatively, install each library individually
 
 `pip install dill`
 
-7. Once the libraries are installed, open up a jupyter notebook with the command:
+## Once the libraries are installed, open up a jupyter notebook with the command:
 `jupyter notebook`
 
-8. Open satellite_constellation_ex.ipynb
+## Open satellite_constellation_ex.ipynb
 
 9. Run the notebook!
