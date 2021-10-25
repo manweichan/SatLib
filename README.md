@@ -4,6 +4,8 @@ Running the example notebook
 
 This tutorial assumes working knowledge of the terminal with [git installed](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git). There are many [resources](https://www.makeuseof.com/tag/beginners-guide-mac-terminal/) online to learn from if you need. You should also have a working version of python, or you can download it [here](https://www.python.org/downloads/). This tutorial was tested using python 3.7.3
 
+Draft documentation is under `docs/_build/html/index.html`, which you can open in your browser.
+
 ## Initialize Git
 Begin by moving to a directory that you want to work in and initialize git if needed `git init`
 
