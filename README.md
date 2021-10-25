@@ -17,7 +17,7 @@ Example: `python3 -m venv satelliteExample`, which you type in the terminal
 ## Clone the library: 
 `git clone https://github.com/manweichan/SatLib.git`
 
-## Change to the SatLab directory: 
+## Change to the SatLib directory: 
 `cd SatLib`
 
 ## Install the relevant packages using:
