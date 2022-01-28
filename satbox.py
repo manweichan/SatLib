@@ -126,7 +126,7 @@ class Constellation():
         return constClass
         
         
-    def plan_reconfigure(self, GroundLoc, GroundStation, tInit, days, figName=None, selectionMethod=1, selectionParams=None, plot = False, savePlot = False):
+    # def plan_reconfigure(self, GroundLoc, GroundStation, tInit, days, figName=None, selectionMethod=1, selectionParams=None, plot = False, savePlot = False):
         """
         Plane reconfiguration of the constellation to visit and image a GroundLoc and downlink to a GroundStation
 
@@ -378,7 +378,7 @@ class Constellation():
 
 
 
-    def get_pass_maneuver(self, GroundLoc, tInit, days, useSatEpoch = False, task = None, plot = False, savePlot = False, figName = None):
+    # def get_pass_maneuver(self, GroundLoc, tInit, days, useSatEpoch = False, task = None, plot = False, savePlot = False, figName = None):
         """
         Gets set a maneuvers that will pass a specific ground location on
         select days
@@ -474,7 +474,7 @@ class Constellation():
 
         return maneuverPoolCut, paretoSats, ghostSatsInitAll, ghostSatsPassAll, missionCosts
     
-    def get_ISL_maneuver(self, Constellation, perturbation='J2', plotFlag=False, savePlot = False, figName = None):
+    # def get_ISL_maneuver(self, Constellation, perturbation='J2', plotFlag=False, savePlot = False, figName = None):
         """
         Calculate potential ISL maneuvers between all satellites in current constellation with
         all satellites of another satellite
@@ -621,7 +621,7 @@ class Constellation():
         # accessData = DataAccessConstellation(accessList)
         return accessList
 
-    def get_srt_no_isl(self, groundTarget, groundLocs, dataAccessConstellation = None, 
+    # def get_srt_no_isl(self, groundTarget, groundLocs, dataAccessConstellation = None, 
                         timeDeltas=None, fastRun=True):  
         """
         Get the system response time for this satellite given a ground target to image
@@ -670,7 +670,7 @@ class Constellation():
             lowest_srt = "No Access"
         return lowest_srt
 
-    def get_srt_isl(self, groundTarget, groundLocs, dataRateXLink, imageSize,
+    # def get_srt_isl(self, groundTarget, groundLocs, dataRateXLink, imageSize,
                          dataAccessConstellation=None, 
                         timeDeltas=None, fastRun=True, verbose=False,
                         relativeData=None, **kwargs):
@@ -998,7 +998,7 @@ class Constellation():
 
             planeSats = []
             for satIdx, sat in enumerate(plane.sats):
-                sat.get_rv_from_propagate(timeDeltas, method=method)
+                sat.sat_get_rv_from_propagate(timeDeltas, method=method)
                 planeSats.append(sat)
             planes2append = Plane.from_list(planeSats)
             planes2const.append(planes2append)
@@ -1169,7 +1169,7 @@ class Constellation():
                 outputData['satData'][dictKey] = dictEntry
         return outputData
 
-    def calc_isl_link_performance(self, l_atm = 0, l_pointing = 0, 
+    # def calc_isl_link_performance(self, l_atm = 0, l_pointing = 0, 
                              l_pol = 0, txID = 0, rxID = 0, 
                              drReq = None):
         """
@@ -1415,14 +1415,6 @@ class Constellation():
         with open(fname, 'wb') as f:
             dill.dump(self, f)
 
-# ## Constellation data class that holds data from analyzing a constellation
-# class ConstellationData(Constellation):
-#   """
-#   This class holds the analysis conducted on a constellation class
-#   """
-#   def __init__(self):
-#       super.__init__()
-
 ## Plane class
 class Plane():
     """
@@ -1483,7 +1475,7 @@ class Plane():
         """
         self.sats.append(sat)
         
-    def get_pass_details(self, GroundLoc, tInit, days, useSatEpoch, task):
+    # def get_pass_details(self, GroundLoc, tInit, days, useSatEpoch, task):
         """
         Gets set a maneuvers that will pass a specific ground location on
         select days
@@ -1570,7 +1562,7 @@ class Satellite(Orbit):
         else:
             self.previousSatInteractions = previousSatInteractions
 
-    def get_rv_from_propagate(self, timeDeltas, method="J2"):       
+    def sat_get_rv_from_propagate(self, timeDeltas, method="J2"):       
         """
         Propagates satellites and returns position (R) and Velocity (V) values
         at the specific timeDeltas input. Defaults to propagation using J2 perturbation
@@ -1658,7 +1650,7 @@ class Satellite(Orbit):
 
         return data_access  
 
-    def calc_link_budget_tx(self, rx_object, from_relative_position = False, path_dist = None,
+    # def calc_link_budget_tx(self, rx_object, from_relative_position = False, path_dist = None,
                              l_atm = 0, l_pointing = 0, 
                              l_pol = 0, txID = 0, rxID = 0, 
                              drReq = None, verbose = False):
@@ -1760,7 +1752,7 @@ class Satellite(Orbit):
 
         return output
     
-    def get_srt(self, groundTarget, groundLocs, targetAccess=None, timeDeltas=None, 
+    # def get_srt(self, groundTarget, groundLocs, targetAccess=None, timeDeltas=None, 
                 fastRun=True, verbose=False):
         """
         Get the system response time for this satellite given a ground target to image
@@ -1873,14 +1865,14 @@ class Satellite(Orbit):
     def add_schedule(self, sch_commands): #Adds a schedule to the satellite
         self.schedule.append(sch_commands)
     
-    def add_previousTransfer(self, prevSch):
-        self.previousTransfer.append(prevSch)
+    # def add_previousTransfer(self, prevSch):
+    #     self.previousTransfer.append(prevSch)
 
-    def add_previousSatInteraction(self, object):
-        if not self.previousSatInteractions or not isinstance(object, list): #If empty
-            self.previousSatInteractions.append(object)
-        else:
-            self.previousSatInteractions.extend(object)
+    # def add_previousSatInteraction(self, object):
+    #     if not self.previousSatInteractions or not isinstance(object, list): #If empty
+    #         self.previousSatInteractions.append(object)
+    #     else:
+    #         self.previousSatInteractions.extend(object)
 
     def add_comms_payload(self, commsPL):
         self.commsPayload.append(commsPL)
@@ -1892,11 +1884,8 @@ class Satellite(Orbit):
         
     def reset_payload(self):
         self.commsPayload = []
-        
-    # def set_task(self, task):
-    #   self.task = task
 
-    def get_desired_pass_orbs(self, GroundLoc, tInitSim, days, useSatEpoch, task = None,
+    # def get_desired_pass_orbs(self, GroundLoc, tInitSim, days, useSatEpoch, task = None,
                                  refVernalEquinox = astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
         """
         Given an orbit and ground site, gets the pass time and true anomaly 
@@ -2097,7 +2086,7 @@ class Satellite(Orbit):
 
         return desiredGhostOrbits_atPass, desiredGhostOrbits_tInit, maneuverObjectsAll, maneuverObjectsCut, runningMissionCosts
         
-    def desired_raan_from_pass_time(self, tPass, GroundLoc):
+    # def desired_raan_from_pass_time(self, tPass, GroundLoc):
         """        Gets the desired orbit specifications from a desired pass time and groundstation
         Based on equations in section 3.1.2 in Legge's thesis (2014)
 
@@ -2116,9 +2105,7 @@ class Satellite(Orbit):
         if not isinstance(GroundLoc.lat, astropy.units.quantity.Quantity):
             GroundLoc.lat = GroundLoc.lat * u.deg
         if not isinstance(GroundLoc.lon, astropy.units.quantity.Quantity):
-            GroundLoc.lon = GroundLoc.lon * u.deg
-#         if not isinstance(i, astropy.units.quantity.Quantity):
-#             i = i * u.rad
+            # GroundLoc.lon = GroundLoc.lon * u.deg
         tPass.location = GroundLoc.loc #Make sure location is tied to time object
         theta_GMST = tPass.sidereal_time('mean', 'greenwich') #Greenwich mean sidereal time
         
@@ -2165,8 +2152,8 @@ class Satellite(Orbit):
 
         return raans, Anoms
     
-    @staticmethod
-    def _coplanar_phase(a_tgt, theta, k_tgt, k_int, mu = constants.GM_earth):
+    # @staticmethod
+    # def _coplanar_phase(a_tgt, theta, k_tgt, k_int, mu = constants.GM_earth):
         """
         Get time to phase, deltaV and semi-major axis of phasing orbit in a coplanar phasing maneuver (same altitude)
         From Vallado section 6.6.1 Circular Coplanar Phasing. Algorithm 44
@@ -2211,7 +2198,7 @@ class Satellite(Orbit):
 
         return t_phase.to(u.s), deltaV.to(u.m/u.s), delV1.to(u.m/u.s), delV2.to(u.m/u.s), a_phase.to(u.km), passFlag
 
-    def get_nu_intercept(self, satellite):
+    # def get_nu_intercept(self, satellite):
         """
         Given two orbits, determine true anomaly (argument of latitude)
         of each circular orbit for the position of closest approach of the orbits
@@ -2281,7 +2268,7 @@ class Satellite(Orbit):
 
         return nus1, nus2
 
-    def schedule_coplanar_intercept(self, targetSat, task='ISL', perturbation='J2', debug=False):
+    # def schedule_coplanar_intercept(self, targetSat, task='ISL', perturbation='J2', debug=False):
         """
         Schedule coplanar intercept (2 satellites are in the same orbital plane)
         
@@ -2418,7 +2405,7 @@ class Satellite(Orbit):
             return output
 
 
-    def get_pass_from_plane(self, Plane):
+    # def get_pass_from_plane(self, Plane):
         """
         Get pass details from plane (Also will output mean anomaly and time of pass)
         """
@@ -2647,7 +2634,7 @@ class RemoteSensor():
         self.fov = fov
         self.wavelength = wavelength
 
-class MissionOption():
+# class MissionOption():
     """
     Holder for mission options
     """                       
