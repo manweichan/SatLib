@@ -1315,7 +1315,14 @@ class SimSatellite():
         #Times in UTC (default)
         self.times = satellite.epoch + self.timeDeltas
 
-    def run_sim(self, method="J2"):
+        #List to hold all satellite segments
+        self.satSegments = []
+        self.timeSegments = []
+        self.cartesianRepSegments = []
+        self.coordSegmentsECI = []
+        self.coordSegmentsECEF = []
+        self.coordSegmentsLLA = []
+    def propagate(self, method="J2"):
         """
         Run simulator
 
@@ -1325,37 +1332,164 @@ class SimSatellite():
             J2 to propagate using J2 perturbations
         """
 
+        if method == "J2":
+            def f(t0, state, k): #Define J2 perturbation
+                du_kep = func_twobody(t0, state, k)
+                ax, ay, az = J2_perturbation(
+                    t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
+                )
+                du_ad = np.array([0, 0, 0, ax, ay, az])
+
+                return du_kep + du_ad
+
+        currentSat = self.initSat #Initialize satellite
+        self.satSegments.append(currentSat)
+
+
         #If not maneuver schedule
         if (self.maneuverSchedule is None): 
             if method == "J2":
-                def f(t0, state, k): #Define J2 perturbation
-                    du_kep = func_twobody(t0, state, k)
-                    ax, ay, az = J2_perturbation(
-                        t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
-                    )
-                    du_ad = np.array([0, 0, 0, ax, ay, az])
-
-                    return du_kep + du_ad
                 coords = propagate(
                     self.initSat,
                     self.timeDeltas,
                     method=cowell,
                     f=f,
                     )
+                coordsAll = coords
             else:
                 coords = propagate(
                     self.initSat,
-                    timeDeltas,
+                    self.timeDeltas,
                     )
+                coordsAll = coords
+            satECI = GCRS(coords.x, coords.y, coords.z, representation_type="cartesian", obstime = self.times)
 
-        satECI = GCRS(coords.x, coords.y, coords.z, representation_type="cartesian", obstime = self.times)
+        elif (self.maneuverSchedule is not None):
+            schedule = self.maneuverSchedule.schedule
+
+            #Sort maneuver schedule by time
+            schedule.sort(key=lambda x: x.time)
+
+
+            for manIdx, man in enumerate(schedule):
+                assert man.time >= currentSat.epoch, "maneuver time before satellite epoch"
+
+                #Poliastro maneuver object    
+                poliMan = Maneuver.impulse(man.deltaV)
+
+                segmentTimeLen = man.time - currentSat.epoch
+
+                if segmentTimeLen.to(u.s).value == 0: #Burn initialized at same time as sim start
+                    sat_i = currentSat 
+                    sat_f = sat_i.apply_maneuver(poliMan)
+
+                else:
+                    tDeltas = TimeDelta(np.arange(0,
+                                                  segmentTimeLen.to(u.s).value,
+                                                  self.tStep.to(u.s).value ) * u.s)
+                    if method == "J2":
+                        coords = propagate(
+                            currentSat,
+                            tDeltas,
+                            method=cowell,
+                            f=f,
+                            )
+                        sat_i = currentSat.propagate(segmentTimeLen,
+                                                     method=cowell,
+                                                     f=f)
+                    else:
+                        coords = propagate(
+                            currentSat,
+                            tDeltas)
+                        sat_i = currentSat.propagate(segmentTimeLen)
+
+                    timesSegment = currentSat.epoch + tDeltas
+                    satECISeg = GCRS(coords.x, 
+                                          coords.y, 
+                                          coords.z, 
+                                          representation_type="cartesian", 
+                                          obstime = timesSegment)
+                    satECISkySeg = SkyCoord(satECISeg)
+                    satECEFSeg = satECISkySeg.transform_to(ITRS)
+                    ## Turn coordinates into an EarthLocation object
+                    satELSeg = EarthLocation.from_geocentric(satECEFSeg.x, satECEFSeg.y, satECEFSeg.z)
+                    ## Convert to LLA
+                    lla_satSeg = satELSeg.to_geodetic() #to LLA
+
+                    self.timeSegments.append(timesSegment)
+                    self.cartesianRepSegments.append(coords)
+                    self.coordSegmentsECI.append(satECISkySeg)
+                    self.coordSegmentsECEF.append(satECEFSeg)
+                    self.coordSegmentsLLA.append(lla_satSeg)
+
+
+                sat_f = sat_i.apply_maneuver(poliMan)
+                currentSat = sat_f
+
+
+
+                self.satSegments.append(currentSat)
+
+            #Propagate after the maneuver
+            timeEnd = self.initSat.epoch + self.t2propagate
+            timeLeft = timeEnd - currentSat.epoch
+            if timeLeft.to(u.s).value != 0: #No time left
+                tDeltas = TimeDelta(np.arange(0,
+                                          timeLeft.to(u.s).value,
+                                          self.tStep.to(u.s).value ) * u.s)
+                if method == "J2":
+                    coords = propagate(
+                        currentSat,
+                        tDeltas,
+                        method=cowell,
+                        f=f,
+                        )
+                    sat_i = currentSat.propagate(timeLeft,
+                                                 method=cowell,
+                                                 f=f)
+                else:
+                    coords = propagate(
+                        currentSat,
+                        tDeltas)
+                    sat_i = currentSat.propagate(timeLeft)
+                timesSegment = currentSat.epoch + tDeltas
+                satECISeg = GCRS(coords.x, 
+                                      coords.y, 
+                                      coords.z, 
+                                      representation_type="cartesian", 
+                                      obstime = timesSegment)
+                satECISkySeg = SkyCoord(satECISeg)
+                satECEFSeg = satECISkySeg.transform_to(ITRS)
+                ## Turn coordinates into an EarthLocation object
+                satELSeg = EarthLocation.from_geocentric(satECEFSeg.x, satECEFSeg.y, satECEFSeg.z)
+                ## Convert to LLA
+                lla_satSeg = satELSeg.to_geodetic() #to LLA
+
+                #TODO: May have to eliminate some of these conversions and only convert when needed
+                self.timeSegments.append(timesSegment)
+                self.cartesianRepSegments.append(coords)
+                self.coordSegmentsECI.append(satECISkySeg)
+                self.coordSegmentsECEF.append(satECEFSeg)
+                self.coordSegmentsLLA.append(lla_satSeg)
+            if len(self.cartesianRepSegments) > 1:
+                coordsAll= astropy.coordinates.concatenate_representations([*self.cartesianRepSegments])
+            else:
+                coordsAll = self.cartesianRepSegments[0]
+            timesAll = np.concatenate([*self.timeSegments], axis=None)
+            satECI = GCRS(coordsAll.x, 
+                              coordsAll.y, 
+                              coordsAll.z, 
+                              representation_type="cartesian", 
+                              obstime = timesAll)
         satECISky = SkyCoord(satECI)
         satECEF = satECISky.transform_to(ITRS)
+
         ## Turn coordinates into an EarthLocation object
         satEL = EarthLocation.from_geocentric(satECEF.x, satECEF.y, satECEF.z)
+
         ## Convert to LLA
         lla_sat = satEL.to_geodetic() #to LLA
-        self.rvECI = coords #ECI coordinates
+        self.coordECI = coordsAll #ECI coordinates
         self.LLA = lla_sat #Lat long alt of satellite
         self.rvECEF = satECEF #ECEF coordinates
 
@@ -1426,12 +1560,12 @@ class ManeuverObject():
         assert isinstance(time, astropy.time.core.Time), ('time must be an'
                                                          'astropy.time.core.Time object')
         assert len(deltaV) == 3, 'deltaV must be a 3 vector'
-        assert isinstance(deltaV[0], astropy.units.quantity.Quantity), ('0 index deltaV value' 
+        assert isinstance(deltaV, astropy.units.quantity.Quantity), ('deltaV' 
                                          ' must be astropy.units.quantity.Quantity')
-        assert isinstance(deltaV[1], astropy.units.quantity.Quantity), ('1 index deltaV value' 
-                                         ' must be astropy.units.quantity.Quantity')
-        assert isinstance(deltaV[2], astropy.units.quantity.Quantity), ('2 index deltaV value' 
-                                         ' must be astropy.units.quantity.Quantity')
+        # assert isinstance(deltaV[1], astropy.units.quantity.Quantity), ('1 index deltaV value' 
+        #                                  ' must be astropy.units.quantity.Quantity')
+        # assert isinstance(deltaV[2], astropy.units.quantity.Quantity), ('2 index deltaV value' 
+        #                                  ' must be astropy.units.quantity.Quantity')
         self.time = time
         self.deltaV = deltaV
         self.satID = satID
