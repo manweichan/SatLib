@@ -22,7 +22,7 @@ def getLonLat(orb, timeInts, pts, J2 = True):
     
     Inputs
     orb [poliastro orbit object]
-    timeInts [astropy object time delta] : time intervals to propagate where 0 refers to the epoch of the orb input variable
+    timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
     pts [integer] : Number of plot points
     J2 : If True, orbits propagate with J2 perturbation
     
@@ -33,13 +33,22 @@ def getLonLat(orb, timeInts, pts, J2 = True):
     
     """
     if J2:
-        coords = propagate(orb,
-             time.TimeDelta(timeInts),
-             method = cowell,
-             rtol=1e-11,
-             ad=J2_perturbation,
-             J2 = Earth.J2.value,
-             R = Earth.R.to(u.km).value)
+        def f(t0, state, k):
+            du_kep = func_twobody(t0, state, k)
+            ax, ay, az = J2_perturbation(
+                t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
+            )
+            du_ad = np.array([0, 0, 0, ax, ay, az])
+
+            return du_kep + du_ad
+
+        coords = propagate(
+            orb,
+            time.TimeDelta(timeInts),
+            method = cowell,
+            f=f,
+            )
+                       
     elif not J2:
         coords = propagate(orb,
          timeDeltas,
@@ -77,7 +86,6 @@ def plotGroundTrack(lon, lat, style):
     ax.stock_img()
     ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
     ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
-#     plt.show()
     return fig, ax
 
 
