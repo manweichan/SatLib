@@ -68,26 +68,51 @@ def getLonLat(orb, timeInts, pts, J2 = True):
     return lon, lat, height
 
 
-def plotGroundTrack(lon, lat, style):
+def plotGroundTrack(lon, lat, style_groundtrack = 'k', style_init = 'r^'):
     """
     Plots ground tracks on map using cartopy
 
-    Inputs
+    Parameters
+    ----------
     lon (deg): Longitude
     lat (deg): Latitude
-    style (string): linestyle from matplotlib
+    style_groundtrack (string): matplotlib linestyle for ground track
+    style_init (string): matplotlib linestyle for starting satellite point
 
-    Outputs
+    Returns
+    ----------
     fig: matplotlib fig object
     ax: matplotlib ax object
     """
     fig = plt.figure(figsize=(15, 25))
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.stock_img()
-    ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
-    ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
+    ax.plot(lon, lat, style_groundtrack, transform=ccrs.Geodetic())
+    ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
     return fig, ax
 
+def addGroundTrack(lon, lat, ax, style_groundtrack = 'k', style_init = 'r^'):
+    """
+    Plots ground tracks on map using cartopy
+
+    Parameters
+    ----------
+    lon (deg): Longitude
+    lat (deg): Latitude
+    ax (matplotlib): matplotlib ax object
+    style_groundtrack (string): matplotlib linestyle for ground track
+    style_init (string): matplotlib linestyle for starting satellite point
+
+
+    Returns
+    ----------
+    ax: matplotlib ax object
+    """
+    ax.plot(lon, lat, style_groundtrack, transform=ccrs.Geodetic())
+    ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
+
+
+    return ax
 
 def writeCZMLFile_constellation(constellation, dirPath, periods = 1, sample_points = 80, singleSat = False,
 	groundtrack = False, orbitPath = True):

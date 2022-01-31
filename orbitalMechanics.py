@@ -522,6 +522,12 @@ def getRGTOrbit(k_r, k_d, e, i, detectThresh=10, maxIters=100):
     alt (m) : altitude of RGT
     """
 
+    if not isinstance(i, astropy.units.quantity.Quantity):
+        i_astro = i * u.rad
+        i_clean = i_astro.to(u.rad).value
+    else:
+        i_clean = i
+
     # Constants
     periodEarth = poliastro.constants.rotational_period_earth
     w_earth = 2 * np.pi / periodEarth.to(u.s).value
@@ -531,12 +537,12 @@ def getRGTOrbit(k_r, k_d, e, i, detectThresh=10, maxIters=100):
     
     k_revPerDay = k_r / k_d
     n = k_revPerDay * w_earth
-    a_new = (mu * (1/n0)**2)**(1/3)
+    a_new = (mu * (1/n)**2)**(1/3)
     delLam = 2 * np.pi * k_d / k_r #Change in successive node arrivals (radians)
     for idx in range(maxIters):
         a = a_new
         p = a * (1 - e**2)
-        OmegaDot = - 3 * n * j2 * np.cos(i) / 2 * (r_earth / p)**2 #Change in RAAN due to perturbations
+        OmegaDot = - 3 * n * j2 * np.cos(i_clean) / 2 * (r_earth / p)**2 #Change in RAAN due to perturbations
         delLamPeriod = 2 * np.pi * OmegaDot / n #Change in lambda by period
         delLon = delLam + delLamPeriod
         n = 2 * np.pi * w_earth / delLon
@@ -545,7 +551,10 @@ def getRGTOrbit(k_r, k_d, e, i, detectThresh=10, maxIters=100):
         if diff < detectThresh:
             break
     alt = a_new - r_earth #altitude
-    return a_new, alt
+
+    alt_out = alt * u.m
+    a_new_out = a_new * u.m
+    return a_new_out, alt_out
 
 ####################### Eclipse Calculation #######################
 
