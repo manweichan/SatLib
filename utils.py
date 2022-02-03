@@ -325,3 +325,22 @@ def get_walker_params(t):
             walkerParams.append(paramTuple)
     
     return walkerParams
+
+def get_norm(vec):
+    """
+    Gets the norm of a vector
+    """
+    elementSum = 0
+    for ele in vec:
+        ele2 = ele*ele 
+        elementSum += ele2
+    norm = np.sqrt(elementSum)
+    return norm
+
+def get_unit_vec(vec):
+    """
+    Gets the unit vector of a vector
+    """
+    vecNorm = get_norm(vec)
+    unitVec = vec / vecNorm
+    return unitVec

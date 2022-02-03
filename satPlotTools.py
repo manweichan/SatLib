@@ -87,9 +87,10 @@ def plotGroundTrack(lon, lat, style_groundtrack = 'k', style_init = 'r^'):
     fig = plt.figure(figsize=(15, 25))
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.stock_img()
-    ax.plot(lon, lat, style_groundtrack, transform=ccrs.Geodetic())
+    ax.plot(lon, lat, color=style_groundtrack, transform=ccrs.Geodetic())
     ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
     return fig, ax
+
 
 def addGroundTrack(lon, lat, ax, style_groundtrack = 'k', style_init = 'r^'):
     """
@@ -108,11 +109,48 @@ def addGroundTrack(lon, lat, ax, style_groundtrack = 'k', style_init = 'r^'):
     ----------
     ax: matplotlib ax object
     """
-    ax.plot(lon, lat, style_groundtrack, transform=ccrs.Geodetic())
+    ax.plot(lon, lat, color=style_groundtrack, transform=ccrs.Geodetic())
     ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
 
 
     return ax
+
+def plotSimConstellationGroundTrack(simConstellation, satellites = []):
+    """
+    Plot ground tracks of a SimConstellation
+
+    Parameters
+    ----------
+    simConstellation: ~satbox.SimConstellation
+        Constellation to plot
+    satellites: list
+        List of individual satellites to plot. Empty list plots all satellites
+
+
+    """
+    assert simConstellation.propagated==1, "Run propagate() on class first"
+    propConstellation = simConstellation.constellation
+
+    #Get number of satellites
+    nSats = len(simConstellation.initConstellation.get_sats())
+
+    color = iter(plt.cm.jet(np.linspace(0,1,nSats)))
+    firstRun = 1
+    # if len(satellites) == 0:
+    for plane in propConstellation.planes:
+        for sat in plane.sats:
+            for segment in sat.coordSegmentsLLA:
+                lon = segment.lon
+                lat = segment.lat
+                c = next(color)
+                # import ipdb; ipdb.set_trace() 
+                if sat.initSat.satID in satellites or len(satellites) == 0:
+                    if firstRun == 1:
+                        fig, ax = plotGroundTrack(lon, lat, style_groundtrack=c)
+                        firstRun = 0
+                    else:
+                        ax = addGroundTrack(lon, lat, ax, style_groundtrack=c)
+    return fig, ax
 
 def writeCZMLFile_constellation(constellation, dirPath, periods = 1, sample_points = 80, singleSat = False,
 	groundtrack = False, orbitPath = True):
