@@ -208,7 +208,21 @@ class Constellation():
 
             planeSats=[]
             for satIdx, sat in enumerate(plane.sats):
+                #Save properties that are erased during propagation
+                satID = sat.satID
+                planeID = sat.planeID
+                note = sat.note 
+                task = sat.task
+                manSched = sat.manSched
+
                 satProp=sat.propagate(time)
+
+                satProp.satID = satID
+                satProp.planeID = planeID
+                satProp.note = note 
+                satProp.task = task
+                satProp.manSched = manSched
+
                 planeSats.append(satProp)
             plane2append=Plane.from_list(planeSats)
             planes2const.append(plane2append)
@@ -714,7 +728,7 @@ class SimConstellation():
     def get_lla(self):
         assert self.propagated == 1, "Run propagate() on class first"
         
-        
+
 
 
 
@@ -836,8 +850,8 @@ class Satellite(Orbit):
     def reset_remote_sensor(self):
         self.remoteSensor = []
 
-    def reset_schedule(self):
-        self.schedule = []
+    def reset_man_schedule(self):
+        self.manSched = None
 
     def __eq__(self, other):
         """Check for equality with another object"""
@@ -900,6 +914,13 @@ class SimSatellite():
                                               t2propagate.to(u.s).value,
                                               tStep.to(u.s).value) * u.s)
 
+        #Preserve original attributes
+        self.satID = satellite.satID
+        self.planeID = satellite.planeID
+        self.note = satellite.note 
+        self.task = satellite.task
+        self.manSched = satellite.manSched
+
         #Times in UTC (default)
         self.times = satellite.epoch + self.timeDeltas
 
@@ -913,7 +934,7 @@ class SimSatellite():
 
     def propagate(self, method="J2"):
         """
-        Run simulator
+        Run simulator for satellite
 
         Parameters
         ----------
@@ -932,6 +953,14 @@ class SimSatellite():
                 return du_kep + du_ad
 
         currentSat = self.initSat #Initialize satellite
+
+        #Save properties that are erased during propagation
+        satID = self.initSat.satID
+        planeID = self.initSat.planeID
+        note = self.initSat.note 
+        task = self.initSat.task
+        manSched = self.initSat.manSched
+
         self.satSegments.append(currentSat)
 
 
@@ -1026,7 +1055,11 @@ class SimSatellite():
 
                 currentSat = sat_f
 
-
+                currentSat.satID = satID
+                currentSat.planeID = planeID
+                currentSat.note = note 
+                currentSat.task = task
+                currentSat.manSched = manSched
 
                 self.satSegments.append(currentSat)
 
