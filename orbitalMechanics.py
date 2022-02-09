@@ -67,7 +67,7 @@ def circ2elip_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
     Delta V required to go from circular orbit to elliptical
     circ2elip_Hohmann(a1, a2, muPlanet = 3.986e14)
     a1: semi major axis of circular orbit (m)
-    a2: semi major axis of larger ellipse (m) 
+    a2: semi major axis of final orbit (m) 
     muPlanet: Gravitation parameter (Earth default)
     """
     if not isinstance(a1, astropy.units.quantity.Quantity):
