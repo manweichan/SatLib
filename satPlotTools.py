@@ -15,6 +15,8 @@ from poliastro.bodies import Earth
 from poliastro.czml.extract_czml import CZMLExtractor
 
 import matplotlib.pyplot as plt
+# from cycler import cycler
+from itertools import cycle
 
 def getLonLat(orb, timeInts, pts, J2 = True):
     """
@@ -68,7 +70,8 @@ def getLonLat(orb, timeInts, pts, J2 = True):
     return lon, lat, height
 
 
-def plotGroundTrack(lon, lat, style_groundtrack = 'k', style_init = 'r^'):
+def plotGroundTrack(lon, lat, style_color = 'k', 
+    style_line = '-', style_init = 'r^', style_width=1):
     """
     Plots ground tracks on map using cartopy
 
@@ -87,12 +90,17 @@ def plotGroundTrack(lon, lat, style_groundtrack = 'k', style_init = 'r^'):
     fig = plt.figure(figsize=(15, 25))
     ax = plt.axes(projection=ccrs.PlateCarree())
     ax.stock_img()
-    ax.plot(lon, lat, color=style_groundtrack, transform=ccrs.Geodetic())
+    ax.plot(lon, lat, 
+        color=style_color, 
+        linestyle = style_line,
+        linewidth = style_width, 
+        transform=ccrs.Geodetic())
     ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
     return fig, ax
 
 
-def addGroundTrack(lon, lat, ax, style_groundtrack = 'k', style_init = 'r^'):
+def addGroundTrack(lon, lat, ax, style_color = 'k', 
+    style_line = '-', style_init = 'r^', style_width=1):
     """
     Plots ground tracks on map using cartopy
 
@@ -109,7 +117,11 @@ def addGroundTrack(lon, lat, ax, style_groundtrack = 'k', style_init = 'r^'):
     ----------
     ax: matplotlib ax object
     """
-    ax.plot(lon, lat, color=style_groundtrack, transform=ccrs.Geodetic())
+    ax.plot(lon, lat, 
+        color=style_color, 
+        linestyle = style_line,
+        linewidth = style_width, 
+        transform=ccrs.Geodetic())
     ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
 
 
@@ -135,21 +147,31 @@ def plotSimConstellationGroundTrack(simConstellation, satellites = []):
     nSats = len(simConstellation.initConstellation.get_sats())
 
     color = iter(plt.cm.jet(np.linspace(0,1,nSats)))
+    
     firstRun = 1
     # if len(satellites) == 0:
     for plane in propConstellation.planes:
         for sat in plane.sats:
+            c = next(color)
+            # import ipdb; ipdb.set_trace()
             for segment in sat.coordSegmentsLLA:
                 lon = segment.lon
                 lat = segment.lat
-                c = next(color)
                 # import ipdb; ipdb.set_trace() 
                 if sat.initSat.satID in satellites or len(satellites) == 0:
+                    linestyle_cycler = cycle(['-','--',':','-.'])
+                    linewidth_cycler = cycle([1,2,3,4])
                     if firstRun == 1:
-                        fig, ax = plotGroundTrack(lon, lat, style_groundtrack=c)
+                        fig, ax = plotGroundTrack(lon, lat, 
+                            style_color=c, 
+                            style_line=next(linestyle_cycler),
+                            style_width=next(linewidth_cycler))
                         firstRun = 0
                     else:
-                        ax = addGroundTrack(lon, lat, ax, style_groundtrack=c)
+                        ax = addGroundTrack(lon, lat, ax, 
+                            style_color=c, 
+                            style_line=next(linestyle_cycler),
+                            style_width=next(linewidth_cycler))
     return fig, ax
 
 def writeCZMLFile_constellation(constellation, dirPath, periods = 1, sample_points = 80, singleSat = False,
