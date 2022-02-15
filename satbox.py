@@ -1004,7 +1004,7 @@ class SimSatellite():
                 assert man.time >= currentSat.epoch, "maneuver time before satellite epoch"
 
                 #Poliastro maneuver object    
-                poliMan = Maneuver.impulse(man.deltaV)
+                poliMan = Maneuver.impulse(man.deltaVVec)
 
                 segmentTimeLen = man.time - currentSat.epoch
 
@@ -1195,14 +1195,16 @@ class ManeuverObject():
         assert len(deltaV) == 3, 'deltaV must be a 3 vector'
         assert isinstance(deltaV, astropy.units.quantity.Quantity), ('deltaV' 
                                          ' must be astropy.units.quantity.Quantity')
-        # assert isinstance(deltaV[1], astropy.units.quantity.Quantity), ('1 index deltaV value' 
-        #                                  ' must be astropy.units.quantity.Quantity')
-        # assert isinstance(deltaV[2], astropy.units.quantity.Quantity), ('2 index deltaV value' 
-        #                                  ' must be astropy.units.quantity.Quantity')
+
         self.time = time
-        self.deltaV = deltaV
+
+        #delta v vector
+        self.deltaVVec = deltaV
         self.satID = satID
         self.note = note
+
+        #Total delta v
+        self.deltaVTot = utils.get_norm(deltaV)
 
 class ManeuverSchedule():
     """
@@ -1260,12 +1262,23 @@ class ManeuverSchedule():
         t_hohmann = om.t_Hohmann(orb.a, r_f)
         
         #Add to burn scheduler
-        man1_hoh = ManeuverObject(orb.epoch, delv1)
-        man2_hoh = ManeuverObject(orb.epoch + t_hohmann, delv2)
+        man1_hoh = ManeuverObject(orb.epoch, delv1.to(u.km/u.s))
+        man2_hoh = ManeuverObject(orb.epoch + t_hohmann, delv2.to(u.km/u.s))
         
         self.add_maneuver(man1_hoh)
         self.add_maneuver(man2_hoh)
 
+    def get_delV_total(self):
+        """
+        Get total V of all the maneuvers held in the schedule
+        """
+        schedule = self.schedule
+        if len(schedule) == 0:
+            print("No items in schedule")
+            return
+
+        delVTot = sum(sch.deltaVTot for sch in schedule)
+        return delVTot
 
 # Data class
 class Data():
