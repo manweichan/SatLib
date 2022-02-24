@@ -302,6 +302,78 @@ def aPhase_fromFixedTime(t_phase, alt, mu = poliastro.constants.GM_earth,
     deltaV = 2 * np.abs(np.sqrt(2*mu / a_tgt - mu / a_phase) - np.sqrt(mu / a_tgt)) #For both burns. One to go into ellipse, one to recircularize
     return a_phase.to(u.km), deltaV.to(u.m / u.s), kint
 
+def coplanar_phase_different_orbs(v_i, a_int, a_tgt, mu=constants.GM_earth):
+    """
+    This function returns the maneuvers necessary to phase an intercept
+    between two satellites in different circular orbits.
+    
+    Based on Vallado 4th ed Algorithm 45. Needed to add some checks that
+    weren't explicitly stated in the book. For example, sign convention
+    is confusing and had to make sure they are right in this algorithm.
+    
+    Parameters
+    ----------
+    v_i: ~astropy.unit.Quantity
+        Initial phase difference between chaser and target
+    a_int: ~astropy.unit.Quantity
+        semi-major axis of chaser (intercepter)
+    a_tgt: ~astropy.unit.Quantity
+        semi-major axis of target 
+    mu: ~astropy.unit.Quantity
+        Gravitation parameter of body
+        
+    Returns
+    ---------
+    t_trans: ~astropy.unit.Quantity
+        Hohmann transfer time
+    delVTot: ~astropy.unit.Quantity
+        Delta V of Hohmann Transfer
+    a_trans: ~astropy.unit.Quantity
+        semi-major axis of transfer orbit
+    t_wait: ~astropy.unit.Quantity
+    
+    """
+    assert isinstance(v_i, astropy.units.quantity.Quantity), ('v_i' 
+                                         ' must be astropy.units.quantity.Quantity')
+    assert isinstance(a_int, astropy.units.quantity.Quantity), ('a_int' 
+                                         ' must be astropy.units.quantity.Quantity')
+    assert isinstance(a_tgt, astropy.units.quantity.Quantity), ('a_tgt' 
+                                         ' must be astropy.units.quantity.Quantity')
+    assert isinstance(mu, astropy.units.quantity.Quantity), ('mu' 
+                                         ' must be astropy.units.quantity.Quantity')
+    
+    pi = np.pi
+    
+    w_tgt = np.sqrt(mu / a_tgt**3)
+    w_int = np.sqrt(mu / a_int**3)
+    
+    a_trans = (a_int + a_tgt)/2
+    
+    t_trans = pi * np.sqrt(a_trans**3 / mu)
+    
+    alpha = w_tgt * t_trans #lead angle
+    alphas = alpha % (2*pi) #modulo to ensure angle from 0 to 2pi
+    
+    if alpha < pi:
+        v = alpha - pi
+    elif alpha > pi:
+        v = pi - alpha
+    
+    vDiff = v - v_i.to(u.rad).value
+    if vDiff < 0: #make sure time is positive. Ensure fastest time
+        k = 1 
+    else:
+        k = 0
+    
+    t_wait = (vDiff + 2 * pi * k) / (abs(w_int - w_tgt))
+    
+    delV1 = circ2elip_Hohmann(a_int, a_tgt)
+    delV2 = elip2circ_Hohmann(a_int, a_tgt)
+    
+    delVTot =  delV1 + delV2
+    return t_trans.to(u.s), delVTot.to(u.km/u.s), a_trans.to(u.km), t_wait.to(u.min)
+    
+
 ####################### Keplarian Orbital Mechanics #######################
 
 

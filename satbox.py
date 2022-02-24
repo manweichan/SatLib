@@ -345,6 +345,7 @@ class Constellation():
 
         # Check if first satellite has rvECI Attribute
         # assert self.planes[0].sats[0].rvECI, "Run self.get_rv_from_propagate first to get rv values"
+        # import ipdb;ipdb.set_trace()
         if not hasattr(self.planes[0].sats[0], 'rvECI'):
             print("Run self.get_rv_from_propagate first to get rv values")
             return
@@ -725,11 +726,170 @@ class SimConstellation():
                 const.add_plane(plane)
         return const
 
-    def get_lla(self):
-        assert self.propagated == 1, "Run propagate() on class first"
-        
+
+    def get_relative_velocity_analysis(self, verbose=False):
+        """
+        Gets relative velocities between satellites in the constellation
+
+        Needs to run get_rv_from_propagate first to get position/velocity
+        values first
+
+        Args:
+            verbose: prints loop status updates
+
+        Returns:
+            First layer key are the satellites being compared i.e. '4-10'
+            means that satellite 4 is compared to satellite 10. Second layer
+            key are the specific data types described below
+
+            LOS (Bool): Describes if there is a line of sight between the satellites
+
+            pDiff : Relative position (xyz)
+
+            pDiffNorm : magnitude of relative positions
+
+            pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)
+
+            flag180 : Flag to determine if there was a 180 degree 'direct crossing'
+
+            velDiffNorm : relative velocities
+
+            slewRate : slew rates required to hold pointing between satellites (rad/s)
+
+            dopplerShift : Effective doppler shifts due to relative velocities
+        """
+
+        # Check if first satellite has rvECI Attribute
+        if not hasattr(self.constellation.planes[0].sats[0], 'coordECI'):
+            print("Run self.propagate() first")
+            return
+        c=3e8 * u.m / u.s
+
+        sats=self.constellation.get_sats()
+        numSats=len(sats)
+
+        outputData={}
+
+        outputData['numSats']=numSats
+        outputData['satData']={}
+        for satRef in sats:
+            if verbose:
+                print(f'Reference sat {satRef.satID} out of {numSats}')
+            for sat in sats:
+
+                if satRef.satID == sat.satID:
+                    continue
+                if verbose:
+                    print(f'Refererence compared to {sat.satID}')
+                # Reference orbit RV values
+                satRef_r=satRef.coordECI.without_differentials()
+                satRef_v=satRef.coordECI.differentials
+
+                # Comparison orbit RV values
+                sat_r=sat.coordECI.without_differentials()
+                sat_v=sat.coordECI.differentials
+
+                # Determine LOS availability (Vallado pg 306 5.3)
+                adotb=sat_r.dot(satRef_r)
+                aNorm=sat_r.norm()
+                bNorm=satRef_r.norm()
+                theta=np.arccos(adotb/(aNorm * bNorm))
+
+                theta1=np.arccos(constants.R_earth / aNorm)
+                theta2=np.arccos(constants.R_earth / bNorm)
+
+                LOSidx=(theta1 + theta2) > theta
 
 
+
+
+
+                # Relative positions
+                pDiff=satRef_r - sat_r
+                pDiffNorm=pDiff.norm()
+
+                pDiffDot=pDiff[:-1].dot(pDiff[1:])
+                if min(pDiffDot) < 0:  # Checks for 180 deg crossinig
+                    flag180=1
+                else:
+                    flag180=0
+
+                velDiff=satRef_v["s"] - sat_v["s"]
+                velDiffNorm=velDiff.norm()
+
+                # Slew Equations
+                # Do it using the slew equation (From Trevor Dahl report)
+                rCV=pDiff.cross(velDiff)  # r cross v
+                slewRateOrb=rCV / pDiffNorm**2
+                slewRateOrbNorm=slewRateOrb.norm()
+
+
+                # Doppler shift
+                pDiffU=pDiff/pDiffNorm  # unit vector direction of relative position
+                # Get velocity of destination satellite (Reference orbit)
+                rdDot=satRef_v["s"].to_cartesian()
+                numTerm=rdDot.dot(pDiffU)
+                rsDot=sat_v["s"].to_cartesian()
+                denTerm=rsDot.dot(pDiffU)
+                num=c - numTerm
+                den=c - denTerm
+                fd_fs=num/den
+
+                # Perform max/min analysis
+
+                maxPos=max(pDiffNorm)
+                minPos=min(pDiffNorm)
+
+                maxVel=max(velDiffNorm)
+                minVel=min(velDiffNorm)
+
+                slewMax=max(slewRateOrbNorm)
+                slewMin=min(slewRateOrbNorm)
+
+                dopplerMax=max(fd_fs)
+                dopplerMin=min(fd_fs)
+
+                # Check if adjacent sats (i.e. SatIDs are consecutive)
+                idDiff=satRef.satID - sat.satID
+                idDiffAbs=abs(idDiff)
+                if idDiffAbs == 1 or idDiffAbs == numSats - 1:
+                    adjacentFlag=1  # Flag means satellites are adjacent
+                else:
+                    adjacentFlag=0
+
+                posDict={
+                            'relPosVec': pDiff,
+                            'relPosNorm': pDiffNorm,
+                            'relPosMax': maxPos,
+                            'relPosMin': minPos,
+                            'delRelPos': pDiffDot,
+                }
+
+                velDict={
+                            'relVel': velDiffNorm,
+                            'slewRate': slewRateOrbNorm,
+                            'dopplerShift': fd_fs,
+                            'velMax': maxVel,
+                            'velMin': minVel,
+                            'slewMax': slewMax,
+                            'slewMin': slewMin,
+                            'dopplerMin': dopplerMin,
+                            'dopplerMax': dopplerMax,
+                }
+
+                dictEntry={
+                            'LOS': LOSidx,
+                            'relPosition': posDict,
+                            'flag180': flag180,
+                            'relVel': velDict,
+                            'adjacent': adjacentFlag,
+                            'timeDeltas': sat.timeDeltas,
+                            'times': sat.timesAll,
+                }
+
+                dictKey=str(satRef.satID) + '-' + str(sat.satID)
+                outputData['satData'][dictKey]=dictEntry
+        return outputData
 
 
 # Plane class
@@ -987,6 +1147,7 @@ class SimSatellite():
             ## Convert to LLA
             lla_sat = satEL.to_geodetic() #to LLA
 
+            timesAll = self.times
             self.timeSegments.append(self.times)
             self.cartesianRepSegments.append(coords)
             self.coordSegmentsECI.append(satECISky)
@@ -1125,6 +1286,7 @@ class SimSatellite():
         self.coordECI = coordsAll #ECI coordinates
         self.LLA = lla_sat #Lat long alt of satellite
         self.rvECEF = satECEF #ECEF coordinates
+        self.timesAll = timesAll #all times
 
 
 # Ground location class
@@ -1267,6 +1429,53 @@ class ManeuverSchedule():
         
         self.add_maneuver(man1_hoh)
         self.add_maneuver(man2_hoh)
+
+    def gen_intersect_sched(self, orb_i, orb_tgt, method="J2"):
+        """
+        Calculate the schedule needed to intersect a desired orbit in the same plane. 
+        For this particular research case, orb_i is usually the drift (intermediate)
+        orbit that the satellite hangs out in before conducting a Hohmann 
+        transfer to enter the RGT orbit.
+        
+        Parameters
+        ----------
+        orb_i: ~satbox.Satellite
+            Satellite object in it's current state
+        orb_tgt: ~satbox.Satellite
+            Desired orbit in any state (epoch)
+        method: string
+            Method of propagation. Currently only "J2" supported
+        
+        """
+        
+        #Propagate RGT orbit to same epoch as orb_i
+        if method=="J2":
+            def f(t0, u_, k):
+                du_kep = func_twobody(t0, u_, k)
+                ax, ay, az = J2_perturbation(
+                    t0, u_, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value
+                )
+                du_ad = np.array([0, 0, 0, ax, ay, az])
+                return du_kep + du_ad
+            orb_rgt_i = orb_tgt.propagate(orb_i.epoch, method=cowell, f=f)
+        else:
+            orb_rgt_i = orb_tgt.propagate(orb_i.epoch)
+        
+        #Get initial phase angle
+        #Defined from the target to the chaser. 
+        #Positive direction in target direction of motion
+        v_i = orb_i.arglat - orb_rgt_i.arglat
+        
+        a_int = orb_i.a
+        a_tgt = orb_rgt_i.a
+        t_trans, delVTot, a_trans, t_wait = om.coplanar_phase_different_orbs(v_i, 
+                                                                          a_int, 
+                                                                          a_tgt)
+        
+        #Propagate orb_i to time of first burn
+        orb_i_1st_burn = orb_i.propagate(t_wait)
+        
+        self.gen_hohmann_schedule(orb_i_1st_burn, orb_rgt_i.a)
 
     def get_delV_total(self):
         """
