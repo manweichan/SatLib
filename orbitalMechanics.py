@@ -352,28 +352,30 @@ def coplanar_phase_different_orbs(v_i, a_int, a_tgt, mu=constants.GM_earth):
     t_trans = pi * np.sqrt(a_trans**3 / mu)
     
     alpha = w_tgt * t_trans #lead angle
-    alphas = alpha % (2*pi) #modulo to ensure angle from 0 to 2pi
+    alpha = alpha % (2*pi) #modulo to ensure angle from 0 to 2pi
     
-    if alpha < pi:
-        v = alpha - pi
-    elif alpha > pi:
-        v = pi - alpha
-    
-    vDiff = v - v_i.to(u.rad).value
-    if vDiff < 0: #make sure time is positive. Ensure fastest time
-        k = 1 
+    v = alpha - pi
+
+    if w_tgt < w_int:
+        vDiff = v - v_i.to(u.rad).value
+    elif w_tgt > w_int:
+        vDiff = v_i.to(u.rad).value - v
     else:
-        k = 0
+        vDiff = 0
+        print("In the same orbit")
+    k = 0
     
     t_wait = (vDiff + 2 * pi * k) / (abs(w_int - w_tgt))
+    while t_wait < 0:
+        k += 1
+        t_wait = (vDiff + 2 * pi * k) / (abs(w_int - w_tgt))
     
     delV1 = circ2elip_Hohmann(a_int, a_tgt)
     delV2 = elip2circ_Hohmann(a_int, a_tgt)
-    
+
     delVTot =  delV1 + delV2
     return t_trans.to(u.s), delVTot.to(u.km/u.s), a_trans.to(u.km), t_wait.to(u.min)
     
-
 ####################### Keplarian Orbital Mechanics #######################
 
 

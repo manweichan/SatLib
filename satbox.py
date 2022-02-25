@@ -692,7 +692,7 @@ class SimConstellation():
 
     def propagate(self, method="J2"):
         """
-        Propagate satellites
+        Propagate satellites in a constellation Simulator
 
         Parameters
         ----------
@@ -974,7 +974,7 @@ class Satellite(Orbit):
         self.note = note
         self.task = task
         self.alt = self.a - constants.R_earth
-        self.manSched = manSched
+        self.maneuverSchedule = manSched
 
         if commsPayload is None:  # Set up ability to hold an optical payload
             self.commsPayload = []
@@ -994,7 +994,7 @@ class Satellite(Orbit):
             self.dataMem.remove(data)
 
     def add_man_schedule(self, manSchedule):  # Adds a schedule to the satellite
-        self.manSched = manSchedule
+        self.maneuverSchedule = manSchedule
 
     def add_comms_payload(self, commsPL):
         self.commsPayload.append(commsPL)
@@ -1011,7 +1011,7 @@ class Satellite(Orbit):
         self.remoteSensor = []
 
     def reset_man_schedule(self):
-        self.manSched = None
+        self.maneuverSchedule = None
 
     def __eq__(self, other):
         """Check for equality with another object"""
@@ -1053,8 +1053,8 @@ class SimSatellite():
         self.initSat = satellite
         self.t2propagate = t2propagate
         self.tStep = tStep
-        if satellite.manSched is not None:
-            self.maneuverSchedule = satellite.manSched
+        if satellite.maneuverSchedule is not None:
+            self.maneuverSchedule = satellite.maneuverSchedule
             if verbose:
                 print("maneuver schedule taken from satellite object")
                 if manSched is not None:
@@ -1062,7 +1062,7 @@ class SimSatellite():
         elif manSched is not None:
             self.maneuverSchedule = manSched
             #Set satellite schedule to maneuver schedule
-            satellite.manSched = manSched
+            satellite.maneuverSchedule = manSched
             if verbose:
                 print("maneuver schedule taken initialization")
         else:
@@ -1079,7 +1079,6 @@ class SimSatellite():
         self.planeID = satellite.planeID
         self.note = satellite.note 
         self.task = satellite.task
-        self.manSched = satellite.manSched
 
         #Times in UTC (default)
         self.times = satellite.epoch + self.timeDeltas
@@ -1094,7 +1093,7 @@ class SimSatellite():
 
     def propagate(self, method="J2"):
         """
-        Run simulator for satellite
+        Run simulator for satellite Simulator
 
         Parameters
         ----------
@@ -1119,7 +1118,7 @@ class SimSatellite():
         planeID = self.initSat.planeID
         note = self.initSat.note 
         task = self.initSat.task
-        manSched = self.initSat.manSched
+        manSched = self.initSat.maneuverSchedule
 
         self.satSegments.append(currentSat)
 
@@ -1212,7 +1211,6 @@ class SimSatellite():
                     self.coordSegmentsECEF.append(satECEFSeg)
                     self.coordSegmentsLLA.append(lla_satSeg)
                 sat_f = sat_i.apply_maneuver(poliMan)
-                # import ipdb; ipdb.set_trace()
 
                 currentSat = sat_f
 
@@ -1220,7 +1218,7 @@ class SimSatellite():
                 currentSat.planeID = planeID
                 currentSat.note = note 
                 currentSat.task = task
-                currentSat.manSched = manSched
+                currentSat.maneuverSchedule = manSched
 
                 self.satSegments.append(currentSat)
 
@@ -1398,7 +1396,7 @@ class ManeuverSchedule():
             Desired final orbital radius at end of Hohmann transfer
         
         """
-        #Check if it's a forward or backware propulsive hohmann
+        #Check if it's a forward or backward propulsive hohmann
         if orb.a <= r_f:
             prop_dir = 1 #propel in velocity direction to increase velocity
         elif orb.a > r_f:
@@ -1410,10 +1408,10 @@ class ManeuverSchedule():
         delv1Tot = om.circ2elip_Hohmann(orb.a, r_f)
 
         #Get unit vector
-        delv1_dir = utils.get_unit_vec(orb.v)
+        delv1_dir = utils.get_unit_vec(orb.v) * prop_dir
         
         #Get deltaV in inertial frame
-        delv1 = prop_dir * delv1Tot * delv1_dir
+        delv1 = delv1Tot * delv1_dir
 
         #Total delta V to move from elliptical to final circular orbit
         delv2Tot = om.elip2circ_Hohmann(orb.a, r_f)
@@ -1426,7 +1424,8 @@ class ManeuverSchedule():
         #Add to burn scheduler
         man1_hoh = ManeuverObject(orb.epoch, delv1.to(u.km/u.s))
         man2_hoh = ManeuverObject(orb.epoch + t_hohmann, delv2.to(u.km/u.s))
-        
+        # import ipdb; ipdb.set_trace()
+
         self.add_maneuver(man1_hoh)
         self.add_maneuver(man2_hoh)
 
@@ -1457,25 +1456,28 @@ class ManeuverSchedule():
                 )
                 du_ad = np.array([0, 0, 0, ax, ay, az])
                 return du_kep + du_ad
-            orb_rgt_i = orb_tgt.propagate(orb_i.epoch, method=cowell, f=f)
+            orb_tgt_i = orb_tgt.propagate(orb_i.epoch, method=cowell, f=f)
         else:
-            orb_rgt_i = orb_tgt.propagate(orb_i.epoch)
+            orb_tgt_i = orb_tgt.propagate(orb_i.epoch)
         
         #Get initial phase angle
         #Defined from the target to the chaser. 
         #Positive direction in target direction of motion
-        v_i = orb_i.arglat - orb_rgt_i.arglat
+        v_i = orb_i.arglat - orb_tgt_i.arglat
+        if v_i < (-180*u.deg): #Wrap angle around
+            v_i = v_i % (360 * u.deg)
         
         a_int = orb_i.a
-        a_tgt = orb_rgt_i.a
+        a_tgt = orb_tgt_i.a
         t_trans, delVTot, a_trans, t_wait = om.coplanar_phase_different_orbs(v_i, 
                                                                           a_int, 
                                                                           a_tgt)
-        
         #Propagate orb_i to time of first burn
-        orb_i_1st_burn = orb_i.propagate(t_wait)
-        
-        self.gen_hohmann_schedule(orb_i_1st_burn, orb_rgt_i.a)
+        if method=="J2":
+            orb_i_1st_burn = orb_i.propagate(t_wait, method=cowell, f=f)
+        else:
+            orb_i_1st_burn = orb_i.propagate(t_wait)
+        self.gen_hohmann_schedule(orb_i_1st_burn, orb_tgt_i.a)
 
     def get_delV_total(self):
         """
