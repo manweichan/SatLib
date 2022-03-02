@@ -106,11 +106,20 @@ def addGroundTrack(lon, lat, ax, style_color = 'k',
 
     Parameters
     ----------
-    lon (deg): Longitude
-    lat (deg): Latitude
-    ax (matplotlib): matplotlib ax object
-    style_groundtrack (string): matplotlib linestyle for ground track
-    style_init (string): matplotlib linestyle for starting satellite point
+    lon: deg 
+        Longitude
+    lat: deg 
+        Latitude
+    ax: matplotlib 
+        matplotlib ax object
+    style_color: string 
+        matplotlib color
+    style_line: string 
+        matplotlib line style
+    style_init: string 
+        matplotlib style for initial data point
+    style_width: int 
+        matplotlib linestyle for starting satellite point
 
 
     Returns
@@ -123,6 +132,41 @@ def addGroundTrack(lon, lat, ax, style_color = 'k',
         linewidth = style_width, 
         transform=ccrs.Geodetic())
     ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
+
+
+    return ax
+
+def addGroundLoc(lon, lat, ax, style_color = 'k', 
+    style_marker = 'o', style_width=1):
+    """
+    Plots ground tracks on map using cartopy
+
+    Parameters
+    ----------
+    lon: deg 
+        Longitude
+    lat: deg 
+        Latitude
+    ax: matplotlib 
+        matplotlib ax object
+    style_color: string 
+        matplotlib color for marker
+    style_marker: string 
+        matplotlib data marker
+    style_width: int 
+        matplotlib linestyle for starting satellite point
+
+
+    Returns
+    ----------
+    ax: matplotlib ax object
+    """
+    ax.plot(lon, lat, 
+        color=style_color, 
+        marker = style_marker,
+        linewidth = style_width, 
+        transform=ccrs.Geodetic())
+    # ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
 
 
     return ax
