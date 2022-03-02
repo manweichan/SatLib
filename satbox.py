@@ -1013,6 +1013,215 @@ class Satellite(Orbit):
     def reset_man_schedule(self):
         self.maneuverSchedule = None
 
+    def get_rgt(self, groundLoc, days=7 , tInitSim=None, task=None, k_r=15, k_d=1,
+                                 refVernalEquinox=astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
+        """
+        Given an orbit and ground site, gets the desired repeat ground track orbit 
+        Loosely based on Legge's thesis section 3.1.2
+
+        Parameters
+        ----------
+        groundLoc: satbox.GroundLoc  
+            This is the ground location that you want to get a pass from
+        days int: int 
+            Amount of days ahead for the scheduler to plan for
+        tInitSim: ~astropy.time.Time
+            Time to initialize planner
+        task: string 
+            The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
+        k_r: int
+            Number of revolutions until repeat ground track
+        k_d: int
+            Number of days to to repeat ground track
+        refVernalEquinox: ~astropy.time.Time 
+            Date of vernal equinox. Default is for 2021
+
+        Returns
+        ----------
+        rgtOrbits: (array of satbox.Satellite objects): 
+            Orbit of satellite at ground pass (potential position aka ghost position)
+
+        Todo:
+            Account for RAAN drift due to J2 perturbation
+        """
+
+        assert isinstance(groundLoc, GroundLoc), ('groundLoc argument must' 
+                                                  ' be a GroundLoc object')
+        assert isinstance(days, int), ('days argument must' 
+                                                  ' be an integer')
+
+        if tInitSim is None:
+            tInit = self.epoch
+            satInit = self  
+        else:
+            assert isinstance(tInitSim, astropy.units.quantity.Quantity), ('tInitSim '
+                                                 'must be an astropy.units.quantity.Quantity')
+            tInit = tInitSim
+            satinit = self.propagate(tInitSim)
+
+        
+        tInitMJDRaw = tInit.mjd
+        tInitMJD = int(tInitMJDRaw)
+
+        dayArray = np.arange(0, days + 1)
+        days2InvestigateMJD = list(tInitMJD + dayArray) #Which days to plan over
+        days = [Time(dayMJD, format='mjd', scale='utc')
+                            for dayMJD in days2InvestigateMJD]
+        
+        ## Extract relevant orbit and ground station parameters
+        i = satInit.inc
+        lon = groundLoc.lon
+        lat = groundLoc.lat
+        raan = satInit.raan
+        delLam = np.arcsin(np.tan(lat) / np.tan(i)) #Longitudinal offset
+        theta_GMST_a = raan + delLam - lon #ascending sidereal angle of pass
+        theta_GMST_d = raan - delLam - lon - np.pi * u.rad #descending sidereal angle of pass
+
+
+        delDDates = [day - refVernalEquinox for day in days] #Gets difference in time from vernal equinox
+        delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
+        delDDateDecimalYr = np.array(delDDateDecimalYrList)
+    
+        #Get solar time values for ascending and descending pass
+        theta_GMT_a_raw = theta_GMST_a - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+        theta_GMT_d_raw = theta_GMST_d - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+
+        theta_GMT_a = np.mod(theta_GMT_a_raw, 360 * u.deg)
+        theta_GMT_d = np.mod(theta_GMT_d_raw, 360 * u.deg)
+
+        angleToHrs_a = astropy.coordinates.Angle(theta_GMT_a).hour
+        angleToHrs_d = astropy.coordinates.Angle(theta_GMT_d).hour
+        
+        tPass_a = []
+        tPass_d = []
+        for d_idx, day in enumerate(days):
+            timePass_a = day + angleToHrs_a[d_idx] * u.hr
+            timePass_d = day + angleToHrs_d[d_idx] * u.hr
+            if timePass_a > self.epoch: #Make sure time is in the future
+                tPass_a.append(timePass_a)
+            if timePass_d > self.epoch:
+                tPass_d.append(timePass_d)
+        timesRaw = [tPass_a, tPass_d]
+
+        note_a = f"Potential ascending pass times for Satellite: {self.satID}"
+        note_d = f"Potential descending pass times for Satellite: {self.satID}"
+        scheduleItms_a = [PointingObject(tPass) for tPass in tPass_a]
+        for schItm in scheduleItms_a:
+            schItm.note = note_a
+            schItm.passType = 'a'
+        
+        scheduleItms_d = [PointingObject(tPass) for tPass in tPass_d]
+        for schItm in scheduleItms_d:
+            schItm.note = note_d
+            schItm.passType = 'd'
+        
+        scheduleItms = scheduleItms_a + scheduleItms_d
+        
+        rgtOrbits = []
+
+        rgt_r, rgt_alt = om.getRGTOrbit(k_r, k_d, satInit.ecc, satInit.inc)
+
+        for idx, sch in enumerate(scheduleItms):
+            raans, anoms = self.__desired_raan_from_pass_time(sch.time, groundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
+            if sch.passType == 'a': #Ascending argument of latitude
+                omega = anoms[0]
+                raan = raans[0]
+            elif sch.passType == 'd': #Descending argument of latitude
+                omega = anoms[1]
+                raan = raans[1]
+            
+            #Get desired satellite that will make pass of ground location
+            ghostSatFuture = Satellite.circular(Earth, alt = rgt_alt,
+                 inc = satInit.inc, raan = raan, arglat = omega, epoch = sch.time)
+            ghostSatFuture.satID = self.satID #tag with satID
+            ghostSatFuture.note = sch.passType #Tag with ascending or descending
+            
+            ##Tag satellite with maneuver number
+            ghostSatFuture.manID = idx
+
+            ## Tag ghost satellites with sat and plane IDs
+            ghostSatFuture.satID = self.satID
+            ghostSatFuture.satID = self.planeID
+
+
+            rgtOrbits.append(ghostSatFuture)
+    
+
+        return rgtOrbits
+        
+    def __desired_raan_from_pass_time(self, tPass, groundLoc):
+        """        Gets the desired orbit specifications from a desired pass time and groundstation
+        Based on equations in section 3.1.2 in Legge's thesis (2014)
+
+        Parameters
+        ----------
+            tPass: ~astropy.time.Time 
+                Desired time of pass. Local UTC time preferred
+            GroundLoc: satbox.GroundLoc 
+                GroundLoc class. This is the ground location that you want to get a pass from
+
+        Returns
+        ----------
+            raans [List]: 2 element list where 1st element corresponding to RAAN in the ascending case
+                            and the 2nd element correspond to RAAN in the descending case
+
+            Anoms [List]: 2 element list where the elements corresponds to true Anomalies (circular orbit)
+                            of the ascending case and descending case respectively"""
+    
+         ## Check if astropy class. Make astropy class if not
+        if not isinstance(groundLoc.lat, astropy.units.quantity.Quantity):
+            groundLoc.lat = groundLoc.lat * u.deg
+        if not isinstance(groundLoc.lon, astropy.units.quantity.Quantity):
+            groundLoc.lon = groundLoc.lon * u.deg
+#         if not isinstance(i, astropy.units.quantity.Quantity):
+#             i = i * u.rad
+        tPass.location = groundLoc.loc #Make sure location is tied to time object
+        theta_GMST = tPass.sidereal_time('mean', 'greenwich') #Greenwich mean sidereal time
+        
+        i = self.inc
+        dLam = np.arcsin(np.tan(groundLoc.lat.to(u.rad)) / np.tan(i.to(u.rad)))
+
+        #From Legge eqn 3.10 pg.69
+        raan_ascending = theta_GMST - dLam + np.deg2rad(groundLoc.lon)
+        raan_descending = theta_GMST + dLam + np.deg2rad(groundLoc.lon) + np.pi * u.rad
+
+
+        #Get mean anomaly (assuming circular earth): https://en.wikipedia.org/wiki/Great-circle_distance
+        n1_ascending = np.array([np.cos(raan_ascending),np.sin(raan_ascending),0]) #RAAN for ascending case in ECI norm
+        n1_descending = np.array([np.cos(raan_descending),np.sin(raan_descending),0]) #RAAN for descending case in ECI norm
+
+        n2Raw = groundLoc.loc.get_gcrs(tPass).data.without_differentials() / groundLoc.loc.get_gcrs(tPass).data.norm() #norm of ground station vector in ECI
+        n2 = n2Raw.xyz
+
+        n1_ascendingXn2 = np.cross(n1_ascending, n2) #Cross product
+        n1_descendingXn2 = np.cross(n1_descending, n2)
+
+        n1_ascendingDn2 = np.dot(n1_ascending, n2) #Dot product
+        n1_descendingDn2 = np.dot(n1_descending, n2)
+
+        n1a_X_n2_norm = np.linalg.norm(n1_ascendingXn2)
+        n1d_X_n2_norm = np.linalg.norm(n1_descendingXn2)
+        if groundLoc.lat > 0 * u.deg and groundLoc.lat < 90 * u.deg: #Northern Hemisphere case
+            ca_a = np.arctan2(n1a_X_n2_norm, n1_ascendingDn2) #Central angle ascending
+            ca_d = np.arctan2(n1d_X_n2_norm, n1_descendingDn2) #Central angle descending
+        elif groundLoc.lat < 0 * u.deg and groundLoc.lat > -90 * u.deg: #Southern Hemisphere case
+            ca_a = 2 * np.pi * u.rad - np.arctan2(n1a_X_n2_norm, n1_ascendingDn2) 
+            ca_d = 2 * np.pi * u.rad - np.arctan2(n1d_X_n2_norm, n1_descendingDn2)
+        elif groundLoc.lat == 0 * u.deg: #Equatorial case
+            ca_a = 0 * u.rad
+            ca_d = np.pi * u.rad
+        elif groundLoc.lat == 90 * u.deg or groundLoc.lat == -90 * u.deg: #polar cases
+            ca_a = np.pi * u.rad
+            ca_d = 3 * np.pi / 2 * u.rad
+        else:
+            print("non valid latitude")
+            
+        raans = [raan_ascending, raan_descending]
+        Anoms = [ca_a, ca_d]
+
+        return raans, Anoms
+
+
     def __eq__(self, other):
         """Check for equality with another object"""
         return self.__dict__ == other.__dict__
@@ -1466,6 +1675,8 @@ class ManeuverSchedule():
         v_i = orb_i.arglat - orb_tgt_i.arglat
         if v_i < (-180*u.deg): #Wrap angle around
             v_i = v_i % (360 * u.deg)
+        elif v_i > (180*u.deg):
+            v_i = v_i - (360 * u.deg)
         
         a_int = orb_i.a
         a_tgt = orb_tgt_i.a
@@ -1490,6 +1701,14 @@ class ManeuverSchedule():
 
         delVTot = sum(sch.deltaVTot for sch in schedule)
         return delVTot
+
+class PointingObject():
+    def __init__(self, time, note=None, passType=None,direction=None, action=None):
+        self.time = time 
+        self.note = note
+        self.direction = direction
+        self.action = action
+        self.passType = passType
 
 # Data class
 class Data():
