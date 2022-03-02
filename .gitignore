@@ -3,3 +3,4 @@ __pycache__/*
 *.cpython-38.pyc
 *sublime-workspace
 deprecated/*
+.ipynb_checkpoints/*
