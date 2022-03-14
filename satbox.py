@@ -311,171 +311,171 @@ class Constellation():
         return Constellation.from_list(planes2const)
 
 
-    def get_relative_velocity_analysis(self, verbose=False):
-        """
-        Gets relative velocities between satellites in the constellation
+    # def get_relative_velocity_analysis(self, verbose=False):
+    #     """
+    #     Gets relative velocities between satellites in the constellation
 
-        Needs to run get_rv_from_propagate first to get position/velocity
-        values first
+    #     Needs to run get_rv_from_propagate first to get position/velocity
+    #     values first
 
-        Args:
-            verbose: prints loop status updates
+    #     Args:
+    #         verbose: prints loop status updates
 
-        Returns:
-            First layer key are the satellites being compared i.e. '4-10'
-            means that satellite 4 is compared to satellite 10. Second layer
-            key are the specific data types described below
+    #     Returns:
+    #         First layer key are the satellites being compared i.e. '4-10'
+    #         means that satellite 4 is compared to satellite 10. Second layer
+    #         key are the specific data types described below
 
-            LOS (Bool): Describes if there is a line of sight between the satellites
+    #         LOS (Bool): Describes if there is a line of sight between the satellites
 
-            pDiff : Relative position (xyz)
+    #         pDiff : Relative position (xyz)
 
-            pDiffNorm : magnitude of relative positions
+    #         pDiffNorm : magnitude of relative positions
 
-            pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)
+    #         pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)
 
-            flag180 : Flag to determine if there was a 180 degree 'direct crossing'
+    #         flag180 : Flag to determine if there was a 180 degree 'direct crossing'
 
-            velDiffNorm : relative velocities
+    #         velDiffNorm : relative velocities
 
-            slewRate : slew rates required to hold pointing between satellites (rad/s)
+    #         slewRate : slew rates required to hold pointing between satellites (rad/s)
 
-            dopplerShift : Effective doppler shifts due to relative velocities
-        """
+    #         dopplerShift : Effective doppler shifts due to relative velocities
+    #     """
 
-        # Check if first satellite has rvECI Attribute
-        # assert self.planes[0].sats[0].rvECI, "Run self.get_rv_from_propagate first to get rv values"
-        # import ipdb;ipdb.set_trace()
-        if not hasattr(self.planes[0].sats[0], 'rvECI'):
-            print("Run self.get_rv_from_propagate first to get rv values")
-            return
-        c=3e8 * u.m / u.s
+    #     # Check if first satellite has rvECI Attribute
+    #     # assert self.planes[0].sats[0].rvECI, "Run self.get_rv_from_propagate first to get rv values"
+    #     # import ipdb;ipdb.set_trace()
+    #     if not hasattr(self.planes[0].sats[0], 'rvECI'):
+    #         print("Run self.get_rv_from_propagate first to get rv values")
+    #         return
+    #     c=3e8 * u.m / u.s
 
-        sats=self.get_sats()
-        numSats=len(sats)
+    #     sats=self.get_sats()
+    #     numSats=len(sats)
 
-        outputData={}
+    #     outputData={}
 
-        outputData['numSats']=numSats
-        outputData['satData']={}
-        for satRef in sats:
-            if verbose:
-                print(f'Reference sat {satRef.satID} out of {numSats}')
-            for sat in sats:
+    #     outputData['numSats']=numSats
+    #     outputData['satData']={}
+    #     for satRef in sats:
+    #         if verbose:
+    #             print(f'Reference sat {satRef.satID} out of {numSats}')
+    #         for sat in sats:
 
-                if satRef.satID == sat.satID:
-                    continue
-                if verbose:
-                    print(f'Refererence compared to {sat.satID}')
-                # Reference orbit RV values
-                satRef_r=satRef.rvECI.without_differentials()
-                satRef_v=satRef.rvECI.differentials
+    #             if satRef.satID == sat.satID:
+    #                 continue
+    #             if verbose:
+    #                 print(f'Refererence compared to {sat.satID}')
+    #             # Reference orbit RV values
+    #             satRef_r=satRef.rvECI.without_differentials()
+    #             satRef_v=satRef.rvECI.differentials
 
-                # Comparison orbit RV values
-                sat_r=sat.rvECI.without_differentials()
-                sat_v=sat.rvECI.differentials
+    #             # Comparison orbit RV values
+    #             sat_r=sat.rvECI.without_differentials()
+    #             sat_v=sat.rvECI.differentials
 
-                # Determine LOS availability (Vallado pg 306 5.3)
-                adotb=sat_r.dot(satRef_r)
-                aNorm=sat_r.norm()
-                bNorm=satRef_r.norm()
-                theta=np.arccos(adotb/(aNorm * bNorm))
+    #             # Determine LOS availability (Vallado pg 306 5.3)
+    #             adotb=sat_r.dot(satRef_r)
+    #             aNorm=sat_r.norm()
+    #             bNorm=satRef_r.norm()
+    #             theta=np.arccos(adotb/(aNorm * bNorm))
 
-                theta1=np.arccos(constants.R_earth / aNorm)
-                theta2=np.arccos(constants.R_earth / bNorm)
+    #             theta1=np.arccos(constants.R_earth / aNorm)
+    #             theta2=np.arccos(constants.R_earth / bNorm)
 
-                LOSidx=(theta1 + theta2) > theta
-
-
+    #             LOSidx=(theta1 + theta2) > theta
 
 
 
-                # Relative positions
-                pDiff=satRef_r - sat_r
-                pDiffNorm=pDiff.norm()
-
-                pDiffDot=pDiff[:-1].dot(pDiff[1:])
-                if min(pDiffDot) < 0:  # Checks for 180 deg crossinig
-                    flag180=1
-                else:
-                    flag180=0
-
-                velDiff=satRef_v["s"] - sat_v["s"]
-                velDiffNorm=velDiff.norm()
-
-                # Slew Equations
-                # Do it using the slew equation (From Trevor Dahl report)
-                rCV=pDiff.cross(velDiff)  # r cross v
-                slewRateOrb=rCV / pDiffNorm**2
-                slewRateOrbNorm=slewRateOrb.norm()
 
 
-                # Doppler shift
-                pDiffU=pDiff/pDiffNorm  # unit vector direction of relative position
-                # Get velocity of destination satellite (Reference orbit)
-                rdDot=satRef_v["s"].to_cartesian()
-                numTerm=rdDot.dot(pDiffU)
-                rsDot=sat_v["s"].to_cartesian()
-                denTerm=rsDot.dot(pDiffU)
-                num=c - numTerm
-                den=c - denTerm
-                fd_fs=num/den
+    #             # Relative positions
+    #             pDiff=satRef_r - sat_r
+    #             pDiffNorm=pDiff.norm()
 
-                # Perform max/min analysis
+    #             pDiffDot=pDiff[:-1].dot(pDiff[1:])
+    #             if min(pDiffDot) < 0:  # Checks for 180 deg crossinig
+    #                 flag180=1
+    #             else:
+    #                 flag180=0
 
-                maxPos=max(pDiffNorm)
-                minPos=min(pDiffNorm)
+    #             velDiff=satRef_v["s"] - sat_v["s"]
+    #             velDiffNorm=velDiff.norm()
 
-                maxVel=max(velDiffNorm)
-                minVel=min(velDiffNorm)
+    #             # Slew Equations
+    #             # Do it using the slew equation (From Trevor Dahl report)
+    #             rCV=pDiff.cross(velDiff)  # r cross v
+    #             slewRateOrb=rCV / pDiffNorm**2
+    #             slewRateOrbNorm=slewRateOrb.norm()
 
-                slewMax=max(slewRateOrbNorm)
-                slewMin=min(slewRateOrbNorm)
 
-                dopplerMax=max(fd_fs)
-                dopplerMin=min(fd_fs)
+    #             # Doppler shift
+    #             pDiffU=pDiff/pDiffNorm  # unit vector direction of relative position
+    #             # Get velocity of destination satellite (Reference orbit)
+    #             rdDot=satRef_v["s"].to_cartesian()
+    #             numTerm=rdDot.dot(pDiffU)
+    #             rsDot=sat_v["s"].to_cartesian()
+    #             denTerm=rsDot.dot(pDiffU)
+    #             num=c - numTerm
+    #             den=c - denTerm
+    #             fd_fs=num/den
 
-                # Check if adjacent sats (i.e. SatIDs are consecutive)
-                idDiff=satRef.satID - sat.satID
-                idDiffAbs=abs(idDiff)
-                if idDiffAbs == 1 or idDiffAbs == numSats - 1:
-                    adjacentFlag=1  # Flag means satellites are adjacent
-                else:
-                    adjacentFlag=0
+    #             # Perform max/min analysis
 
-                posDict={
-                            'relPosVec': pDiff,
-                            'relPosNorm': pDiffNorm,
-                            'relPosMax': maxPos,
-                            'relPosMin': minPos,
-                            'delRelPos': pDiffDot,
-                }
+    #             maxPos=max(pDiffNorm)
+    #             minPos=min(pDiffNorm)
 
-                velDict={
-                            'relVel': velDiffNorm,
-                            'slewRate': slewRateOrbNorm,
-                            'dopplerShift': fd_fs,
-                            'velMax': maxVel,
-                            'velMin': minVel,
-                            'slewMax': slewMax,
-                            'slewMin': slewMin,
-                            'dopplerMin': dopplerMin,
-                            'dopplerMax': dopplerMax,
-                }
+    #             maxVel=max(velDiffNorm)
+    #             minVel=min(velDiffNorm)
 
-                dictEntry={
-                            'LOS': LOSidx,
-                            'relPosition': posDict,
-                            'flag180': flag180,
-                            'relVel': velDict,
-                            'adjacent': adjacentFlag,
-                            'timeDeltas': sat.rvTimeDeltas,
-                            'times': sat.rvTimes,
-                }
+    #             slewMax=max(slewRateOrbNorm)
+    #             slewMin=min(slewRateOrbNorm)
 
-                dictKey=str(satRef.satID) + '-' + str(sat.satID)
-                outputData['satData'][dictKey]=dictEntry
-        return outputData
+    #             dopplerMax=max(fd_fs)
+    #             dopplerMin=min(fd_fs)
+
+    #             # Check if adjacent sats (i.e. SatIDs are consecutive)
+    #             idDiff=satRef.satID - sat.satID
+    #             idDiffAbs=abs(idDiff)
+    #             if idDiffAbs == 1 or idDiffAbs == numSats - 1:
+    #                 adjacentFlag=1  # Flag means satellites are adjacent
+    #             else:
+    #                 adjacentFlag=0
+
+    #             posDict={
+    #                         'relPosVec': pDiff,
+    #                         'relPosNorm': pDiffNorm,
+    #                         'relPosMax': maxPos,
+    #                         'relPosMin': minPos,
+    #                         'delRelPos': pDiffDot,
+    #             }
+
+    #             velDict={
+    #                         'relVel': velDiffNorm,
+    #                         'slewRate': slewRateOrbNorm,
+    #                         'dopplerShift': fd_fs,
+    #                         'velMax': maxVel,
+    #                         'velMin': minVel,
+    #                         'slewMax': slewMax,
+    #                         'slewMin': slewMin,
+    #                         'dopplerMin': dopplerMin,
+    #                         'dopplerMax': dopplerMax,
+    #             }
+
+    #             dictEntry={
+    #                         'LOS': LOSidx,
+    #                         'relPosition': posDict,
+    #                         'flag180': flag180,
+    #                         'relVel': velDict,
+    #                         'adjacent': adjacentFlag,
+    #                         'timeDeltas': sat.rvTimeDeltas,
+    #                         'times': sat.rvTimes,
+    #             }
+
+    #             dictKey=str(satRef.satID) + '-' + str(sat.satID)
+    #             outputData['satData'][dictKey]=dictEntry
+    #     return outputData
 
     def get_sats(self):
         """
@@ -1434,6 +1434,7 @@ class SimSatellite():
             #Propagate after the maneuver
             timeEnd = self.initSat.epoch + self.t2propagate
             timeLeft = timeEnd - currentSat.epoch
+            assert timeLeft >= 0, "timeLeft is < 0, can't create time Deltas"
             if timeLeft.to(u.s).value != 0: #No time left
                 tDeltas = TimeDelta(np.arange(0,
                                           timeLeft.to(u.s).value,
@@ -1655,7 +1656,6 @@ class ManeuverSchedule():
             Method of propagation. Currently only "J2" supported
         
         """
-        
         #Propagate RGT orbit to same epoch as orb_i
         if method=="J2":
             def f(t0, u_, k):
@@ -1688,6 +1688,16 @@ class ManeuverSchedule():
             orb_i_1st_burn = orb_i.propagate(t_wait, method=cowell, f=f)
         else:
             orb_i_1st_burn = orb_i.propagate(t_wait)
+
+        ## Debug statements ##
+        print(f"T_wait: {t_wait}")
+        orb_tgt_180 = orb_tgt.propagate(orb_i.epoch + t_wait + t_trans, method=cowell, f=f)
+        anomalyDiff = orb_i_1st_burn.arglat.to(u.deg) - orb_tgt_180.arglat.to(u.deg)
+        print(f"Anomaly Diff: {anomalyDiff}")
+        print("T_transfer: ", t_trans)
+        print("a_trans: ", a_trans)
+        ## End Debug statements ##
+
         self.gen_hohmann_schedule(orb_i_1st_burn, orb_tgt_i.a)
 
     def get_delV_total(self):
