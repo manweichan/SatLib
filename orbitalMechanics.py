@@ -379,27 +379,60 @@ def coplanar_phase_different_orbs(v_i, a_int, a_tgt, mu=constants.GM_earth):
 ####################### Keplarian Orbital Mechanics #######################
 
 
-def precRate_RAAN(a, e, w, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m).value):
+# def precRate_RAAN(a, e, w, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m).value):
+#     """
+#     https://en.wikipedia.org/wiki/Nodal_precession
+#     Calculates right ascension nodal precession rate of a satellite around a body
+#     inputs(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3)
+#     a: semi major axis (meters)
+#     e: eccentricity
+#     w: Mean motion/angular velocity of satellite motion (2 pi / T) where T is satellite period. 
+#     i: inclination (radians)
+#     J2: second dynamic form factor of body
+#     rPlanet: body's equitorial radius
+
+#     Ouputs:
+#     wp: precession rate 
+#     Note For a satellite in a prograde orbit, precession is westward, i.e. node and satellite
+#     move in opposite directions
+
+#     """
+#     wp = ((-3/2) * rPlanet**2 * J2 * w * np.cos(i)) / (a * (1 - e**2))**2
+#     return wp
+
+def precRate_RAAN(a, e, i,J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m), muPlanet=poliastro.constants.GM_earth):
     """
     https://en.wikipedia.org/wiki/Nodal_precession
-    Calculates right ascension nodal precession rate of a satellite around a body
-    inputs(a, e, w, i, J2 = 1.08262668e-3, rPlanet = 6378.1e3)
-    a: semi major axis (meters)
-    e: eccentricity
-    w: Mean motion/angular velocity of satellite motion (2 pi / T) where T is satellite period. 
-    i: inclination (radians)
-    J2: second dynamic form factor of body
-    rPlanet: body's equitorial radius
+    Calculates right ascension nodal precession rate of a satellite around a body given J2 perturbation
 
-    Ouputs:
-    wp: precession rate 
+    Parameters
+    ----------
+    a: ~astropy.unit.Quantity
+        semi-major axis of the orbit
+    e: float
+        eccentricity of the orbit
+    i: ~astropy.unit.Quantity
+        inclination of the orbit
+    J2: float
+        second dynamic form factor of body. Default poliastro constant for earth
+    rPlanet: ~astropy.unit.Quantity
+        body's equatorial radius. Default poliastro constant for earth
+    muPlanet: ~astropy.unit.Quantity
+        body's gravitational constant. Default poliastro constant for earth
+
+    Returns
+    -------
+    dRaan: astropy.unit.Quantity
+        Precession rate of RAAN in rad/s
+
     Note For a satellite in a prograde orbit, precession is westward, i.e. node and satellite
     move in opposite directions
 
     """
-    wp = ((-3/2) * rPlanet**2 * J2 * w * np.cos(i)) / (a * (1 - e**2))**2
-    return wp
-
+    n = np.sqrt(muPlanet/a**3)
+    p = (a * (1 - e**2))
+    dRaan = -(3 * n * rPlanet**2 * J2 * np.cos(i)) / (2 * p**2)
+    return dRaan
 
 def delPrecRate_RAAN(a, e, w, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m).value):
     """
@@ -439,6 +472,64 @@ def delPrecRateDelA_Raan(a, e, w, i, J2=constants.J2_earth, rPlanet=constants.R_
     delWP_a = (3 * rPlanet ** 2 * J2 * w * np.cos(i)) / (a**3 * (1-e**2)**2)
     return delWP_a
 
+
+def precRate_omega(a, e, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m), muPlanet=poliastro.constants.GM_earth):
+    """
+    Calculates the precession of the argument of perigee (omega) due to J2
+
+    Parameters
+    ----------
+    a: ~astropy.unit.Quantity
+        semi-major axis of the orbit
+    e: float
+        eccentricity of the orbit
+    i: ~astropy.unit.Quantity
+        inclination of the orbit
+    J2: float
+        second dynamic form factor of body. Default poliastro constant for earth
+    rPlanet: ~astropy.unit.Quantity
+        body's equatorial radius. Default poliastro constant for earth
+    muPlanet: ~astropy.unit.Quantity
+        body's gravitational constant. Default poliastro constant for earth
+
+    Returns
+    -------
+    delOmega: ~astropy.unit.Quantity
+        precession rate of the argument of perigee in rad/s
+    """
+    n = np.sqrt(muPlanet/a**3)
+    p = (a * (1 - e**2))
+    delOmega = -(3 * n * rPlanet**2 * J2 * np.cos(i)) / (2 * p**2)
+    return delOmega
+
+def precRate_anom(a, e, i, J2=constants.J2_earth, rPlanet=constants.R_earth.to(u.m), muPlanet=poliastro.constants.GM_earth):
+    """
+    Calculates the precession of the mean anomaly due to J2 perturbations
+
+    Parameters
+    ----------
+    a: ~astropy.unit.Quantity
+        semi-major axis of the orbit
+    e: float
+        eccentricity of the orbit
+    i: ~astropy.unit.Quantity
+        inclination of the orbit
+    J2: float
+        second dynamic form factor of body. Default poliastro constant for earth
+    rPlanet: ~astropy.unit.Quantity
+        body's equatorial radius. Default poliastro constant for earth
+    muPlanet: ~astropy.unit.Quantity
+        body's gravitational constant. Default poliastro constant for earth
+
+    Returns
+    -------
+    delAnom: ~astropy.unit.Quantity
+        precession rate of the mean anomaly in rad/s
+    """
+    n = np.sqrt(muPlanet/a**3)
+    p = (a * (1 - e**2))
+    delAnom = -(3 * n * rPlanet**2 * J2 * np.sqrt(1 - e**2) * (3 * np.sin(i)**2 - 2)) / (4 * p**2)
+    return delAnom
 
 def orbitalPeriod_fromAlt(alt, rPlanet=constants.R_earth, muPlanet=poliastro.constants.GM_earth):
     """
