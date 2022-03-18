@@ -1057,7 +1057,7 @@ class Satellite(Orbit):
             assert isinstance(tInitSim, astropy.units.quantity.Quantity), ('tInitSim '
                                                  'must be an astropy.units.quantity.Quantity')
             tInit = tInitSim
-            satinit = self.propagate(tInitSim)
+            satInit = self.propagate(tInitSim)
 
         
         tInitMJDRaw = tInit.mjd
@@ -1068,15 +1068,35 @@ class Satellite(Orbit):
         days = [Time(dayMJD, format='mjd', scale='utc')
                             for dayMJD in days2InvestigateMJD]
         
+        ## Get geocentric coordinates of ground station
+        gsGeocentric = groundLoc.loc.to_geocentric()
+
+        #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
+        gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
+        r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
+        p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
+        gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
+
         ## Extract relevant orbit and ground station parameters
         i = satInit.inc
         lon = groundLoc.lon
-        lat = groundLoc.lat
+        # lat = groundLoc.lat
+        lat = gsLatGeocentric
         raan = satInit.raan
         delLam = np.arcsin(np.tan(lat) / np.tan(i)) #Longitudinal offset
         theta_GMST_a = raan + delLam - lon #ascending sidereal angle of pass
         theta_GMST_d = raan - delLam - lon - np.pi * u.rad #descending sidereal angle of pass
 
+        # Calculate ground track equator crossings
+        crossPoint0 = lon - delLam
+        lonSplit = 360*u.deg / k_r
+        crossPointArray = np.linspace(0 * u.deg, 360 * u.deg - lonSplit, k_r)
+        crossPointsRaw = crossPoint0 + crossPointArray
+
+        #Mod 360
+        crossPoints360 = crossPointsRaw % (360 * u.deg)
+        #Wrap angles > 180 around
+        wrapAngles = [-180*u.deg + x%(180*u.deg) if x > 180*u.deg else x for x in crossPoints360]
 
         delDDates = [day - refVernalEquinox for day in days] #Gets difference in time from vernal equinox
         delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
@@ -1143,7 +1163,9 @@ class Satellite(Orbit):
             ghostSatFuture.satID = self.satID
             ghostSatFuture.satID = self.planeID
 
-
+            #Include RGT Constant as an attribute
+            ghostSatFuture.rgtConstant = k_r * raan + k_d * omega 
+            ghostSatFuture.equatorCrossings = wrapAngles
             rgtOrbits.append(ghostSatFuture)
     
 
