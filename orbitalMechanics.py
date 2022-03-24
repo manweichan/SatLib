@@ -61,6 +61,45 @@ def delV_circInc(v, i):
     delV = 2 * v * np.sin(i/2.)
     return delV
 
+def a_ecc_hohmann(a1, a2):
+    """
+    Find semi-major axis and eccentricity of the Hohmann Transfer Orbit
+
+    Parameters
+    ----------
+    a1: ~astropy.unit.Quantity
+        semi major axis of circular orbit (m)
+    a2: ~astropy.unit.Quantity
+        semi major axis of final orbit (m) 
+
+    Returns
+    -------
+    ecc: 
+        Eccentricity of the Hohmann transfer orbit
+    muPlanet: Gravitation parameter (Earth default)
+    """
+    if not isinstance(a1, astropy.units.quantity.Quantity):
+       a1 = a1 * u.m
+    if not isinstance(a2, astropy.units.quantity.Quantity):
+       a2 = a2 * u.m
+
+    a = (a1 + a2)/2
+
+    #Find periapsis and apoapsis
+    if a1 > a2:
+        apoapsis = a1
+        periapsis = a2 
+    elif a1 < a2:
+        apoapsis = a2 
+        periapsis = a1
+    else:
+        print("Hohmann orbits must be different")
+        return
+
+    eccNum = apoapsis - periapsis
+    eccDen = apoapsis + periapsis
+    ecc = eccNum / eccDen
+    return a, ecc
 
 def circ2elip_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
     """
