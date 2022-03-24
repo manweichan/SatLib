@@ -1552,10 +1552,10 @@ class GroundLoc():
         self.groundID = groundID
         self.identifier = identifier
 
-        def propagate_to_ECI(self, obstime):  # Gets GCRS coordinates (ECI)
-            return self.loc.get_gcrs(obstime)
-        def get_ECEF(self):
-            return self.loc.get_itrs()
+    def propagate_to_ECI(self, obstime):  # Gets GCRS coordinates (ECI)
+        return self.loc.get_gcrs(obstime)
+    def get_ECEF(self):
+        return self.loc.get_itrs()
 
 # Ground station class
 class GroundStation(GroundLoc):
