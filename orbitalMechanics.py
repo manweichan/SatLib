@@ -760,6 +760,73 @@ def getRGTOrbit(k_r, k_d, e, i, detectThresh=10, maxIters=100):
     a_new_out = a_new * u.m
     return a_new_out, alt_out
 
+# Nodal period of satellite
+def get_nodal_period(a, i, J2=constants.J2_earth, Re=constants.R_earth, mu=constants.GM_earth):
+    """
+    Function from equation 2 of Lee, Eun 
+    (Ground Track Acquisition and Maintenance Maneuver Modeling)
+    
+    Also Vallado 4th ed 11-24
+    
+    Parameters
+    ----------
+    a: ~astropy.unit.Quantity
+        Semi-major axis of orbit
+    i: ~astropy.unit.Quantity
+        Inclination of orbit
+        
+    Returns
+    -------
+    Pn: ~astropy.unit.Quantity
+        Nodal period of satellite
+    """
+    
+    n = np.sqrt(mu / a**3)
+    
+    term1 = 2 * np.pi / n
+    
+    term2 = 1 - 3 / 2 * J2 * (Re / a)**2 * (4 * np.cos(i)**2 - 1)
+    
+    Pn = term1 * term2
+    return Pn
+
+def nodal_period_displacement(pn0, aRGT, eRGT, iRGT, aSat):
+    """
+    Gets ground track displacement per nodal period
+    From Aorpimai (Repeat-Groundtrack Orbit Acquisition and Maintenance 
+    for Earth-Observation Satellites) eqn 20
+    
+    Parameters
+    ----------
+    pn0: ~astropy.unit.Quantity
+        nodal period of desired repeat-groundtrack orbit
+    aRGT: ~astropy.unit.Quantity
+        semi-major axis of rgt orbit
+    eRGT: ~astropy.unit.Quantity
+        eccentriciy of rgt orbit
+    iRGT: ~astropy.unit.Quantity
+        inclination axis of rgt orbit
+    aSat: ~astropy.unit.Quantity
+        semi-major axis of satellite orbit (trying to attain RGT orbit)
+        
+    Returns
+    -------
+    deltaL: ~astropy.unit.Quantity
+        ground track displacement per nodal period (radians)
+    """
+    
+    # Get earth rotation rate
+    siderealDaySec = 86164.0905 * u.s #Sidereal day in seconds
+    we = (2*np.pi)/siderealDaySec #Rotation rate of the earth
+    
+    deltaA = abs(aSat - aRGT)
+    
+    omegaDot = precRate_RAAN(aRGT, eRGT, iRGT)
+    
+    deltaL = 3/2 * pn0 * (we - omegaDot) * deltaA / aRGT
+    
+    return deltaL
+
 ####################### Eclipse Calculation #######################
 
 

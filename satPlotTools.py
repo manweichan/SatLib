@@ -14,6 +14,7 @@ from poliastro.core.perturbations import J2_perturbation
 from poliastro.bodies import Earth
 from poliastro.czml.extract_czml import CZMLExtractor
 
+
 import matplotlib.pyplot as plt
 # from cycler import cycler
 from itertools import cycle

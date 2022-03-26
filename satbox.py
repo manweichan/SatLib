@@ -14,6 +14,9 @@ from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 from poliastro.plotting.static import StaticOrbitPlotter
 from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
+from poliastro.twobody.events import(
+    NodeCrossEvent,
+)
 # import cartopy.crs as ccrs
 
 import seaborn as sns
@@ -1013,6 +1016,160 @@ class Satellite(Orbit):
     def reset_man_schedule(self):
         self.maneuverSchedule = None
 
+    def gen_sched_rgt_acquisition(self, groundLoc, k_r=15, k_d=1):
+        """
+        Generates a burn schedule that takes a satellite in a drift orbit into
+        a desired RGT orbit over the ground location of interest. 
+
+        **Schedule is generated using current satellite (self) epoch**
+
+        Parameters
+        ----------
+        groundLoc: satbox.GroundLoc  
+            This is the ground location that you want to get a pass from
+        k_r: int
+            Number of revolutions until repeat ground track
+        k_d: int
+            Number of days to to repeat ground track
+
+        Returns
+        -------
+        sched: satbox.ManeuverSchedule
+            Hohmann transfer schedule to attain RGT orbit
+        """
+        assert isinstance(groundLoc, GroundLoc), ('groundLoc argument must' 
+                                                  ' be a satbox.GroundLoc object')
+
+
+        #Find desired RGT orbits for specified ground location
+        rgtOrbits = self.get_rgt(groundLoc, days=2, k_r=k_r, k_d=k_d)
+
+        #Take first RGT option (All others in the rgtOrbits should be similar)
+        #This choice is purely heuristic
+        rgtDesired = rgtOrbits[0] 
+
+        #Propagate the RGT to the next node crossing
+        _, lon_eq_rgt = self.__get_lon_next_node_crossing(rgtDesired)
+
+        ## Get other longitude crossings
+        k_r = 15 #Make sure it is the same as in get_rgt
+        lonSplit = 360*u.deg / k_r
+        crossPointArray = np.linspace(0 * u.deg, 360 * u.deg - lonSplit, k_r)
+        crossPointsRaw = lon_eq_rgt + crossPointArray
+
+        #Mod 360
+        crossPoints360 = crossPointsRaw % (360 * u.deg)
+        #Wrap angles > 180 around
+        wrapAngles = [-180*u.deg + x%(180*u.deg) if x > 180*u.deg else x for x in crossPoints360]
+
+
+        ## Calculate distance from GOM equatorial crossing to ground track equatorial crossing
+        driftSatEq, lon_eq_driftSat = self.__get_lon_next_node_crossing(self)
+
+        eqDists = [lon_eq_driftSat - cross for cross in wrapAngles]
+
+        #mod Distances by 360 to make sortable (Westward distance to go)
+        eqDistsLeft = [d%(360*u.deg) for d in eqDists]
+
+        #This is the distance to go to acquire ground track
+        minDist = min(eqDistsLeft)
+
+        ## Define Hohmann transfer parameters
+        hoh_a, hoh_ecc = om.a_ecc_hohmann(self.a, rgtDesired.a)
+        pnHohmann = om.get_nodal_period(hoh_a, self.inc)
+
+        # Get nodal periods
+        pnRGT = om.get_nodal_period(rgtDesired.a, rgtDesired.inc)
+        pnDrift = om.get_nodal_period(self.a, self.inc)
+
+        t_hoh = om.t_Hohmann(self.a, rgtDesired.a)
+
+
+
+
+
+        #Calculate equatorial nodal displacement
+        deltaL_hoh = om.nodal_period_displacement(pnRGT, rgtDesired.a, rgtDesired.ecc, rgtDesired.inc, hoh_a)
+        deltaL_drift = om.nodal_period_displacement(pnRGT, rgtDesired.a, rgtDesired.ecc, rgtDesired.inc, self.a)
+        
+        # Get drift rate of drift orbit and hohmann orbit
+        deltaLDriftDot = deltaL_drift / pnDrift
+        deltaL_hohDot = deltaL_hoh / pnHohmann
+
+
+        deltaL_hoh_transfer = (t_hoh * deltaL_hohDot) * u.rad
+
+        # Subtract distance that will be covered by Hohmann Transfer
+        dist2drift = minDist - deltaL_hoh_transfer
+
+        # find drift time by dividing dist2drift by deltaLDriftDot
+        t2drift = dist2drift / (deltaLDriftDot * u.rad)
+
+        # Propagate equatorial crossing by t2drift
+        driftSatAtHohmann = driftSatEq.propagate(t2drift, method=cowell, f=self.j2_f) ## TODO: Area where we can speed up code
+
+        sched = ManeuverSchedule()
+        sched.gen_hohmann_schedule(driftSatAtHohmann, rgtDesired.a)
+
+        return sched
+
+    @staticmethod
+    def __get_lon_next_node_crossing(satellite):
+        """
+        Gets the longitude of the next node crossing
+
+        Parameters
+        ----------
+        satellite: ~satbox.satellite
+            Satellite object in equstion
+
+        Returns
+        -------
+        satEq: ~satbox.Satellite
+            Satellite object at equator
+        satLon: ~astropy.unit.Quantity
+            longitude of satellite at crossing
+
+        """
+        #Propagate the RGT to the next node crossing
+        tofs = TimeDelta(np.arange(0, satellite.period.to(u.s).value, 1)*u.s)
+
+        node_event = NodeCrossEvent(terminal=True)
+        events = [node_event]
+
+        rr,vv = cowell(
+                Earth.k,
+                satellite.r,
+                satellite.v,
+                tofs,
+                f=satellite.j2_f,
+                events=events,
+        )
+
+        #Propagate satellite to equatorial position
+        satEq = satellite.propagate(node_event.last_t, method=cowell, f=satellite.j2_f)
+
+        satECI = GCRS(rr[-1][0], rr[-1][1], rr[-1][2], representation_type="cartesian", obstime = satellite.epoch+node_event.last_t)
+
+        satECISky = SkyCoord(satECI)
+        satECEF = satECISky.transform_to(ITRS)
+        satEL = EarthLocation.from_geocentric(satECEF.x, satECEF.y, satECEF.z)
+        ## Convert to LLA
+
+        ## 1st Node crossing of desired RGT track
+        lla = satEL.to_geodetic() #to LLA
+
+        satLon = lla.lon
+        return satEq, satLon
+
+    @staticmethod
+    def j2_f(t0, state, k):
+        du_kep = func_twobody(t0, state, k)
+        ax, ay, az = J2_perturbation(
+            t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value)
+        du_ad = np.array([0, 0, 0, ax, ay, az])
+        return du_kep + du_ad
+
     def get_rgt(self, groundLoc, days=7 , tInitSim=None, task=None, k_r=15, k_d=1,
                                  refVernalEquinox=astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
         """
@@ -1046,7 +1203,7 @@ class Satellite(Orbit):
         """
 
         assert isinstance(groundLoc, GroundLoc), ('groundLoc argument must' 
-                                                  ' be a GroundLoc object')
+                                                  ' be a satbox.GroundLoc object')
         assert isinstance(days, int), ('days argument must' 
                                                   ' be an integer')
 
