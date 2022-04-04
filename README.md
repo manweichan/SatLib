@@ -43,6 +43,6 @@ Once the libraries are installed, open up a jupyter notebook with the command:
 `jupyter notebook`
 
 ## Open notebook
-Open satellite_constellation_ex.ipynb
+Open satbox_ex.ipynb
 
 ## Run the notebook!

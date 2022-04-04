@@ -314,173 +314,6 @@ class Constellation():
             planes2const.append(planes2append)
         return Constellation.from_list(planes2const)
 
-
-    # def get_relative_velocity_analysis(self, verbose=False):
-    #     """
-    #     Gets relative velocities between satellites in the constellation
-
-    #     Needs to run get_rv_from_propagate first to get position/velocity
-    #     values first
-
-    #     Args:
-    #         verbose: prints loop status updates
-
-    #     Returns:
-    #         First layer key are the satellites being compared i.e. '4-10'
-    #         means that satellite 4 is compared to satellite 10. Second layer
-    #         key are the specific data types described below
-
-    #         LOS (Bool): Describes if there is a line of sight between the satellites
-
-    #         pDiff : Relative position (xyz)
-
-    #         pDiffNorm : magnitude of relative positions
-
-    #         pDiffDot : dot product of subsequent relative position entries (helps determine if there is a 180 direct crossing)
-
-    #         flag180 : Flag to determine if there was a 180 degree 'direct crossing'
-
-    #         velDiffNorm : relative velocities
-
-    #         slewRate : slew rates required to hold pointing between satellites (rad/s)
-
-    #         dopplerShift : Effective doppler shifts due to relative velocities
-    #     """
-
-    #     # Check if first satellite has rvECI Attribute
-    #     # assert self.planes[0].sats[0].rvECI, "Run self.get_rv_from_propagate first to get rv values"
-    #     # import ipdb;ipdb.set_trace()
-    #     if not hasattr(self.planes[0].sats[0], 'rvECI'):
-    #         print("Run self.get_rv_from_propagate first to get rv values")
-    #         return
-    #     c=3e8 * u.m / u.s
-
-    #     sats=self.get_sats()
-    #     numSats=len(sats)
-
-    #     outputData={}
-
-    #     outputData['numSats']=numSats
-    #     outputData['satData']={}
-    #     for satRef in sats:
-    #         if verbose:
-    #             print(f'Reference sat {satRef.satID} out of {numSats}')
-    #         for sat in sats:
-
-    #             if satRef.satID == sat.satID:
-    #                 continue
-    #             if verbose:
-    #                 print(f'Refererence compared to {sat.satID}')
-    #             # Reference orbit RV values
-    #             satRef_r=satRef.rvECI.without_differentials()
-    #             satRef_v=satRef.rvECI.differentials
-
-    #             # Comparison orbit RV values
-    #             sat_r=sat.rvECI.without_differentials()
-    #             sat_v=sat.rvECI.differentials
-
-    #             # Determine LOS availability (Vallado pg 306 5.3)
-    #             adotb=sat_r.dot(satRef_r)
-    #             aNorm=sat_r.norm()
-    #             bNorm=satRef_r.norm()
-    #             theta=np.arccos(adotb/(aNorm * bNorm))
-
-    #             theta1=np.arccos(constants.R_earth / aNorm)
-    #             theta2=np.arccos(constants.R_earth / bNorm)
-
-    #             LOSidx=(theta1 + theta2) > theta
-
-
-
-
-
-    #             # Relative positions
-    #             pDiff=satRef_r - sat_r
-    #             pDiffNorm=pDiff.norm()
-
-    #             pDiffDot=pDiff[:-1].dot(pDiff[1:])
-    #             if min(pDiffDot) < 0:  # Checks for 180 deg crossinig
-    #                 flag180=1
-    #             else:
-    #                 flag180=0
-
-    #             velDiff=satRef_v["s"] - sat_v["s"]
-    #             velDiffNorm=velDiff.norm()
-
-    #             # Slew Equations
-    #             # Do it using the slew equation (From Trevor Dahl report)
-    #             rCV=pDiff.cross(velDiff)  # r cross v
-    #             slewRateOrb=rCV / pDiffNorm**2
-    #             slewRateOrbNorm=slewRateOrb.norm()
-
-
-    #             # Doppler shift
-    #             pDiffU=pDiff/pDiffNorm  # unit vector direction of relative position
-    #             # Get velocity of destination satellite (Reference orbit)
-    #             rdDot=satRef_v["s"].to_cartesian()
-    #             numTerm=rdDot.dot(pDiffU)
-    #             rsDot=sat_v["s"].to_cartesian()
-    #             denTerm=rsDot.dot(pDiffU)
-    #             num=c - numTerm
-    #             den=c - denTerm
-    #             fd_fs=num/den
-
-    #             # Perform max/min analysis
-
-    #             maxPos=max(pDiffNorm)
-    #             minPos=min(pDiffNorm)
-
-    #             maxVel=max(velDiffNorm)
-    #             minVel=min(velDiffNorm)
-
-    #             slewMax=max(slewRateOrbNorm)
-    #             slewMin=min(slewRateOrbNorm)
-
-    #             dopplerMax=max(fd_fs)
-    #             dopplerMin=min(fd_fs)
-
-    #             # Check if adjacent sats (i.e. SatIDs are consecutive)
-    #             idDiff=satRef.satID - sat.satID
-    #             idDiffAbs=abs(idDiff)
-    #             if idDiffAbs == 1 or idDiffAbs == numSats - 1:
-    #                 adjacentFlag=1  # Flag means satellites are adjacent
-    #             else:
-    #                 adjacentFlag=0
-
-    #             posDict={
-    #                         'relPosVec': pDiff,
-    #                         'relPosNorm': pDiffNorm,
-    #                         'relPosMax': maxPos,
-    #                         'relPosMin': minPos,
-    #                         'delRelPos': pDiffDot,
-    #             }
-
-    #             velDict={
-    #                         'relVel': velDiffNorm,
-    #                         'slewRate': slewRateOrbNorm,
-    #                         'dopplerShift': fd_fs,
-    #                         'velMax': maxVel,
-    #                         'velMin': minVel,
-    #                         'slewMax': slewMax,
-    #                         'slewMin': slewMin,
-    #                         'dopplerMin': dopplerMin,
-    #                         'dopplerMax': dopplerMax,
-    #             }
-
-    #             dictEntry={
-    #                         'LOS': LOSidx,
-    #                         'relPosition': posDict,
-    #                         'flag180': flag180,
-    #                         'relVel': velDict,
-    #                         'adjacent': adjacentFlag,
-    #                         'timeDeltas': sat.rvTimeDeltas,
-    #                         'times': sat.rvTimes,
-    #             }
-
-    #             dictKey=str(satRef.satID) + '-' + str(sat.satID)
-    #             outputData['satData'][dictKey]=dictEntry
-    #     return outputData
-
     def get_sats(self):
         """
         Gets a list of all the satellite objects in the constellation
@@ -554,43 +387,6 @@ class Constellation():
             if sat.satID in satIDs:
                 op.plot(sat, label=f"ID {sat.satID:.0f}")
         return op
-
-    # def plot2D(self, timeInts, pts):
-    #     """
-    #     Plots 2D ground tracks
-
-    #     Args:
-    #         timeInts [astropy object] : time intervals to propagate where 0 refers to the epoch of the orb input variable
-    #         pts [integer] : Number of plot points
-
-
-    #     """
-    #     sats = self.get_sats()
-
-    #     fig = plt.figure()
-    #     ax = plt.axes(projection=ccrs.PlateCarree())
-    #     ax.stock_img()
-
-    #     plottedConstellationIds = [] #Constellation IDs that have been plotted
-
-    #     cmap = ['k', 'b', 'g', 'p']
-    #     cmapIdx = -1
-    #     for sat in sats:
-    #         lon, lat, h = utils.getLonLat(sat, timeInts, pts)
-    #         if hasattr(sat, 'constellationID'):#sat.constellationID is not None:
-
-    #             if sat.constellationID not in plottedConstellationIds:
-    #                 plottedConstellationIds.append(sat.constellationID)
-    #                 cmapIdx += 1
-    #                 # print(cmapIdx)
-    #                 # breakpoint()
-    #             ax.plot(lon, lat, cmap[cmapIdx], transform=ccrs.Geodetic())
-    #             ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
-    #         else:
-    #             ax.plot(lon, lat, 'k', transform=ccrs.Geodetic())
-    #             ax.plot(lon[0], lat[0], 'r^', transform=ccrs.Geodetic())
-    #     return fig, ax
-
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
@@ -1144,11 +940,11 @@ class Satellite(Orbit):
 
         """
         #Propagate the RGT to the next node crossing
-        tofs = TimeDelta(np.arange(0, satellite.period.to(u.s).value, 1)*u.s)
+        t2propagate = 1.5 * satellite.period.to(u.s).value
+        tofs = TimeDelta(np.arange(0, t2propagate, 1)*u.s)
 
         node_event = NodeCrossEvent(terminal=True)
         events = [node_event]
-
         rr,vv = cowell(
                 Earth.k,
                 satellite.r,
@@ -1237,35 +1033,44 @@ class Satellite(Orbit):
         days = [Time(dayMJD, format='mjd', scale='utc')
                             for dayMJD in days2InvestigateMJD]
         
-        ## Get geocentric coordinates of ground station
-        gsGeocentric = groundLoc.loc.to_geocentric()
+        # #Get geocentric coordinates of ground station
+        # gsGeocentric = groundLoc.loc.to_geocentric()
 
-        #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
-        gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
-        r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
-        p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
-        gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
+        # #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
+        # gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
+        # r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
+        # p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
+        # gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
 
         ## Extract relevant orbit and ground station parameters
         i = satInit.inc
         lon = groundLoc.lon
-        # lat = groundLoc.lat
-        lat = gsLatGeocentric
+        lat = groundLoc.lat
+        # lat = gsLatGeocentric
         raan = satInit.raan
-        delLam = np.arcsin(np.tan(lat) / np.tan(i)) #Longitudinal offset
+
+        #Angle check
+        asin = np.tan(lat) / np.tan(i)
+        if asin > 1:
+            print(f'Arcsin angle {asin} rounding to 1')
+            asin = 1  * u.one
+        elif asin < -1:
+            print(f'Arcsin angle {asin} rounding to -1')
+            asin = -1 * u.one
+        delLam = np.arcsin(asin) #Longitudinal offset
         theta_GMST_a = raan + delLam - lon #ascending sidereal angle of pass
         theta_GMST_d = raan - delLam - lon - np.pi * u.rad #descending sidereal angle of pass
 
-        # Calculate ground track equator crossings
-        crossPoint0 = lon - delLam
-        lonSplit = 360*u.deg / k_r
-        crossPointArray = np.linspace(0 * u.deg, 360 * u.deg - lonSplit, k_r)
-        crossPointsRaw = crossPoint0 + crossPointArray
+        # # Calculate ground track equator crossings
+        # crossPoint0 = lon - delLam
+        # lonSplit = 360*u.deg / k_r
+        # crossPointArray = np.linspace(0 * u.deg, 360 * u.deg - lonSplit, k_r)
+        # crossPointsRaw = crossPoint0 + crossPointArray
 
-        #Mod 360
-        crossPoints360 = crossPointsRaw % (360 * u.deg)
-        #Wrap angles > 180 around
-        wrapAngles = [-180*u.deg + x%(180*u.deg) if x > 180*u.deg else x for x in crossPoints360]
+        # #Mod 360
+        # crossPoints360 = crossPointsRaw % (360 * u.deg)
+        # #Wrap angles > 180 around
+        # wrapAngles = [-180*u.deg + x%(180*u.deg) if x > 180*u.deg else x for x in crossPoints360]
 
         delDDates = [day - refVernalEquinox for day in days] #Gets difference in time from vernal equinox
         delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
@@ -1333,12 +1138,58 @@ class Satellite(Orbit):
             ghostSatFuture.satID = self.planeID
 
             #Include RGT Constant as an attribute
-            ghostSatFuture.rgtConstant = k_r * raan + k_d * omega 
-            ghostSatFuture.equatorCrossings = wrapAngles
+            # ghostSatFuture.rgtConstant = k_r * raan + k_d * omega 
+            # ghostSatFuture.equatorCrossings = wrapAngles
             rgtOrbits.append(ghostSatFuture)
     
 
         return rgtOrbits
+
+    def gen_GOM_2_RGT_sched(self, r_drift, gs, tStep=15*u.s):
+        """
+        Generates a schedule to take a satellite in GOM to RGT over the desired
+        ground location (gs)
+        
+        Parameters
+        ----------
+        self: satbox.Satellite
+            Satellite in global observation mode
+        r_drift: ~astropy.unit.Quantity
+            Radius of drift orbit (assuming circular)
+        gs: satbox.GroundLoc
+            Ground location that RGT should pass
+            
+        Returns
+        -------
+        sched: satbox.ManeuverSchedule
+            Schedule that will take self to desired RGT orbit
+        """
+        
+        # Create drift satellite
+        sched = ManeuverSchedule()
+        sched.gen_hohmann_schedule(self, r_drift)
+        satDrift = self
+        satDrift.add_man_schedule(sched)
+        
+        #Get Hohmann Time
+        hohmannStartTime = sched.schedule[0].time
+        hohmannStopTime = sched.schedule[1].time
+        hohmannTime = hohmannStopTime - hohmannStartTime
+        
+        hohmannPropagateTime = hohmannTime + tStep #add tStep buffer
+        
+        #Propagate to drift orbit
+        satDriftSim = SimSatellite(satDrift, hohmannPropagateTime.sec * u.s, tStep, verbose=True)
+        satDriftSim.propagate()
+        
+        driftSat = satDriftSim.satSegments[2]
+        rgtAqSched = driftSat.gen_sched_rgt_acquisition(gs)
+        driftSat.add_man_schedule(rgtAqSched)
+        
+        for s in rgtAqSched.schedule:
+            sched.add_maneuver(s)
+        
+        return sched
         
     def __desired_raan_from_pass_time(self, tPass, groundLoc):
         """        Gets the desired orbit specifications from a desired pass time and groundstation
@@ -1370,7 +1221,17 @@ class Satellite(Orbit):
         theta_GMST = tPass.sidereal_time('mean', 'greenwich') #Greenwich mean sidereal time
         
         i = self.inc
-        dLam = np.arcsin(np.tan(groundLoc.lat.to(u.rad)) / np.tan(i.to(u.rad)))
+
+        ## Angle check
+        asin = np.tan(groundLoc.lat.to(u.rad)) / np.tan(i.to(u.rad))
+        if asin > 1:
+            print(f'Arcsin angle {asin} rounding to 1')
+            asin = 1  * u.one
+        elif asin < -1:
+            print(f'Arcsin angle {asin} rounding to -1')
+            asin = -1 * u.one
+        dLam = np.arcsin(asin)
+
 
         #From Legge eqn 3.10 pg.69
         raan_ascending = theta_GMST - dLam + np.deg2rad(groundLoc.lon)
@@ -2073,6 +1934,12 @@ class DataAccessSat():
         self.groundLocID = groundLoc.groundID
         self.groundIdentifier = groundLoc.identifier
 
+        # Holders for other variables
+        self.accessIntervals = None
+        self.accessMask = None
+        self.accessIntervalLengths = None
+        self.accessElevations = None
+
     def calc_access(self, constraint_type, constraint_angle):
         """
         Calculate access between a satellite and a ground station given a 
@@ -2084,7 +1951,7 @@ class DataAccessSat():
         Parameters:
         -----------
         constraint_type: ~string | "nadir" or "elevation"
-            constrain angles with either a "nadir" (usually analagous to sensor FOV) or "elevation" (minimum elevation angle from ground station) constraint
+            constrain angles with either a "nadir" (usually analogous to sensor FOV) or "elevation" (minimum elevation angle from ground station) constraint
         constraint_angle: ~astropy.unit.Quantity
             angle used as the access threshold to determine access calculation
         """
@@ -2121,8 +1988,22 @@ class DataAccessSat():
 
         accessIntervals = utils.get_start_stop_intervals(accessMask, self.sat.timesAll)
 
+
+        # Get access times given access Intervals
+        intervalLengths = []
+        if (accessIntervals[0][0] is not None) and (accessIntervals[0][1] is not None):
+            for interval in accessIntervals:
+                startTime = interval[0]
+                stopTime = interval[1]
+
+                intervalLength = stopTime - startTime
+                intervalLengths.append(intervalLength.to(u.s))
+
+
         self.accessIntervals = accessIntervals
         self.accessMask = accessMask
+        self.accessIntervalLengths = intervalLengths
+        self.accessElevations = ele
         
     def plot_tombstone(self):
         """
@@ -2403,7 +2284,7 @@ class DataAccessConstellation():
                     ax = axs
                 else:
                     ax = axs[accessCounter]
-                    
+
                 lab = f'Sat: {access.satID} | GS: {access.groundLocID}'
                 ax.plot(timePlot, access.accessMask, label=lab)
 
