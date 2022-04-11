@@ -1985,7 +1985,7 @@ class DataAccessSat():
         else:
             assert False, "constraint_type not recognized"
 
-
+        # import ipdb;ipdb.set_trace()
         accessIntervals = utils.get_start_stop_intervals(accessMask, self.sat.timesAll)
 
 
