@@ -232,7 +232,7 @@ def get_start_stop_intervals(mask, refArray):
         endTimes = refArray[endIdx]
     elif mask[0] == 1 and mask[-1] == 1: #Begin and end on an mask
         startIdx = np.append(np.array([0]), maskStart)
-        endIdx = np.append(maskEnd, len(refArray.value)-1)
+        endIdx = np.append(maskEnd, len(refArray)-1)
         startTimes = refArray[startIdx]
         endTimes = refArray[endIdx]
     elif mask[0] == 1 and mask[-1] == 0: #Begin on mask and end in no mask
@@ -243,9 +243,9 @@ def get_start_stop_intervals(mask, refArray):
     elif mask[0] == 0 and mask[-1] == 1:#begin in false, end in true
         startIdx = maskStart
         if maskEnd.size == 0:
-            endIdx = len(refArray.value) - 1
+            endIdx = len(refArray) - 1
         else:
-            endIdx = np.append(maskEnd, len(refArray.value)-1)
+            endIdx = np.append(maskEnd, len(refArray)-1)
         startTimes = refArray[startIdx]
         endTimes = refArray[endIdx]
     elif mask[0] == 0 and mask[-1] == 0 and any(mask)==False:
