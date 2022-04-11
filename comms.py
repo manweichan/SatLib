@@ -138,8 +138,12 @@ def slantRange_fromAltNu(alt, nu, re = poliastro.constants.general.R_earth):
 		nu = nu * u.rad
 
 	sinrho = re / (re + alt)
-
 	cosEle = np.sin(nu) / sinrho
+
+	#Catch cosines larger than 1 or less than -1
+	cosEle[cosEle > 1 * u.one] = 1 * u.one
+	cosEle[cosEle < -1 * u.one] = -1 * u.one
+
 	ele = np.arccos(cosEle)
 
 	lam = np.pi/2 * u.rad - nu - ele
