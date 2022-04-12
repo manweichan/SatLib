@@ -874,7 +874,13 @@ class Satellite(Orbit):
         ## Calculate distance from GOM equatorial crossing to ground track equatorial crossing
         driftSatEq, lon_eq_driftSat = self.__get_lon_next_node_crossing(self)
 
-        eqDists = [lon_eq_driftSat - cross for cross in wrapAngles]
+        if self.a > rgtDesired.a: #Westward relative drift if drift is higher than RGT
+            eqDists = [lon_eq_driftSat - cross for cross in wrapAngles]
+        elif self.a < rgtDesired.a: #Eastward relative drift if drift is lower than RGT
+            eqDists = [cross - lon_eq_driftSat for cross in wrapAngles]
+        else:
+            print("Drift orbit is in same orbit as rgt orbit")
+            return
 
         #mod Distances by 360 to make sortable (Westward distance to go)
         eqDistsLeft = [d%(360*u.deg) for d in eqDists]
@@ -1060,17 +1066,6 @@ class Satellite(Orbit):
         delLam = np.arcsin(asin) #Longitudinal offset
         theta_GMST_a = raan + delLam - lon #ascending sidereal angle of pass
         theta_GMST_d = raan - delLam - lon - np.pi * u.rad #descending sidereal angle of pass
-
-        # # Calculate ground track equator crossings
-        # crossPoint0 = lon - delLam
-        # lonSplit = 360*u.deg / k_r
-        # crossPointArray = np.linspace(0 * u.deg, 360 * u.deg - lonSplit, k_r)
-        # crossPointsRaw = crossPoint0 + crossPointArray
-
-        # #Mod 360
-        # crossPoints360 = crossPointsRaw % (360 * u.deg)
-        # #Wrap angles > 180 around
-        # wrapAngles = [-180*u.deg + x%(180*u.deg) if x > 180*u.deg else x for x in crossPoints360]
 
         delDDates = [day - refVernalEquinox for day in days] #Gets difference in time from vernal equinox
         delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
