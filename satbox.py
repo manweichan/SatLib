@@ -24,6 +24,7 @@ import astropy.units as u
 import astropy
 from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord
+from CZMLExtractor_MJD import CZMLExtractor_MJD
 # import OpticalLinkBudget.OLBtools as olb
 import utils as utils
 import orbitalMechanics as om
@@ -391,8 +392,8 @@ class Constellation():
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
-    def generate_czml_file(self, fname, prop_duration, sample_points, scene3d=True,
-                            specificSats=False):
+    def generate_czml_file(self, fname, prop_duration, sample_points, 
+                            satellites, objects, L_avail,L_poly, L_avail_gs, L_poly_gs, GS_pos, GS=False, scene3d=True, specificSats=False, show_polyline=False ):
         """
         Generates CZML file for the constellation for plotting
 
@@ -402,6 +403,14 @@ class Constellation():
             sample_points (int): Number of sample points
             scene3d (bool): Set to false for 2D plot
             specificSats (list of ints) : List of satIDs to plot
+            show_polyline (boo) : Whether or not to show intersatellite communication links. Default is set to False
+            satellites (list) : list of satellite pairs that can can communicate (or you want to communicate)
+            objects (list) : list of sat-gs pairs that can can communicate (or you want to communicate)
+            L_avail (list) : list of availability intervals
+            L_poly (list) : list of polyline intervals
+            L_avail_gs (list) : list of availability intervals
+            L_poly_gs (list) : list of polyline intervals
+            G_pos (list of list): postions of each satellite
         """
         seedSat = self.get_sats()[0]
         start_epoch= seedSat.epoch  # iss.epoch
@@ -410,7 +419,7 @@ class Constellation():
 
         earth_uv = "https://earthobservatory.nasa.gov/ContentFeature/BlueMarble/Images/land_shallow_topo_2048.jpg"
 
-        extractor = CZMLExtractor(start_epoch, end_epoch, sample_points,
+        extractor = CZMLExtractor_MJD(start_epoch, end_epoch, sample_points,
                                       attractor=Earth, pr_map=earth_uv, scene3D=scene3d)
 
         if specificSats:
@@ -426,6 +435,63 @@ class Constellation():
                     extractor.add_orbit(sat, groundtrack_show=False,
                                 groundtrack_trail_time=0, path_show=True)
 
+        #adding groundstations
+        if GS:
+            for i in GS_pos:
+                extractor.add_ground_station(pos=i)
+
+
+        #adding communication
+        if show_polyline:
+            if (satellites==None) or (L_avail==None) or (L_poly==None):
+                return "You have chosen to visualize the intersatellite communication links between satellites. Please make sure the following paramenters have been inputted: satellites, L_avail, and L_poly"    
+        
+            # sat-sat links
+            r1=[]
+            r2=[]
+            for i in satellites:
+                x = i.split('-')
+                r1.append(x[0])
+                r2.append(x[1])
+
+        
+            for i in range(len(satellites)):
+                extractor.add_communication(id_name=r1[i]+'to'+r2[i],
+                                        id_description=None,
+                                        reference1=r1[i],
+                                        reference2=r2[i],
+                                        true_time_intervals=L_avail[i],
+                                        time_intervals=L_poly[i],
+                                        )
+            #sat-gs links
+            r3=[]
+            r4=[]
+            for i in objects:
+                x = i.split('-')
+                r3.append(x[0])
+                r4.append(x[1])
+        
+            for i in range(len(objects)):
+                extractor.add_communication(id_name=r3[i]+'to'+r4[i],
+                                        id_description=None,
+                                        reference1=r3[i],
+                                        reference2=r4[i],
+                                        true_time_intervals=L_avail_gs[i],
+                                        time_intervals=L_poly_gs[i],
+                                        )
+                
+        doc = [str(x) for x in extractor.packets]
+        toPrint = ','.join(doc)
+        toPrint = '[' + toPrint + ']'
+
+        dir = os.getcwd()
+        fileDir = os.path.join(dir, fname + ".czml")
+        f = open(fileDir, "w")
+        f.write(toPrint)
+        f.close()
+
+        #Manwei's code
+        '''
         testL = [str(x) for x in extractor.packets]
         toPrint = ','.join(testL)
         toPrint = '[' + toPrint + ']'
@@ -452,6 +518,8 @@ class Constellation():
         fname = fname_prefix + '.pkl'
         with open(fname, 'wb') as f:
             dill.dump(self, f)
+        '''
+
 
 class SimConstellation():
     """
