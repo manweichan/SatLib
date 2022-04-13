@@ -269,6 +269,65 @@ def get_start_stop_intervals(mask, refArray):
 
     return startStopIntervals
 
+def get_false_intervals(mask, refArray):
+    """
+    Given a mask of booleans, return a list of start/stop intervals
+    where starts refer to the beginnings of true entries
+
+    Args
+        mask (array of bools) : Array of booleans
+        refArray (array) : Array that mask is to be applied to (usually an array of times)
+
+    Returns
+        startStopIntervals (list) : list of start/stop intervals
+    """
+    accDiff = np.diff(mask*1) #multiply by one to turn booleans into int
+    maskEnd = np.squeeze(np.where(accDiff==1))
+    maskStart = np.squeeze(np.where(accDiff==-1))
+    if mask[0] == 0 and mask[-1] == 0 and any(mask)==False:
+        startIdx = 0
+        endIdx = -1
+        startTimes = refArray[startIdx]
+        endTimes = refArray[endIdx]
+    elif mask[0] == 0 and mask[-1] == 0: #Begin and end on an mask
+        startIdx = np.append(np.array([0]), maskStart)
+        endIdx = np.append(maskEnd, len(refArray)-1)
+        startTimes = refArray[startIdx]
+        endTimes = refArray[endIdx]
+    elif mask[0] == 0 and mask[-1] == 1: #Begin on mask and end in no mask
+        startIdx = np.append(np.array([0]), maskStart)
+        endIdx = maskEnd
+        startTimes = refArray[startIdx]
+        endTimes = refArray[endIdx]
+    elif mask[0] == 1 and mask[-1] == 0:#begin in false, end in true
+        startIdx = maskStart
+        if maskEnd.size == 0:
+            endIdx = len(refArray) - 1
+        else:
+            endIdx = np.append(maskEnd, len(refArray)-1)
+        startTimes = refArray[startIdx]
+        endTimes = refArray[endIdx]
+    elif mask[0] == 1 and mask[-1] == 1 and all(mask):
+        startStopIntervals = [(None, None)]
+        print('No Intervals Found')
+        return startStopIntervals
+    elif mask[0] == 1 and mask[-1] == 1:
+        startIdx = maskStart
+        endIdx = maskEnd
+        startTimes = refArray[startIdx]
+        endTimes = refArray[endIdx]
+    else:
+        print("check function")
+        
+    if not isinstance(startTimes, list):
+        startTimes = [startTimes]
+
+    if not isinstance(endTimes, list):
+        endTimes = [endTimes]
+    startStopIntervals = np.column_stack((startTimes[0], endTimes[0]))
+
+    return startStopIntervals
+
 def get_potential_isl_keys(satID, keys, excludeList = None):
     """
     Get keys that incorporate the satID in the name
