@@ -1052,6 +1052,139 @@ class Satellite(Orbit):
         du_ad = np.array([0, 0, 0, ax, ay, az])
         return du_kep + du_ad
 
+    def get_rgt_new(self, groundLoc, days=7 , tInitSim=None, task=None, k_r=15, k_d=1,
+                                 refVernalEquinox=astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc'))
+        """
+        Given an orbit and ground site, gets the desired repeat ground track orbit 
+        Loosely based on Legge's thesis section 3.1.2
+
+        Parameters
+        ----------
+        groundLoc: satbox.GroundLoc  
+            This is the ground location that you want to get a pass from
+        days int: int 
+            Amount of days ahead for the scheduler to plan for
+        tInitSim: ~astropy.time.Time
+            Time to initialize planner
+        task: string 
+            The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
+        k_r: int
+            Number of revolutions until repeat ground track
+        k_d: int
+            Number of days to to repeat ground track
+        refVernalEquinox: ~astropy.time.Time 
+            Date of vernal equinox. Default is for 2021
+
+        Returns
+        ----------
+        rgtOrbits: (array of satbox.Satellite objects): 
+            Orbit of satellite at ground pass (potential position aka ghost position)
+        """
+        assert isinstance(groundLoc, GroundLoc), ('groundLoc argument must' 
+                                                  ' be a satbox.GroundLoc object')
+        assert isinstance(days, int), ('days argument must' 
+                                                  ' be an integer')
+
+        if tInitSim is None:
+            tInit = self.epoch
+            satInit = self  
+        else:
+            assert isinstance(tInitSim, astropy.units.quantity.Quantity), ('tInitSim '
+                                                 'must be an astropy.units.quantity.Quantity')
+            tInit = tInitSim
+            satInit = self.propagate(tInitSim)
+
+        
+        tInitMJDRaw = tInit.mjd
+        tInitMJD = int(tInitMJDRaw)
+
+        dayArray = np.arange(0, days + 1)
+        days2InvestigateMJD = list(tInitMJD + dayArray) #Which days to plan over
+        days = [Time(dayMJD, format='mjd', scale='utc')
+                            for dayMJD in days2InvestigateMJD]
+        
+        # #Get geocentric coordinates of ground station
+        # gsGeocentric = groundLoc.loc.to_geocentric()
+
+        # #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
+        # gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
+        # r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
+        # p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
+        # gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
+
+        ## Extract relevant orbit and ground station parameters
+        i = satInit.inc
+        lon = groundLoc.lon
+        lat = groundLoc.lat
+        # lat = gsLatGeocentric
+        raan = satInit.raan
+
+        #Angle check
+        asin = np.tan(lat) / np.tan(i)
+        if asin > 1:
+            print(f'Arcsin angle {asin} rounding to 1')
+            asin = 1  * u.one
+        elif asin < -1:
+            print(f'Arcsin angle {asin} rounding to -1')
+            asin = -1 * u.one
+        delLam = np.arcsin(asin) #Longitudinal offset
+        theta_GMST = raan + delLam - lon #ascending sidereal angle of pass
+
+        ## Create quicker calculation of descending raan
+        raanA = raan
+        raanD = theta_GMST + delLam + lon + np.pi * u.rad # pegs both raans to this GMST time
+
+
+        delDDates = [day - refVernalEquinox for day in days] #Gets difference in time from vernal equinox
+        delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
+        delDDateDecimalYr = np.array(delDDateDecimalYrList)
+    
+        #Get solar time values for ascending and descending pass
+        theta_GMT_raw = theta_GMST - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
+
+        theta_GMT = np.mod(theta_GMT_raw, 360 * u.deg)
+
+        angleToHrs = astropy.coordinates.Angle(theta_GMT).hour
+
+        tPass = []
+        for d_idx, day in enumerate(days):
+            timePass = day + angleToHrs[d_idx] * u.hr
+            if timePass > self.epoch: #Make sure time is in the future
+                tPass.append(timePass)
+        # timesRaw = [tPass_a, tPass_d]
+
+        rgtOrbits = []
+
+        rgt_r, rgt_alt = om.getRGTOrbit(k_r, k_d, satInit.ecc, satInit.inc)
+
+        for timePass in tPass:
+            raans_not_used, anoms = self.__desired_raan_from_pass_time(timePass, groundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
+
+            ghostSatFutureA = Satellite.circular(Earth, alt = rgt_alt,
+                 inc = satInit.inc, raan = raanA, arglat = anoms[0], epoch = timePass)
+            ghostSatFutureD = Satellite.circular(Earth, alt = rgt_alt,
+                 inc = satInit.inc, raan = raanD, arglat = anoms[1], epoch = timePass)
+
+            # ghostSatFutureA.satID = self.satID #tag with satID
+            # ghostSatFutureD.satID = self.satID #tag with satID
+
+            ghostSatFutureA.note = 'a' #Tag with ascending or descending
+            ghostSatFutureD.note = 'd' #Tag with ascending or descending
+
+            # ##Tag satellite with maneuver number
+            # ghostSatFuture.manID = idx
+
+            ## Tag ghost satellites with sat and plane IDs
+            ghostSatFutureA.satID = self.satID
+            ghostSatFutureA.planeID = self.planeID
+            ghostSatFutureD.satID = self.satID
+            ghostSatFutureD.planeID = self.planeID
+
+            rgtOrbits.append(ghostSatFutureA)
+            rgtOrbits.append(ghostSatFutureD)
+
+        return rgtOrbits
+
     def get_rgt(self, groundLoc, days=7 , tInitSim=None, task=None, k_r=15, k_d=1,
                                  refVernalEquinox=astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
         """
@@ -1135,6 +1268,10 @@ class Satellite(Orbit):
         theta_GMST_a = raan + delLam - lon #ascending sidereal angle of pass
         theta_GMST_d = raan - delLam - lon - np.pi * u.rad #descending sidereal angle of pass
 
+        ## Create quicker calculation of descending raan
+        raanA = raan
+        raanD = theta_GMST_a + delLam + lon + np.pi * u.rad # pegs both raans to this GMST time
+
         delDDates = [day - refVernalEquinox for day in days] #Gets difference in time from vernal equinox
         delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
         delDDateDecimalYr = np.array(delDDateDecimalYrList)
@@ -1180,6 +1317,7 @@ class Satellite(Orbit):
 
         for idx, sch in enumerate(scheduleItms):
             raans, anoms = self.__desired_raan_from_pass_time(sch.time, groundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
+            import ipdb; ipdb.set_trace()
             if sch.passType == 'a': #Ascending argument of latitude
                 omega = anoms[0]
                 raan = raans[0]
@@ -1299,7 +1437,6 @@ class Satellite(Orbit):
         #From Legge eqn 3.10 pg.69
         raan_ascending = theta_GMST - dLam + np.deg2rad(groundLoc.lon)
         raan_descending = theta_GMST + dLam + np.deg2rad(groundLoc.lon) + np.pi * u.rad
-
 
         #Get mean anomaly (assuming circular earth): https://en.wikipedia.org/wiki/Great-circle_distance
         n1_ascending = np.array([np.cos(raan_ascending),np.sin(raan_ascending),0]) #RAAN for ascending case in ECI norm
