@@ -920,10 +920,8 @@ class Satellite(Orbit):
         #Find desired RGT orbits for specified ground location
         rgtOrbits = self.get_rgt(groundLoc, days=2, k_r=k_r, k_d=k_d)
 
-        #Take first RGT option (All others in the rgtOrbits should be similar)
-        #This choice is purely heuristic
+        #Calculate algorithm for both ascending and descending pass
         rgtDesired = rgtOrbits[0] #Ascending pass
-
         rgtDesiredD = rgtOrbits[1] #Descending pass
 
         #Propagate the RGT to the next node crossing
@@ -931,7 +929,6 @@ class Satellite(Orbit):
         _, lon_eq_rgtD = self.__get_lon_next_node_crossing(rgtDesiredD)
 
         ## Get other longitude crossings
-        k_r = 15 #Make sure it is the same as in get_rgt
         lonSplit = 360*u.deg / k_r
         crossPointArray = np.linspace(0 * u.deg, 360 * u.deg - lonSplit, k_r)
         crossPointsRaw = lon_eq_rgt + crossPointArray
@@ -1026,12 +1023,16 @@ class Satellite(Orbit):
         sched.gen_hohmann_schedule(driftSatAtHohmann, rgtDesired.a)
         schedD.gen_hohmann_schedule(driftSatAtHohmannD, rgtDesiredD.a)
 
-        import ipdb;ipdb.set_trace()
         sched.passType = 'a'
         if t2drift > t2driftD: #Choose descending pass if quicker
             sched = schedD
             sched.passType = 'd'
+            sched.desiredOrbit = rgtDesiredD
+        else:
+            sched.desiredOrbit = rgtDesired
 
+        sched.desiredOrbits = rgtOrbits #Pass desired rgt orbit for debugging
+        sched.eqCrossings = [wrapAngles, wrapAnglesD]
         return sched
 
     @staticmethod
@@ -1092,7 +1093,7 @@ class Satellite(Orbit):
         return du_kep + du_ad
 
     def get_rgt(self, groundLoc, days=3 , tInitSim=None, task=None, k_r=15, k_d=1,
-                                 refVernalEquinox=astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
+                                 refVernalEquinox=astropy.time.Time("2022-03-22T0:00:00", format = 'isot', scale = 'utc')):
         """
         Given an orbit and ground site, gets the desired repeat ground track orbit 
         Loosely based on Legge's thesis section 3.1.2
@@ -1137,25 +1138,42 @@ class Satellite(Orbit):
         tInitMJDRaw = tInit.mjd
         tInitMJD = int(tInitMJDRaw)
 
-        dayArray = np.arange(0, days + 1)
+        dayArray = np.arange(1, days + 2)
         days2InvestigateMJD = list(tInitMJD + dayArray) #Which days to plan over
         days = [Time(dayMJD, format='mjd', scale='utc')
                             for dayMJD in days2InvestigateMJD]
         
         # #Get geocentric coordinates of ground station
-        # gsGeocentric = groundLoc.loc.to_geocentric()
+        gsGeocentric = groundLoc.loc.to_geocentric()
 
         # #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
-        # gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
-        # r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
-        # p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
-        # gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
+        gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
+        r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
+        p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
+        gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
+
+        # Calculate reduced latitude (https://en.wikipedia.org/wiki/Latitude#Parametric_latitude_(or_reduced_latitude))
+        f = 1/298.257223563 #Flattening factor of WGS-84
+        beta = np.arctan((1-f)*np.tan(groundLoc.lat))
+
+        # #Using geocentric latitude
+        # asinGeocentric = np.tan(gsLatGeocentric) / np.tan(satInit.inc)
+        # delLamGeocentric = np.arcsin(asinGeocentric)
+        
+        # #Using reduced latitude
+        # asinReduced = np.tan(beta) / np.tan(satInit.inc)
+        # delLamReduced = np.arcsin(asinReduced)
+
+        # #Using geodetic latitude
+        # iGeodetic = np.arctan2(np.tan(satInit.inc), 1-f)
+        # asinGeodetic = np.tan(groundLoc.lat) / np.tan(iGeodetic)
+        # delLamGeodetic = np.arcsin(asinGeodetic)
 
         ## Extract relevant orbit and ground station parameters
         i = satInit.inc
         lon = groundLoc.lon
-        lat = groundLoc.lat
-        # lat = gsLatGeocentric
+        # lat = groundLoc.lat
+        lat = gsLatGeocentric
         raan = satInit.raan
 
         #Angle check
@@ -1167,6 +1185,8 @@ class Satellite(Orbit):
             print(f'Arcsin angle {asin} rounding to -1')
             asin = -1 * u.one
         delLam = np.arcsin(asin) #Longitudinal offset
+        # import ipdb;ipdb.set_trace()
+
         theta_GMST = raan + delLam - lon #ascending sidereal angle of pass
 
         ## Create quicker calculation of descending raan
@@ -1428,7 +1448,12 @@ class Satellite(Orbit):
         
         for s in rgtAqSched.schedule:
             sched.add_maneuver(s)
-        
+
+        sched.desiredOrbit = rgtAqSched.desiredOrbit
+        sched.desiredOrbits = rgtAqSched.desiredOrbits
+        sched.eqCrossings = rgtAqSched.eqCrossings
+        sched.passType = rgtAqSched.passType
+
         return sched
         
     def __desired_raan_from_pass_time(self, tPass, groundLoc):
@@ -1460,10 +1485,21 @@ class Satellite(Orbit):
         tPass.location = groundLoc.loc #Make sure location is tied to time object
         theta_GMST = tPass.sidereal_time('mean', 'greenwich') #Greenwich mean sidereal time
         
+        # #Get geocentric coordinates of ground station
+        gsGeocentric = groundLoc.loc.to_geocentric()
+
+        # #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
+        # gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
+        r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
+        p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
+        gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
+
         i = self.inc
 
         ## Angle check
-        asin = np.tan(groundLoc.lat.to(u.rad)) / np.tan(i.to(u.rad))
+        # asin = np.tan(groundLoc.lat.to(u.rad)) / np.tan(i.to(u.rad))
+        #Calculate in geocentric coordinates
+        asin = np.tan(gsLatGeocentric) / np.tan(i)
         if asin > 1:
             print(f'Arcsin angle {asin} rounding to 1')
             asin = 1  * u.one
@@ -1471,7 +1507,6 @@ class Satellite(Orbit):
             print(f'Arcsin angle {asin} rounding to -1')
             asin = -1 * u.one
         dLam = np.arcsin(asin)
-
 
         #From Legge eqn 3.10 pg.69
         raan_ascending = theta_GMST - dLam + np.deg2rad(groundLoc.lon)
@@ -1481,7 +1516,6 @@ class Satellite(Orbit):
         n1_ascending = np.array([np.cos(raan_ascending),np.sin(raan_ascending),0]) #RAAN for ascending case in ECI norm
         n1_descending = np.array([np.cos(raan_descending),np.sin(raan_descending),0]) #RAAN for descending case in ECI norm
 
-        #TODO This might be where the algorithm is getting slightly off since we aren't using geocentric coordinates
         n2Raw = groundLoc.loc.get_gcrs(tPass).data.without_differentials() / groundLoc.loc.get_gcrs(tPass).data.norm() #norm of ground station vector in ECI
         n2 = n2Raw.xyz
 
@@ -1877,6 +1911,9 @@ class ManeuverSchedule():
     """
     def __init__(self):
         self.schedule = []
+        self.desiredOrbit = None
+        self.eqCrossings = None
+        self.passType = None
 
     def add_maneuver(self, manObj):
         """
