@@ -2238,7 +2238,7 @@ class DataAccessSat():
         gsECEF = self.groundLoc.get_ECEF().cartesian
 
 
-        #Find earth central angle between ground station and satellite
+        ## Find earth central angle between ground station and satellite
         dotProduct = satECEF.dot(gsECEF)
         satECEFNorm = satECEF.norm()
         gsECEFNorm = gsECEF.norm()
