@@ -392,6 +392,87 @@ class Constellation():
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+    def gen_GOM_2_RGT_scheds(self, r_drift, gs, tStep=15*u.s):
+        """
+        Generates schedules to take each satellite in the constellation to the
+        desired RGT track. This function doesn't decide which satellites are
+        given the RGT tasking.
+        
+        Parameters
+        ----------
+        self: satbox.Constellation
+            Constellation in global observation mode
+        r_drift: ~astropy.unit.Quantity
+            Radius of drift orbit (assuming circular)
+        gs: satbox.GroundLoc
+            Ground location that RGT should pass
+        tSTep: ~astropy.unit.Quantity
+            time step used when propagating satellite into drift orbit
+            
+        Returns
+        -------
+        schedDict: Dict of satbox.ManeuverSchedules
+            Schedule that will take self to desired RGT orbit. Key is [planeID][satID]
+        """
+
+        sats = self.get_sats()
+
+        schedDict = {}
+
+        for sat in sats:
+            sched = sat.gen_GOM_2_RGT_sched(r_drift, gs, tStep)
+            satID = sat.satID
+            planeID = sat.planeID
+
+            if f"Plane {planeID}" in schedDict:
+                schedDict[f"Plane {planeID}"][f"Sat {satID}"] = sched
+            else:
+                schedDict[f"Plane {planeID}"] = {} #Initialize
+                schedDict[f"Plane {planeID}"][f"Sat {satID}"] = sched
+
+        return schedDict
+
+    @staticmethod
+    def get_lowest_drift_time_per_plane(schedDict):
+        """
+        Gets the satellite in each plane with the lowest drift time to RGT
+
+        Parameters
+        ----------
+        schedDict: Dict of satbox.ManeuverSchedules
+            Schedule that will take satellites in constellation to desired RGT orbits. Key is [planeID][satID]
+
+        Returns
+        -------
+        sats2Maneuver: Dict
+            Dict of satellites to maneuver
+        """
+
+        sats2Maneuver = {}
+
+        for planeKey in schedDict.keys():
+            plane = schedDict[planeKey]
+            sats2Maneuver[planeKey] = {}
+            driftHolder = None
+            for satKey in plane.keys():
+                tDrift = plane[satKey].driftTime 
+                if driftHolder is None:
+                    driftHolder = tDrift 
+                    saveSat = satKey
+                elif driftHolder > tDrift:
+                    driftHolder = tDrift
+                    saveSat = satKey
+                elif driftHolder <= tDrift:
+                    continue
+                else:
+                    print("something is wrong with tDrift comparison")
+
+                sats2Maneuver[planeKey] = saveSat
+
+        return sats2Maneuver
+
+
+
     def generate_czml_file(self, fname, prop_duration, sample_points, 
                             satellites, objects, L_avail,L_poly, L_avail_gs, L_poly_gs, GS_pos, GS=False, scene3d=True, specificSats=False, show_polyline=False ):
         """
@@ -1028,8 +1109,11 @@ class Satellite(Orbit):
             sched = schedD
             sched.passType = 'd'
             sched.desiredOrbit = rgtDesiredD
+            sched.driftTime = t2driftD
         else:
             sched.desiredOrbit = rgtDesired
+            sched.driftTime = t2drift
+
 
         sched.desiredOrbits = rgtOrbits #Pass desired rgt orbit for debugging
         sched.eqCrossings = [wrapAngles, wrapAnglesD]
@@ -1453,6 +1537,7 @@ class Satellite(Orbit):
         sched.desiredOrbits = rgtAqSched.desiredOrbits
         sched.eqCrossings = rgtAqSched.eqCrossings
         sched.passType = rgtAqSched.passType
+        sched.driftTime = rgtAqSched.driftTime
 
         return sched
         
@@ -2436,9 +2521,6 @@ class DataAccessConstellation():
                 allAccessData.append(dataAccess)
 
         self.allAccessData = allAccessData
-
-
-
 
     def plot_total_access(self, gLocs, plot_style = 'b-'):
         """
