@@ -473,8 +473,8 @@ class Constellation():
 
 
 
-    def generate_czml_file(self, fname, prop_duration, sample_points, 
-                            satellites, objects, L_avail,L_poly, L_avail_gs, L_poly_gs, GS_pos, GS=False, scene3d=True, specificSats=False, show_polyline=False ):
+    def generate_czml_file(self, prop_duration, sample_points, 
+                            fname=None, satellites=None, objects=None, L_avail_ISL=None,L_poly_ISL=None, L_avail_GS=None, L_poly_GS=None, GS_pos=None, GS=False, scene3d=True, specificSats=False, show_polyline_ISL=False, show_polyline_GS=False, create_file=False):
         """
         Generates CZML file for the constellation for plotting
 
@@ -484,7 +484,8 @@ class Constellation():
             sample_points (int): Number of sample points
             scene3d (bool): Set to false for 2D plot
             specificSats (list of ints) : List of satIDs to plot
-            show_polyline (boo) : Whether or not to show intersatellite communication links. Default is set to False
+            show_polyline-isl (boo) : Whether or not to show intersatellite communication links. Default is set to False
+            show_polyline_gs (boo) : Whether or not to show gs-sat communication links. Default is set to False
             satellites (list) : list of satellite pairs that can can communicate (or you want to communicate)
             objects (list) : list of sat-gs pairs that can can communicate (or you want to communicate)
             L_avail (list) : list of availability intervals
@@ -492,6 +493,7 @@ class Constellation():
             L_avail_gs (list) : list of availability intervals
             L_poly_gs (list) : list of polyline intervals
             G_pos (list of list): postions of each satellite
+            create_file (boo) : whether  or not to create a czml file or just return text
         """
         seedSat = self.get_sats()[0]
         start_epoch= seedSat.epoch  # iss.epoch
@@ -522,9 +524,9 @@ class Constellation():
                 extractor.add_ground_station(pos=i)
 
 
-        #adding communication
-        if show_polyline:
-            if (satellites==None) or (L_avail==None) or (L_poly==None):
+        #adding isl
+        if show_polyline_ISL:
+            if (satellites==None) or (L_avail_ISL==None) or (L_poly_ISL==None):
                 return "You have chosen to visualize the intersatellite communication links between satellites. Please make sure the following paramenters have been inputted: satellites, L_avail, and L_poly"    
         
             # sat-sat links
@@ -541,10 +543,13 @@ class Constellation():
                                         id_description=None,
                                         reference1=r1[i],
                                         reference2=r2[i],
-                                        true_time_intervals=L_avail[i],
-                                        time_intervals=L_poly[i],
+                                        true_time_intervals=L_avail_ISL[i],
+                                        time_intervals=L_poly_ISL[i],
                                         )
-            #sat-gs links
+        #adding gs-sat links
+        if show_polyline_GS:
+            if (objects==None) or (L_avail_GS==None) or (L_poly_GS==None):
+                return "You have chosen to visualize the gs-sat links between satellites. Please make sure the following paramenters have been inputted: objects, L_avail_gs, and L_poly_gs"
             r3=[]
             r4=[]
             for i in objects:
@@ -557,19 +562,29 @@ class Constellation():
                                         id_description=None,
                                         reference1=r3[i],
                                         reference2=r4[i],
-                                        true_time_intervals=L_avail_gs[i],
-                                        time_intervals=L_poly_gs[i],
+                                        true_time_intervals=L_avail_GS[i],
+                                        time_intervals=L_poly_GS[i],
                                         )
                 
-        doc = [str(x) for x in extractor.packets]
-        toPrint = ','.join(doc)
-        toPrint = '[' + toPrint + ']'
+        if create_file:     
+            doc = [str(x) for x in extractor.packets]
+            toPrint = ','.join(doc)
+            toPrint = '[' + toPrint + ']'
 
-        dir = os.getcwd()
-        fileDir = os.path.join(dir, fname + ".czml")
-        f = open(fileDir, "w")
-        f.write(toPrint)
-        f.close()
+            #To create file with name fname.czml
+            dir = os.getcwd()
+            fileDir = os.path.join(dir, fname + ".czml")
+            f = open(fileDir, "w")
+            f.write(toPrint)
+            f.close()
+            
+        else:
+            doc = [str(x) for x in extractor.packets]
+            toPrint = ','.join(doc)
+            toPrint = '[' + toPrint + ']'
+
+            return toPrint
+
 
         #Manwei's code
         '''
