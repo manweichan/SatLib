@@ -681,9 +681,9 @@ class SimConstellation():
                         skip_sched = False
                         if verbose:
                             print(f"Not skipping schedule for {planeKey} {satStr}")
-                    else:
-                        skip_sched = True
-
+                else:
+                    skip_sched = True
+                        
                 satPropInit.propagate(skip_sched=skip_sched)
                 planeSats.append(satPropInit)
             plane2append = Plane.from_list(planeSats)
