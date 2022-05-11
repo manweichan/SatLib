@@ -452,7 +452,7 @@ class Constellation():
 
         for planeKey in schedDict.keys():
             plane = schedDict[planeKey]
-            sats2Maneuver[planeKey] = {}
+            sats2Maneuver[planeKey] = []
             driftHolder = None
             for satKey in plane.keys():
                 tDrift = plane[satKey].driftTime 
@@ -467,7 +467,7 @@ class Constellation():
                 else:
                     print("something is wrong with tDrift comparison")
 
-                sats2Maneuver[planeKey] = saveSat
+            sats2Maneuver[planeKey].append(saveSat)
 
         return sats2Maneuver
 
@@ -639,7 +639,7 @@ class SimConstellation():
 
         self.propagated = 0 #Check to see if constellation has been propagated
 
-    def propagate(self, method="J2"):
+    def propagate(self, method="J2", select_sched_sats=None, verbose=False):
         """
         Propagate satellites in a constellation Simulator
 
@@ -647,16 +647,29 @@ class SimConstellation():
         ----------
         method: str ("J2")
             J2 to propagate using J2 perturbations
+        select_sched_sats: dict
+            Dictionary of satellites to propagate with burn schedule. Key is plane, value is satellite. Form {'Plane 3': 'Sat12'}
         """
         planes2const = []
         for plane in self.initConstellation.planes:
             if not plane: #continue if empty
                 continue
-
+            planeKey = f'Plane {plane.planeID}'
             planeSats = []
             for sat in plane.sats:
                 satPropInit = SimSatellite(sat, self.t2propagate, self.tStep, verbose=self.verbose)
-                satPropInit.propagate()
+
+                #Select satellites if applicable
+                if select_sched_sats is not None:
+                    satStr = f'Sat {sat.satID}'
+                    if satStr in select_sched_sats[planeKey]:
+                        skip_sched = False
+                        if verbose:
+                            print(f"Not skipping schedule for {planeKey} {satStr}")
+                    else:
+                        skip_sched = True
+
+                satPropInit.propagate(skip_sched=skip_sched)
                 planeSats.append(satPropInit)
             plane2append = Plane.from_list(planeSats)
             planes2const.append(plane2append)
@@ -1712,7 +1725,7 @@ class SimSatellite():
         self.coordSegmentsECEF = []
         self.coordSegmentsLLA = []
 
-    def propagate(self, method="J2"):
+    def propagate(self, method="J2", skip_sched=False):
         """
         Run simulator for satellite Simulator
 
@@ -1720,6 +1733,8 @@ class SimSatellite():
         ----------
         method: str ("J2")
             J2 to propagate using J2 perturbations
+        skip_sched: bool
+            boolean to skip burn schedule when propagating
         """
 
         if method == "J2":
@@ -1745,7 +1760,7 @@ class SimSatellite():
 
 
         #If not maneuver schedule
-        if (self.maneuverSchedule is None): 
+        if (self.maneuverSchedule is None) or skip_sched==True: 
             if method == "J2":
                 coords = propagate(
                     self.initSat,
@@ -2609,7 +2624,6 @@ class DataAccessConstellation():
         Args:
             sats [list] : list of satellite IDs to plot
             gLocs [list] : list of groundLocation IDs to plot
-            absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
             legend (Bool): Plot legend if true
         """
 
@@ -2659,3 +2673,88 @@ class DataAccessConstellation():
         plt.tight_layout()
 
         return axs, fig
+
+    def get_temp_resolution(self, gLocs, sats='all', length_threshold=0*u.s):
+        """
+        Gets the temporal resolution (observation cadence) of select sats
+        
+        Parameters
+        ----------
+        sats: [list]
+            list of satellite IDs to plot. If 'all', entire constellation taken into account
+        gLocs: [list]
+            list of groundLocation IDs to plot
+        length_threshold: astropy.unit.Quantity
+            threshold where any interval below this value is not considered in analysis
+
+        Returns
+        -------
+        dataOut: dict
+            Dictionary of times [startSorted and endSorted] and time values [startResolutions and endResolutions] between starts and ends of passes
+        """
+        if not isinstance(sats, list):
+            sats = [sats]
+        if not isinstance(gLocs, list):
+            gLocs = [gLocs]
+
+        allIntervals = []
+
+        if 'all' in sats:
+            for accessIdx, access in enumerate(self.allAccessData):
+
+
+            
+                #Find applicable intervals
+
+                newArray = [q.to(u.s).value for q in access.accessIntervalLengths]
+                newArrayQuantity = np.array(newArray) * u.s
+
+                newArrayLengths = [q.to(u.s).value for q in access.accessIntervalLengths]
+
+                goodIntervalIdx = newArrayQuantity > length_threshold
+                goodIntervals = access.accessIntervals[goodIntervalIdx]
+                goodIntervalLengths = newArrayQuantity[goodIntervalIdx]
+
+                allIntervals.extend(goodIntervals)
+
+                # intDiffs = np.diff(access.accessIntervals, axis=0)    
+        else:
+            for accessIdx, access in enumerate(self.allAccessData):
+                if access.satID in sats:
+                    #Find applicable intervals
+
+                    newArray = [q.to(u.s).value for q in access.accessIntervalLengths]
+                    newArrayQuantity = np.array(newArray) * u.s
+
+                    newArrayLengths = [q.to(u.s).value for q in access.accessIntervalLengths]
+
+                    goodIntervalIdx = newArrayQuantity > length_threshold
+                    goodIntervals = access.accessIntervals[goodIntervalIdx]
+                    goodIntervalLengths = newArrayQuantity[goodIntervalIdx]
+
+                    allIntervals.extend(goodIntervals)
+
+        startTimes = np.array([k[0] for k in allIntervals])
+        endTimes = np.array([k[1] for k in allIntervals])
+
+        endIdxSort = np.argsort(endTimes)
+        startIdxSort = np.argsort(startTimes)
+
+        startSorted = startTimes[startIdxSort]
+        endSorted = endTimes[endIdxSort]
+
+        startResolutions = np.diff(startSorted)
+        endResolutions = np.diff(endSorted)
+
+        dataOut = {
+                    'startSorted': startSorted,
+                    'endSorted' : endSorted,
+                    'startResolutions' : startResolutions,
+                    'endResolutions' : endResolutions
+        }
+
+        return dataOut
+
+
+
+
