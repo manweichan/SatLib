@@ -72,7 +72,7 @@ def getLonLat(orb, timeInts, pts, J2 = True):
 
 
 def plotGroundTrack(lon, lat, style_color = 'k', 
-    style_line = '-', style_init = 'r^', style_width=1):
+    style_line = '-', style_init = 'r^', style_width=1, label = None):
     """
     Plots ground tracks on map using cartopy
 
@@ -95,7 +95,8 @@ def plotGroundTrack(lon, lat, style_color = 'k',
         color=style_color, 
         linestyle = style_line,
         linewidth = style_width, 
-        transform=ccrs.Geodetic())
+        transform=ccrs.Geodetic(),
+        label = label)
     ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
     return fig, ax
 
@@ -138,7 +139,7 @@ def addGroundTrack(lon, lat, ax, style_color = 'k',
     return ax
 
 def addGroundLoc(lon, lat, ax, style_color = 'k', 
-    style_marker = 'o', style_width=1):
+    style_marker = 'o', style_width=1, label = None):
     """
     Plots ground tracks on map using cartopy
 
@@ -166,7 +167,8 @@ def addGroundLoc(lon, lat, ax, style_color = 'k',
         color=style_color, 
         marker = style_marker,
         linewidth = style_width, 
-        transform=ccrs.Geodetic())
+        transform=ccrs.Geodetic(),
+        label=label)
     # ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
 
 
@@ -198,11 +200,9 @@ def plotSimConstellationGroundTrack(simConstellation, satellites = []):
     for plane in propConstellation.planes:
         for sat in plane.sats:
             c = next(color)
-            # import ipdb; ipdb.set_trace()
             for segment in sat.coordSegmentsLLA:
                 lon = segment.lon
                 lat = segment.lat
-                # import ipdb; ipdb.set_trace() 
                 if sat.initSat.satID in satellites or len(satellites) == 0:
                     linestyle_cycler = cycle(['-','--',':','-.'])
                     linewidth_cycler = cycle([1,2,3,4])
