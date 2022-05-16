@@ -446,9 +446,13 @@ class Constellation():
         -------
         sats2Maneuver: Dict
             Dict of satellites to maneuver
+        driftTimes: Dict
+            Dict of drift times
         """
 
         sats2Maneuver = {}
+        driftTimes = {}
+        scheds = {}
 
         for planeKey in schedDict.keys():
             plane = schedDict[planeKey]
@@ -459,17 +463,21 @@ class Constellation():
                 if driftHolder is None:
                     driftHolder = tDrift 
                     saveSat = satKey
+                    sched = plane[satKey]
                 elif driftHolder > tDrift:
                     driftHolder = tDrift
                     saveSat = satKey
+                    sched = plane[satKey]
                 elif driftHolder <= tDrift:
                     continue
                 else:
                     print("something is wrong with tDrift comparison")
 
             sats2Maneuver[planeKey].append(saveSat)
+            driftTimes[f'{planeKey} {saveSat}'] = driftHolder
+            scheds[f'{planeKey} {saveSat}'] = sched
 
-        return sats2Maneuver
+        return sats2Maneuver, driftTimes, scheds
 
 
 
@@ -674,6 +682,7 @@ class SimConstellation():
             for sat in plane.sats:
                 satPropInit = SimSatellite(sat, self.t2propagate, self.tStep, verbose=self.verbose)
 
+                skip_sched = False #Default you will not skip schedule
                 #Select satellites if applicable
                 if select_sched_sats is not None:
                     satStr = f'Sat {sat.satID}'
@@ -681,9 +690,9 @@ class SimConstellation():
                         skip_sched = False
                         if verbose:
                             print(f"Not skipping schedule for {planeKey} {satStr}")
-                else:
-                    skip_sched = True
-                        
+                    else:
+                        skip_sched = True
+
                 satPropInit.propagate(skip_sched=skip_sched)
                 planeSats.append(satPropInit)
             plane2append = Plane.from_list(planeSats)
@@ -1075,8 +1084,11 @@ class Satellite(Orbit):
         eqDistsLeftD = [d%(360*u.deg) for d in eqDistsD]
 
         #This is the distance to go to acquire ground track
-        minDist = min(eqDistsLeft)
-        minDistD = min(eqDistsLeftD)
+        eqDistsLeftSorted = sorted(eqDistsLeft)
+        eqDistsLeftSortedD = sorted(eqDistsLeftD)
+
+        minDist = eqDistsLeftSorted[0]
+        minDistD = eqDistsLeftSortedD[0]
 
         ## Define Hohmann transfer parameters
         hoh_a, hoh_ecc = om.a_ecc_hohmann(self.a, rgtDesired.a)
@@ -1116,6 +1128,13 @@ class Satellite(Orbit):
         deltaL_hoh_transferD = (t_hohD * deltaL_hohDotD) * u.rad
 
         # Subtract distance that will be covered by Hohmann Transfer
+
+        #Choose next selection if hohmann transfer drift is longer than minimum Distance
+        if minDist < deltaL_hoh_transfer:
+            minDist = eqDistsLeftSorted[1]
+        if minDistD < deltaL_hoh_transferD:
+            minDistD = eqDistsLeftSortedD[1]
+
         dist2drift = minDist - deltaL_hoh_transfer
         dist2driftD = minDistD - deltaL_hoh_transferD
 
@@ -1141,7 +1160,6 @@ class Satellite(Orbit):
         else:
             sched.desiredOrbit = rgtDesired
             sched.driftTime = t2drift
-
 
         sched.desiredOrbits = rgtOrbits #Pass desired rgt orbit for debugging
         sched.eqCrossings = [wrapAngles, wrapAnglesD]
