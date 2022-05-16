@@ -21,6 +21,8 @@ from poliastro.czml.extract_czml import CZMLExtractor
 
 import matplotlib.pyplot as plt
 
+import satbox as sb
+
 def find_non_dominated_time_deltaV(flatArray):
     """
     Find non-dominated trade space instances when looking at time to pass and delta V value
@@ -209,6 +211,71 @@ def get_isl_feasibility(dataDict, distanceConstraint = None, slewRateConstraint 
         pairData['islSlewMask'] = slewMask
         pairData['dopplerMask'] = dopplerMask
         pairData['islFeasible'] = np.logical_and.reduce((los, distanceMask, slewMask, dopplerMask))
+
+def calc_temp_resolution(constellation, gs, altDrift = 650*u.km, constraint_type = 'nadir', constraint_angle = 25*u.deg,
+                         t2propagate = 5*u.day, tStep = 15*u.s, verbose=True):
+    """
+    Calculate the temporal resolution of a walker constellation and ground station
+
+    Parameters
+    ----------
+    constellation: ~satbox.Constellation class
+        Constellation to run analysis on
+    gs: ~satbox.groundLoc class
+        Ground location to target for observing
+    altDrift: ~astropy.unit.Quantity
+        Altitude of reconfigurable drift orbit
+    constraint_type: ~string | "nadir" or "elevation"
+            constrain angles with either a "nadir" (usually analogous to sensor FOV) or "elevation" (minimum elevation angle from ground station) constraint
+    constraint_angle: ~astropy.unit.Quantity
+            angle used as the access threshold to determine access calculation
+    t2propagate: ~astropy.unit.Quantity
+        Amount of time to Propagate starting from satellite.epoch
+    tStep: ~astropy.unit.Quantity
+        Time step used in the propagation
+    verbose: Boolean
+        Prints out debug statements if True
+
+    Returns
+    -------
+    output: Dict
+        dataOut - temporal resolution data (Dict)
+        driftTimes - drift time data (Dict)
+        sched - schedule data (Dict)
+        walkerSim - propagated walker constellation (satbox.SimConstellation)
+        accessObj - access object (satbox.DataAccessConstellation)
+    """
+
+    schedDict = constellation.gen_GOM_2_RGT_scheds(r_drift, gs)
+    sats2Maneuver, driftTimes, sched = constellation.get_lowest_drift_time_per_plane(schedDict) #Assumes one satellite per plane will get there
+    
+    walkerSim = sb.SimConstellation(constellation, t2propagate, tStep, verbose = verbose)
+    
+    walkerSim.propagate(select_sched_sats = sats2Maneuver, verbose=verbose)
+
+    #Create an access object
+    accessObject = sb.DataAccessConstellation(walkerSim, gs)
+
+    accessObject.calc_access(constraint_type, constraint_angle)
+    
+    #Get sat IDSs
+    satsStr = sats2Maneuver.values()
+    satsStrs = [sat for sat in satsStr]
+
+    #Satellites that will be doing the sensing
+    senseSats = [int(string[0].split()[-1]) for string in satsStrs]
+    
+    dataOut = accessObject.get_temp_resolution(None, sats=senseSats)
+
+    output = {
+                'dataOut':dataOut,
+                'driftTimes':driftTimes,
+                'sched':sched,
+                'walkerSim':walkerSim,
+                'accessObj':accessObject,
+    }
+    
+    return output
 
 def get_start_stop_intervals(mask, refArray):
     """
