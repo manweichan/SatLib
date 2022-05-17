@@ -503,6 +503,9 @@ class Constellation():
 
         for planeKey in schedDict.keys():
             plane = schedDict[planeKey]
+
+            assert len(plane) >= 2, "Need more than one satellite per plane"
+
             sats2Maneuver[planeKey] = []
             driftHolder = None
             for satKey in plane.keys():
