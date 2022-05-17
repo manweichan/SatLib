@@ -2097,6 +2097,8 @@ class ManeuverSchedule():
         t_hohmann = om.t_Hohmann(orb.a, r_f)
         
         #Add to burn scheduler
+
+        # import ipdb; ipdb.set_trace()
         man1_hoh = ManeuverObject(orb.epoch, delv1.to(u.km/u.s))
         man2_hoh = ManeuverObject(orb.epoch + t_hohmann, delv2.to(u.km/u.s))
         # import ipdb; ipdb.set_trace()
