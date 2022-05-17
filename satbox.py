@@ -479,6 +479,116 @@ class Constellation():
 
         return sats2Maneuver, driftTimes, scheds
 
+    def get_ascending_descending_per_plane(self, schedDict):
+        """
+        Gets the two satellites in each plane to move into ascending and descending passes
+        Chooses the two satellites with the least drift times
+
+        Parameters
+        ----------
+        schedDict: Dict of satbox.ManeuverSchedules
+            Schedule that will take satellites in constellation to desired RGT orbits. Key is [planeID][satID]
+
+        Returns
+        -------
+        sats2Maneuver: Dict
+            Dict of satellites to maneuver
+        driftTimes: Dict
+            Dict of drift times
+        """
+
+        sats2Maneuver = {}
+        driftTimes = {}
+        scheds = {}
+
+        for planeKey in schedDict.keys():
+            plane = schedDict[planeKey]
+            sats2Maneuver[planeKey] = []
+            driftHolder = None
+            for satKey in plane.keys():
+                tDrift = plane[satKey].driftTime 
+                # passType = plane[satKey].passType
+                if driftHolder is None: #First satellite in plane is default
+                    driftHolder = tDrift 
+                    saveSat = satKey
+                    sched = plane[satKey]
+
+                elif driftHolder > tDrift: #Replace with better satellite
+                    driftHolder = tDrift
+                    saveSat = satKey
+                    sched = plane[satKey]
+                elif driftHolder <= tDrift: #Skip satellite
+                    continue
+                else:
+                    print("something is wrong with tDrift comparison")
+
+            sats2Maneuver[planeKey].append(saveSat)
+            driftTimes[f'{planeKey} {saveSat}'] = driftHolder
+            scheds[f'{planeKey} {saveSat}'] = sched
+
+        #Calculate for second satellite
+        for planeKey in sats2Maneuver.keys():
+            driftHolder = None
+
+            plane = deepcopy(schedDict[planeKey])
+            saveSat = sats2Maneuver[planeKey]
+            passType = scheds[f'{planeKey} {saveSat[0]}'].passType
+
+            #Remove satellite already chosen
+            for popSat in saveSat: 
+                plane.pop(popSat)
+
+            for satKey in plane.keys():
+                key = f'{planeKey} {satKey}'
+
+                backupChosen = 0 #Keep track of backup schedule chosen
+
+                #Same crossing type means you have to choose other type of crossing
+                if plane[satKey].passType == passType: 
+                    schedHolder = plane[satKey].scheduleBackup
+                    backupChosen = 1
+                else:
+                    schedHolder = plane[satKey]
+                    backupChosen = 0
+
+
+                tDrift = schedHolder.driftTime
+                if driftHolder is None: #First satellite in plane is default
+                    driftHolder = tDrift
+                    saveSat = satKey 
+                    sched = schedHolder
+                    backupTracker = backupChosen #Keep track if backup is chosen
+                elif driftHolder > tDrift: #Replace with better satellite
+                    driftHolder = tDrift
+                    saveSat = satKey
+                    sched = schedHolder
+                    backupTracker = backupChosen #Keep track if backup is chosen
+                elif driftHolder <= tDrift: #Skip satellite
+                    continue
+                else:
+                    print("something is wrong with tDrift comparison 2nd satellite")
+
+            sats2Maneuver[planeKey].append(saveSat)
+            driftTimes[f'{planeKey} {saveSat}'] = driftHolder
+            scheds[f'{planeKey} {saveSat}'] = sched
+
+            #Last thing needed is to change the schedule of the selected satellite
+            if backupTracker:
+                planeIdx = int(planeKey.split()[-1])
+                sats = self.planes[planeIdx].sats
+
+                satIdx = int(saveSat.split()[-1])
+
+                #Get satellite to switch schedule
+                satSchedSwitch = [s for s in sats if s.satID==satIdx][0]
+
+                #Switch in backup schedule
+                satSchedSwitch.originalSchedule = satSchedSwitch.maneuverSchedule #Save original schedule
+                satSchedSwitch.maneuverSchedule = sched
+                satSchedSwitch.maneuverSchedule.backupUsed = 1 #Make sure we know back up is activated
+
+                
+        return sats2Maneuver, driftTimes, scheds
 
 
     def generate_czml_file(self, prop_duration, sample_points, 
@@ -1153,16 +1263,31 @@ class Satellite(Orbit):
 
         sched.passType = 'a'
         if t2drift > t2driftD: #Choose descending pass if quicker
-            sched = schedD
+            #Generate alternate schedule first to avoid copying over sched incorrectly
+            sched.scheduleBackup = sched.schedule
+            sched.passTypeBackup = 'a'
+            sched.desiredOrbitBackup = rgtDesired
+            sched.driftTimeBackup = t2drift
+
+            sched.schedule = schedD.schedule
             sched.passType = 'd'
             sched.desiredOrbit = rgtDesiredD
             sched.driftTime = t2driftD
-        else:
+
+
+        else: #Choose ascending pass
             sched.desiredOrbit = rgtDesired
             sched.driftTime = t2drift
 
+            #Generate alternate schedule
+            sched.scheduleBackup = schedD.schedule
+            sched.passTypeBackup = 'd'
+            sched.desiredOrbitBackup = rgtDesiredD
+            sched.driftTimeBackup = t2driftD
+
         sched.desiredOrbits = rgtOrbits #Pass desired rgt orbit for debugging
         sched.eqCrossings = [wrapAngles, wrapAnglesD]
+
         return sched
 
     @staticmethod
@@ -1558,6 +1683,11 @@ class Satellite(Orbit):
         # Create drift satellite
         sched = ManeuverSchedule()
         sched.gen_hohmann_schedule(self, r_drift)
+
+        # Create backup schedule
+        schedBackup = ManeuverSchedule()
+        schedBackup.gen_hohmann_schedule(self, r_drift)
+
         satDrift = self
         satDrift.add_man_schedule(sched)
         
@@ -1579,11 +1709,29 @@ class Satellite(Orbit):
         for s in rgtAqSched.schedule:
             sched.add_maneuver(s)
 
+        for s in rgtAqSched.scheduleBackup: #Add rgt schedule to backup schedule
+            schedBackup.add_maneuver(s)
+
         sched.desiredOrbit = rgtAqSched.desiredOrbit
         sched.desiredOrbits = rgtAqSched.desiredOrbits
-        sched.eqCrossings = rgtAqSched.eqCrossings
         sched.passType = rgtAqSched.passType
         sched.driftTime = rgtAqSched.driftTime
+
+        if rgtAqSched.passType == 'a':
+            sched.eqCrossings = rgtAqSched.eqCrossings[0]
+            schedBackup.eqCrossings = rgtAqSched.eqCrossings[1]
+        elif rgtAqSched.passType == 'd':
+            sched.eqCrossings = rgtAqSched.eqCrossings[1]
+            schedBackup.eqCrossings = rgtAqSched.eqCrossings[0]
+
+
+        #also return alternate backup schedule
+        schedBackup.desiredOrbit = rgtAqSched.desiredOrbitBackup
+        schedBackup.passType = rgtAqSched.passTypeBackup
+        schedBackup.driftTime = rgtAqSched.driftTimeBackup
+
+        #Add backup schedule to schedule
+        sched.scheduleBackup = schedBackup
 
         return sched
         
