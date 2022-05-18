@@ -2489,7 +2489,7 @@ class DataAccessSat():
             print("run simSat.propagate() first")
             return
 
-        self.sat = simSat.initSat
+        self.sat = simSat
         self.groundLoc = groundLoc
 
         # Extract IDs for easy calling
@@ -2567,6 +2567,9 @@ class DataAccessSat():
         self.accessMask = accessMask
         self.accessIntervalLengths = intervalLengths
         self.accessElevations = ele
+
+        #Remove propagated data to save space
+        self.sat = self.sat.initSat
         
     def plot_tombstone(self):
         """
