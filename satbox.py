@@ -2682,7 +2682,7 @@ class DataAccessConstellation():
             print("run simConstellation.propagate() first")
             return
 
-        self.constellation = simConstellation
+        self.constellation = simConstellation.initConstellation
         self.groundLoc = groundLoc
 
         #Extract IDs for easy calling
