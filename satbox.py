@@ -2726,6 +2726,9 @@ class DataAccessConstellation():
 
         self.allAccessData = allAccessData
 
+        #Remove propagated data to reduce size of object
+        self.constellation = self.constellation.initConstellation
+
     def plot_total_access(self, gLocs, plot_style = 'b-'):
         """
         plots total coverage (satellite agnostic) for a particular
