@@ -2489,7 +2489,7 @@ class DataAccessSat():
             print("run simSat.propagate() first")
             return
 
-        self.sat = simSat
+        self.sat = simSat.initSat
         self.groundLoc = groundLoc
 
         # Extract IDs for easy calling
