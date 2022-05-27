@@ -1,6 +1,9 @@
 # SatLib
 
-Running the example notebook
+## Overview
+SatLib is a python library for constellation based calculations. Much of it is based on [Poliastro](https://docs.poliastro.space/en/stable/) and extends it for use with satellite constellations. Fundamental functionality such as propagating constellations, determining constellation access to ground stations, and determining when satellites in the constellation have windows of opportunity to perform inter-satellite links are included in the library. The main classes are contained in satbox.py and instructions to run an example notebook that showcase some of the capabilities are included below. Note: This library is still under development.
+
+# Running the example notebook
 
 This tutorial assumes working knowledge of the terminal with [git installed](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git). There are many [resources](https://www.makeuseof.com/tag/beginners-guide-mac-terminal/) online to learn from if you need. You should also have a working version of python, or you can download it [here](https://www.python.org/downloads/). This tutorial was tested using python 3.7.3
 
