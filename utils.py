@@ -383,7 +383,7 @@ def get_start_stop_intervals(mask, refArray):
         endTimes = refArray[endIdx]
     elif mask[0] == 0 and mask[-1] == 0 and any(mask)==False:
         startStopIntervals = [(None, None)]
-        print('No Intervals Found')
+        print('No True Intervals Found')
         return startStopIntervals
     elif mask[0] == 0 and mask[-1] == 0:
         startIdx = maskStart
@@ -442,7 +442,7 @@ def get_false_intervals(mask, refArray):
         endTimes = refArray[endIdx]
     elif mask[0] == 1 and mask[-1] == 1 and all(mask):
         startStopIntervals = [(None, None)]
-        print('No Intervals Found')
+        print('No False Intervals Found')
         return startStopIntervals
     elif mask[0] == 1 and mask[-1] == 1:
         startIdx = maskStart

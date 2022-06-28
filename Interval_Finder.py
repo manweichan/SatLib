@@ -1,35 +1,23 @@
-import os
 import satbox as sb
-import orbitalMechanics as om
 import utils as utils
-from poliastro.czml.extract_czml import CZMLExtractor
-import CZMLExtractor_MJD as CZMLExtractor_MJD
-import numpy as np
-from poliastro import constants
-from poliastro.earth import Orbit
-from poliastro.earth.sensors import min_and_max_ground_range, ground_range_diff_at_azimuth
-from poliastro.bodies import Earth
-from poliastro.maneuver import Maneuver
-from poliastro.twobody.propagation import propagate
-from poliastro.twobody.propagation import cowell
-from poliastro.core.perturbations import J2_perturbation
-from poliastro.core.propagation import func_twobody
-from poliastro.util import norm
-import astropy
 import astropy.units as u
-from astropy.time import Time, TimeDelta
-from astropy.coordinates import Angle
-import matplotlib.pyplot as plt
-from poliastro.plotting.static import StaticOrbitPlotter
-from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
-from poliastro.twobody.events import(NodeCrossEvent,)
-import seaborn as sns
-from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord
-import comms as com
-from copy import deepcopy
-import dill
-import Interval_Finder as IF 
-import sys
+
+
+
+##################################################################################
+############################ MISCELLANEOUS FUNCTIONS #############################
+##################################################################################
+def check_if_all_none(array_of_elem):
+    """ Check if all elements in list are None """
+    result = True
+    for index in array_of_elem:
+        for elem in index:
+            if elem is not None:
+                return False
+    return result
+
+
+
 
 
 ##################################################################################
@@ -158,15 +146,6 @@ def get_polyline_ISL(satellites, relative_position_data):
         #If there are no True intervals, we let user know
         if any(mask)==False:
             return 'Intersatellite Comunication Link is not Feasible'
-
-        #Get false intervals
-        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
-        L_false=[]
-        for idx, interval in enumerate(false_intervalsISL):
-            start_time = interval[0]
-            stop_time = interval[1]
-    
-            L_false.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
     
         #Get true intervals
         true_intervalsISL = utils.get_start_stop_intervals(mask, timeArray)
@@ -176,6 +155,19 @@ def get_polyline_ISL(satellites, relative_position_data):
             stop_time = interval[1]
     
             L_true.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
+        
+        #Get false intervals
+        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
+        L_false=[]
+        #If there are no False Intervals
+        if check_if_all_none(false_intervalsISL):
+            pass
+        else:
+            for idx, interval in enumerate(false_intervalsISL):
+                start_time = interval[0]
+                stop_time = interval[1]
+    
+                L_false.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
     
         #Creating dictionary
         L_final=[]
@@ -208,6 +200,7 @@ def get_polyline_ISL(satellites, relative_position_data):
         L_poly.append(L_final)
 
     return L_poly
+
 
 
 
@@ -349,15 +342,6 @@ def get_polyline_GS(objects, relative_position_data):
         if any(mask)==False:
             return 'Intersatellite Comunication Link is not Feasible'
 
-        #Get false intervals
-        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
-        L_false=[]
-        for idx, interval in enumerate(false_intervalsISL):
-            start_time = interval[0]
-            stop_time = interval[1]
-    
-            L_false.append(start_time + 'Z/' + stop_time + 'Z')
-
         #Get true intervals
         true_intervalsISL = utils.get_start_stop_intervals(mask, timeArray)
         L_true=[]
@@ -366,6 +350,19 @@ def get_polyline_GS(objects, relative_position_data):
             stop_time = interval[1]
     
             L_true.append(start_time + 'Z/' + stop_time + 'Z')
+        
+        #Get false intervals
+        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
+        L_false=[]
+        #If there are no False Intervals
+        if check_if_all_none(false_intervalsISL):
+            pass
+        else:
+            for idx, interval in enumerate(false_intervalsISL):
+                start_time = interval[0]
+                stop_time = interval[1]
+    
+                L_false.append(start_time + 'Z/' + stop_time + 'Z')
     
         #Creating dictionary
         L_final=[]
@@ -398,3 +395,7 @@ def get_polyline_GS(objects, relative_position_data):
         L_poly.append(L_final)
 
     return L_poly
+
+
+
+

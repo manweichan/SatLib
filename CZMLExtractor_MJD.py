@@ -1,5 +1,8 @@
+import math
 from datetime import timezone
+#from turtle import position
 from typing import Any, List
+#from matplotlib.style import available
 
 import numpy as np
 from astropy import units as u
@@ -17,14 +20,16 @@ from czml3.properties import (
     Position,
     SolidColorMaterial,
     Polyline,
-    ArcType,
     PositionList,
+    Cylinder,
+    HeightReference
 )
 from czml3.types import IntervalValue, TimeInterval
 from erfa import gd2gce
 
 from poliastro.bodies import Earth
-from poliastro.core.perturbations import J2_perturbation
+#from poliastro.core.perturbations import J2_perturbation
+#from sympy import intersection
 from poliastro.core.czml_utils import (
     project_point_on_ellipsoid as project_point_on_ellipsoid_fast,
 )
@@ -323,12 +328,13 @@ class CZMLExtractor_MJD:
     
     def add_communication(
         self,
-        id_name,
-        id_description,
+        id,
         reference1,
         reference2,
         true_time_intervals,
         time_intervals,
+        name=None,
+        description=None,
         line_width=None,
         line_color=None,
         arc_Type=None,
@@ -338,10 +344,12 @@ class CZMLExtractor_MJD:
         
         Parameters
         ----------
-        id_name : str
-            Set orbit name
-        id_description : str
-            Set orbit description
+        id : str
+            Set link id
+        name : str
+            Set link name
+        description : str
+            Set link description
         reference1 : str
             id of 1st reference
         reference2 : str
@@ -358,24 +366,14 @@ class CZMLExtractor_MJD:
             something
             
         """
-        id_= reference1 + "-to-" + reference2
         pt_1= reference1 + "#position"
         pt_2= reference2 + "#position"
         L= [pt_1,pt_2]
         
-        if reference1 is None:
-            raise ValueError("Please check to make sure these parameters have been inputted: reference1, reference2, true_time_interval, time_interval")
-        elif reference2 is None:
-            raise ValueError("Please check to make sure these parameters have been inputted: reference1, reference2, true_time_interval, time_interval")
-        elif true_time_intervals is None:
-            raise ValueError("Please check to make sure these parameters have been inputted: reference1, reference2, true_time_interval, time_interval")
-        elif time_intervals is None:
-            raise ValueError("Please check to make sure these parameters have been inputted: reference1, reference2, true_time_interval, time_interval")
-        
         pckt = Packet(
-                    id=id_,
-                    name=id_name,
-                    description=id_description,
+                    id=id,
+                    name=name,
+                    description=description,
                     availability=true_time_intervals,
                     polyline=Polyline(positions=PositionList(references=L),
                                       arcType=arc_Type if arc_Type is not None else "NONE",
@@ -385,6 +383,54 @@ class CZMLExtractor_MJD:
         
         )
                     
+        self.packets.append(pckt)
+
+    def add_conicSensor(
+        self,
+        id,
+        satID,
+        alt,
+        sensorAngle,
+        name=None,
+        description=None,
+        cone_color=None
+
+    ):
+        """
+        Adds Conic Sensor
+        
+        Parameters
+        ----------
+        id : str
+            Set sensor id
+        name : str
+            Set sensor name
+        description : str
+            Set sensor description
+        satID : int
+            str format of the satID
+        alt : int
+            altitude of the satellite
+        sensorAngle : (int) 
+            angle of conic sensor
+        cone_color : list of int
+            color/transparency of cone
+        """
+        rad = alt * math.sin(sensorAngle/2)
+
+        pckt = Packet(
+                    id=id,
+                    name=name,
+                    description=description,
+                    availability=TimeInterval(start=self.start_epoch, end=self.end_epoch),
+                    position=Position(reference=str(satID)+"#position"),
+                    cylinder=Cylinder(length=alt,
+                                      topRadius=0.0,
+                                      bottomRadius=rad,
+                                      heightReference=HeightReference(heightReference="CLAMP_TO_GROUND"),
+                                      material=Material(solidColor=SolidColorMaterial(color=Color(rgba=cone_color if cone_color is not None else [255,0,0,130]))))
+        )
+        
         self.packets.append(pckt)
 
     def add_orbit(
