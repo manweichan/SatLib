@@ -97,7 +97,7 @@ class Constellation():
             raan_offset = raan_offset * u.deg
             print("WARNING: raan_offset treated as degrees")
 
-        # Check f is bettween 0 and p-1
+        # Check f is between 0 and p-1
         assert f >= 0 and f <= p-1, "f must be between 0 and p-1"
 
         s = t/p  # number of satellites per plane
