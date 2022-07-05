@@ -1,35 +1,23 @@
-import os
 import satbox as sb
-import orbitalMechanics as om
 import utils as utils
-from poliastro.czml.extract_czml import CZMLExtractor
-import CZMLExtractor_MJD as CZMLExtractor_MJD
-import numpy as np
-from poliastro import constants
-from poliastro.earth import Orbit
-from poliastro.earth.sensors import min_and_max_ground_range, ground_range_diff_at_azimuth
-from poliastro.bodies import Earth
-from poliastro.maneuver import Maneuver
-from poliastro.twobody.propagation import propagate
-from poliastro.twobody.propagation import cowell
-from poliastro.core.perturbations import J2_perturbation
-from poliastro.core.propagation import func_twobody
-from poliastro.util import norm
-import astropy
 import astropy.units as u
-from astropy.time import Time, TimeDelta
-from astropy.coordinates import Angle
-import matplotlib.pyplot as plt
-from poliastro.plotting.static import StaticOrbitPlotter
-from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
-from poliastro.twobody.events import(NodeCrossEvent,)
-import seaborn as sns
-from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord
-import comms as com
-from copy import deepcopy
-import dill
-import Interval_Finder as IF 
-import sys
+
+
+
+##################################################################################
+############################ MISCELLANEOUS FUNCTIONS #############################
+##################################################################################
+def check_if_all_none(array_of_elem):
+    """ Check if all elements in list are None """
+    result = True
+    for index in array_of_elem:
+        for elem in index:
+            if elem is not None:
+                return False
+    return result
+
+
+
 
 
 ##################################################################################
@@ -81,12 +69,9 @@ def find_feasible_links_ISL(num_sats, relative_position_data):
     L2 = L1.copy()
 
     #Eliminating the pairs from the list that are never able to communicate
-    #iterate through the pairs satellites
     for i in L2: 
-       
         #True false mask of ISL opportunities
         mask = relative_position_data['satData'][i]['islFeasible']
-       
         #If this pair has no True time intervals, eliminate it from the list
         if any(mask) == False:
             L1.remove(i)
@@ -107,9 +92,9 @@ def get_availability_ISL(satellites,relative_position_data):
         relative_position_data (array?) : the array of relative_position_data
             
     """
-    #True false mask of ISL opportunities
-    #Gets satellite data between sateelites 
-    #Iterates through the pairs of satellites
+    #Check if satellites list is empty
+    if satellites==[]:
+        return 'No True Intervals Found for Any Satellite Pairs: Intersatellite Comunication Links are not Feasible'
     L_avail=[]
     for i in satellites:
         mask = relative_position_data['satData'][i]['islFeasible'] 
@@ -117,17 +102,18 @@ def get_availability_ISL(satellites,relative_position_data):
 
         #Apply true false mask to time array
         intervalsISL = utils.get_start_stop_intervals(mask, timeArray)
-        #If there are no True intervals, we let user know
+        #If there are no True intervals for this pair, we let user know
         if any(mask)==False:
-            return 'No Intervals Found: Intersatellite Comunication Link is not Feasible'
-        else:
-            L=[]
-            for idx, interval in enumerate(intervalsISL):
-                start_time = interval[0]
-                stop_time = interval[1]
+            return 'No True Intervals Found for {}: Intersatellite Comunication Link is Not Feasible. Please Enter a New List of Satellites'.format(i)
+        #Get availability intervals
+        #Reformatting the data into a format czml can use
+        L=[]
+        for idx, interval in enumerate(intervalsISL):
+            start_time = interval[0]
+            stop_time = interval[1]
     
-                #Format time to isot format
-                L.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
+            #Format time to isot format
+            L.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
 
         L_avail.append(L)
     
@@ -147,26 +133,17 @@ def get_polyline_ISL(satellites, relative_position_data):
         relative_position_data (array?) : the array of relative_position_data
     """
 
-    #True false mask of ISL opportunities
-    #Gets satellite data between sateelites
-    #Iterate throught the pairs of satellites 
+    #Check if satellites list is empty
+    if satellites==[]:
+        return 'No True Intervals Found for Any Satellite Pairs: Intersatellite Comunication Links are not Feasible'
     L_poly=[]
     for i in satellites:
         mask = relative_position_data['satData'][i]['islFeasible'] 
         timeArray = relative_position_data['satData'][i]['times']
 
-        #If there are no True intervals, we let user know
+        #If there are no True intervals for this pair, we let user know
         if any(mask)==False:
-            return 'Intersatellite Comunication Link is not Feasible'
-
-        #Get false intervals
-        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
-        L_false=[]
-        for idx, interval in enumerate(false_intervalsISL):
-            start_time = interval[0]
-            stop_time = interval[1]
-    
-            L_false.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
+            return 'No True Intervals Found for {}: Intersatellite Comunication Link is Not Feasible. Please Enter a New List of Satellites'.format(i)
     
         #Get true intervals
         true_intervalsISL = utils.get_start_stop_intervals(mask, timeArray)
@@ -176,6 +153,19 @@ def get_polyline_ISL(satellites, relative_position_data):
             stop_time = interval[1]
     
             L_true.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
+        
+        #Get false intervals
+        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
+        L_false=[]
+        #If there are no False Intervals
+        if check_if_all_none(false_intervalsISL):
+            pass
+        else:
+            for idx, interval in enumerate(false_intervalsISL):
+                start_time = interval[0]
+                stop_time = interval[1]
+    
+                L_false.append(start_time.isot + 'Z/' + stop_time.isot + 'Z')
     
         #Creating dictionary
         L_final=[]
@@ -208,6 +198,7 @@ def get_polyline_ISL(satellites, relative_position_data):
         L_poly.append(L_final)
 
     return L_poly
+
 
 
 
@@ -297,9 +288,9 @@ def get_availability_GS(objects, relative_position_data):
             
     """
 
-    #True false mask of ISL opportunities
-    #Gets satellite time interval data between objects
-    #Iterates through the pairs of objects
+    #Check if objects list is empty
+    if objects==[]:
+        return 'No True Intervals Found for Any Satellite and Ground Station Pairs: Comunication Links are not Feasible'
     L_avail=[]
     for i in objects:
         mask = relative_position_data[i] 
@@ -307,18 +298,18 @@ def get_availability_GS(objects, relative_position_data):
 
     #Apply true false mask to time array
         intervalsISL = utils.get_start_stop_intervals(mask, timeArray)
-    #If there are no True intervals, let user know
+    #If there are no True intervals for this pair, let user know
         if any(mask)==False:
-            return 'No Intervals Found: Intersatellite Comunication Link is not Feasible'
+            return 'No True Intervals Found for {}: Comunication Link is Not Feasible. Please Enter a New List of Objects'.format(i)
+    #Get availability intervals
     #Reformatting the data into a format czml can use
-        else:
-            L=[]
-            for idx, interval in enumerate(intervalsISL):
-                start_time = interval[0]
-                stop_time = interval[1]
+        L=[]
+        for idx, interval in enumerate(intervalsISL):
+            start_time = interval[0]
+            stop_time = interval[1]
     
-        
-                L.append(start_time + 'Z/' + stop_time + 'Z')
+            #Format time to isot format
+            L.append(start_time + 'Z/' + stop_time + 'Z')
 
         L_avail.append(L)
     
@@ -337,9 +328,9 @@ def get_polyline_GS(objects, relative_position_data):
         relative_position_data (array?) : the array of relative_position_data
     """
 
-    #True false mask of ISL opportunities
-    #Gets position data
-    #Iterate throught the pairs of satellites 
+    #Check if objects list is empty
+    if objects==[]:
+        return 'No True Intervals Found for Any Satellite and Ground Station Pairs: Comunication Links are not Feasible'
     L_poly=[]
     for i in objects:
         mask = relative_position_data[i] 
@@ -347,16 +338,7 @@ def get_polyline_GS(objects, relative_position_data):
 
          #If there are no True intervals, we let user know
         if any(mask)==False:
-            return 'Intersatellite Comunication Link is not Feasible'
-
-        #Get false intervals
-        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
-        L_false=[]
-        for idx, interval in enumerate(false_intervalsISL):
-            start_time = interval[0]
-            stop_time = interval[1]
-    
-            L_false.append(start_time + 'Z/' + stop_time + 'Z')
+            return 'No True Intervals Found for {}: Comunication Link is Not Feasible. Please Enter a New List of Objects'.format(i)
 
         #Get true intervals
         true_intervalsISL = utils.get_start_stop_intervals(mask, timeArray)
@@ -366,6 +348,19 @@ def get_polyline_GS(objects, relative_position_data):
             stop_time = interval[1]
     
             L_true.append(start_time + 'Z/' + stop_time + 'Z')
+        
+        #Get false intervals
+        false_intervalsISL = utils.get_false_intervals(mask, timeArray)
+        L_false=[]
+        #If there are no False Intervals
+        if check_if_all_none(false_intervalsISL):
+            pass
+        else:
+            for idx, interval in enumerate(false_intervalsISL):
+                start_time = interval[0]
+                stop_time = interval[1]
+    
+                L_false.append(start_time + 'Z/' + stop_time + 'Z')
     
         #Creating dictionary
         L_final=[]
@@ -398,3 +393,7 @@ def get_polyline_GS(objects, relative_position_data):
         L_poly.append(L_final)
 
     return L_poly
+
+
+
+
