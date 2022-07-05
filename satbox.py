@@ -1,4 +1,5 @@
 import os
+from matplotlib.style import available
 import numpy as np
 from poliastro import constants
 from poliastro.earth import Orbit
@@ -595,7 +596,7 @@ class Constellation():
 
 
     def generate_czml_file(self, prop_duration, sample_points, 
-                            fname=None, satellites=None, objects=None, L_avail_ISL=None,L_poly_ISL=None, L_avail_GS=None, L_poly_GS=None, GS_pos=None, GS=False, scene3d=True, specificSats=False, show_polyline_ISL=False, show_polyline_GS=False, create_file=False):
+                            fname=None, satellites=None, objects=None, L_avail_ISL=None,L_poly_ISL=None, L_avail_GS=None, L_poly_GS=None, GS_pos=None, alt=None, conicSensorAngle=None, GS=False, scene3d=True, specificSats=False, show_polyline_ISL=False, show_polyline_GS=False, show_conicSensor=False, create_file=False):
         """
         Generates CZML file for the constellation for plotting
 
@@ -605,8 +606,6 @@ class Constellation():
             sample_points (int): Number of sample points
             scene3d (bool): Set to false for 2D plot
             specificSats (list of ints) : List of satIDs to plot
-            show_polyline-isl (boo) : Whether or not to show intersatellite communication links. Default is set to False
-            show_polyline_gs (boo) : Whether or not to show gs-sat communication links. Default is set to False
             satellites (list) : list of satellite pairs that can can communicate (or you want to communicate)
             objects (list) : list of sat-gs pairs that can can communicate (or you want to communicate)
             L_avail (list) : list of availability intervals
@@ -614,6 +613,11 @@ class Constellation():
             L_avail_gs (list) : list of availability intervals
             L_poly_gs (list) : list of polyline intervals
             G_pos (list of list): postions of each satellite
+            alt (int): altitude of walker constellation
+            conicSensorAngle (int) : angle of conic sensor
+            show_polyline-isl (boo) : Whether or not to show intersatellite communication links. Default is set to False
+            show_polyline_gs (boo) : Whether or not to show gs-sat communication links. Default is set to False
+            show_conicSensor (boo): Whether or not to show conicSensor. Default is set to False
             create_file (boo) : whether  or not to create a czml file or just return text
         """
         seedSat = self.get_sats()[0]
@@ -639,65 +643,85 @@ class Constellation():
                     extractor.add_orbit(sat, groundtrack_show=False,
                                 groundtrack_trail_time=0, path_show=True)
 
-        #adding groundstations
-        if GS:
-            for i in GS_pos:
-                extractor.add_ground_station(pos=i)
-
-
         #adding isl
         if show_polyline_ISL:
             if (satellites==None) or (L_avail_ISL==None) or (L_poly_ISL==None):
-                return "You have chosen to visualize the intersatellite communication links between satellites. Please make sure the following paramenters have been inputted: satellites, L_avail, and L_poly"    
+                return "You have chosen to visualize the intersatellite communication links between satellites. Please make sure the following paramenters have been inputted: satellites, L_avail_ISL, and L_poly_ISL"    
+            else: 
+                r1=[]
+                r2=[]
+                for i in satellites:
+                    x = i.split('-')
+                    r1.append(x[0])
+                    r2.append(x[1])
+                for i in range(len(satellites)):
+                    extractor.add_communication(id_name=r1[i]+' to '+r2[i],
+                                            reference1=r1[i],
+                                            reference2=r2[i],
+                                            true_time_intervals=L_avail_ISL[i],
+                                            time_intervals=L_poly_ISL[i],
+                                            line_width=2)
         
-            # sat-sat links
-            r1=[]
-            r2=[]
-            for i in satellites:
-                x = i.split('-')
-                r1.append(x[0])
-                r2.append(x[1])
+        #adding conicSenor
+        if show_conicSensor:
+            if (alt==None) or (conicSensorAngle==None):
+                return "You have chosen to visualize the conic sensors. Please make sure the following paramenters have been inputted: alt, and conicSensorAngle"
+            else:
+                if specificSats:
+                    for plane in self.planes:  # Loop through each plane
+                        for sat in plane.sats:  # Loop through each satellite in a plane
+                            if sat.satID in specificSats:
+                                extractor.add_conicSensor(id_name="ConicSensor for sat#"+str(sat.satID),
+                                                      satID=sat.satID,
+                                                      alt=alt,
+                                                      sensorAngle=conicSensorAngle)
+                else:
+                    for plane in self.planes:  # Loop through each plane
+                        for sat in plane.sats:  # Loop through each satellite in a plane
+                            extractor.add_conicSensor(id_name="ConicSensor for sat#"+str(sat.satID),
+                                                  satID=sat.satID,
+                                                  alt=alt,
+                                                  sensorAngle=conicSensorAngle)
 
-        
-            for i in range(len(satellites)):
-                extractor.add_communication(id_name=r1[i]+'to'+r2[i],
-                                        id_description=None,
-                                        reference1=r1[i],
-                                        reference2=r2[i],
-                                        true_time_intervals=L_avail_ISL[i],
-                                        time_intervals=L_poly_ISL[i],
-                                        )
-        #adding gs-sat links
-        if show_polyline_GS:
-            if (objects==None) or (L_avail_GS==None) or (L_poly_GS==None):
-                return "You have chosen to visualize the gs-sat links between satellites. Please make sure the following paramenters have been inputted: objects, L_avail_gs, and L_poly_gs"
-            r3=[]
-            r4=[]
-            for i in objects:
-                x = i.split('-')
-                r3.append(x[0])
-                r4.append(x[1])
-        
-            for i in range(len(objects)):
-                extractor.add_communication(id_name=r3[i]+'to'+r4[i],
-                                        id_description=None,
-                                        reference1=r3[i],
-                                        reference2=r4[i],
-                                        true_time_intervals=L_avail_GS[i],
-                                        time_intervals=L_poly_GS[i],
-                                        )
+        #adding groundstations
+        if GS:
+            if (GS_pos==None):
+                return "You have chosen to visualize groundstations. Please make sure the GS_pos parameters have been inputted"
+            for i in GS_pos:
+                extractor.add_ground_station(pos=i)
+            if show_polyline_GS:
+                if (objects==None) or (L_avail_GS==None) or (L_poly_GS==None):
+                    return "You have chosen to visualize the gs-sat links between satellites. Please make sure the following paramenters have been inputted: objects, L_avail_GS, and L_poly_GS"
+                else:
+                    r3=[]
+                    r4=[]
+                    for i in objects:
+                        x = i.split('-')
+                        r3.append(x[0])
+                        r4.append(x[1])
+                    for i in range(len(objects)):
+                        extractor.add_communication(id_name=r3[i]+' to '+r4[i],
+                                            reference1=r3[i],
+                                            reference2=r4[i],
+                                            true_time_intervals=L_avail_GS[i],
+                                            time_intervals=L_poly_GS[i],
+                                            line_color=[10, 245, 25, 255],
+                                            line_width=2)
                 
-        if create_file:     
-            doc = [str(x) for x in extractor.packets]
-            toPrint = ','.join(doc)
-            toPrint = '[' + toPrint + ']'
+        if create_file:
+            if (fname==None):
+                return "You have chosen to create a czml file. Please make sure the fname parameter has been inputted"     
+            else:
+                doc = [str(x) for x in extractor.packets]
+                toPrint = ','.join(doc)
+                toPrint = '[' + toPrint + ']'
 
-            #To create file with name fname.czml
-            dir = os.getcwd()
-            fileDir = os.path.join(dir, fname + ".czml")
-            f = open(fileDir, "w")
-            f.write(toPrint)
-            f.close()
+                #To create file with name fname.czml
+                dir = os.getcwd()
+                fileDir = os.path.join(dir, fname + ".czml")
+                f = open(fileDir, "w")
+                f.write(toPrint)
+                f.close()
             
         else:
             doc = [str(x) for x in extractor.packets]
