@@ -328,13 +328,12 @@ class CZMLExtractor_MJD:
     
     def add_communication(
         self,
-        id,
         reference1,
         reference2,
         true_time_intervals,
         time_intervals,
-        name=None,
-        description=None,
+        id_name=None,
+        id_description=None,
         line_width=None,
         line_color=None,
         arc_Type=None,
@@ -344,11 +343,9 @@ class CZMLExtractor_MJD:
         
         Parameters
         ----------
-        id : str
-            Set link id
-        name : str
+        id_name : str
             Set link name
-        description : str
+        id_description : str
             Set link description
         reference1 : str
             id of 1st reference
@@ -371,9 +368,9 @@ class CZMLExtractor_MJD:
         L= [pt_1,pt_2]
         
         pckt = Packet(
-                    id=id,
-                    name=name,
-                    description=description,
+                    id=reference1+"-to-"+reference2,
+                    name=id_name,
+                    description=id_description,
                     availability=true_time_intervals,
                     polyline=Polyline(positions=PositionList(references=L),
                                       arcType=arc_Type if arc_Type is not None else "NONE",
@@ -387,12 +384,11 @@ class CZMLExtractor_MJD:
 
     def add_conicSensor(
         self,
-        id,
         satID,
         alt,
         sensorAngle,
-        name=None,
-        description=None,
+        id_name=None,
+        id_description=None,
         cone_color=None
 
     ):
@@ -401,11 +397,9 @@ class CZMLExtractor_MJD:
         
         Parameters
         ----------
-        id : str
-            Set sensor id
-        name : str
+        id_name : str
             Set sensor name
-        description : str
+        id_description : str
             Set sensor description
         satID : int
             str format of the satID
@@ -416,12 +410,12 @@ class CZMLExtractor_MJD:
         cone_color : list of int
             color/transparency of cone
         """
-        rad = alt * math.sin(sensorAngle/2)
+        rad = alt * math.sin(sensorAngle)
 
         pckt = Packet(
-                    id=id,
-                    name=name,
-                    description=description,
+                    id="CS"+str(satID),
+                    name=id_name,
+                    description=id_description,
                     availability=TimeInterval(start=self.start_epoch, end=self.end_epoch),
                     position=Position(reference=str(satID)+"#position"),
                     cylinder=Cylinder(length=alt,

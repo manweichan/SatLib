@@ -643,89 +643,85 @@ class Constellation():
                     extractor.add_orbit(sat, groundtrack_show=False,
                                 groundtrack_trail_time=0, path_show=True)
 
-        #adding groundstations
-        if GS:
-            for i in GS_pos:
-                extractor.add_ground_station(pos=i)
-
-
         #adding isl
         if show_polyline_ISL:
             if (satellites==None) or (L_avail_ISL==None) or (L_poly_ISL==None):
-                return "You have chosen to visualize the intersatellite communication links between satellites. Please make sure the following paramenters have been inputted: satellites, L_avail, and L_poly"    
-        
-            # sat-sat links
-            r1=[]
-            r2=[]
-            for i in satellites:
-                x = i.split('-')
-                r1.append(x[0])
-                r2.append(x[1])
-
-        
-            for i in range(len(satellites)):
-                extractor.add_communication(id=r1[i]+'-to-'+r2[i],
-                                            name=r1[i]+' to '+r2[i],
+                return "You have chosen to visualize the intersatellite communication links between satellites. Please make sure the following paramenters have been inputted: satellites, L_avail_ISL, and L_poly_ISL"    
+            else: 
+                r1=[]
+                r2=[]
+                for i in satellites:
+                    x = i.split('-')
+                    r1.append(x[0])
+                    r2.append(x[1])
+                for i in range(len(satellites)):
+                    extractor.add_communication(id_name=r1[i]+' to '+r2[i],
                                             reference1=r1[i],
                                             reference2=r2[i],
                                             true_time_intervals=L_avail_ISL[i],
                                             time_intervals=L_poly_ISL[i],
-                                            line_width=2
-                                            )
-        #adding gs-sat links
-        if show_polyline_GS:
-            if (objects==None) or (L_avail_GS==None) or (L_poly_GS==None):
-                return "You have chosen to visualize the gs-sat links between satellites. Please make sure the following paramenters have been inputted: objects, L_avail_gs, and L_poly_gs"
-            r3=[]
-            r4=[]
-            for i in objects:
-                x = i.split('-')
-                r3.append(x[0])
-                r4.append(x[1])
+                                            line_width=2)
         
-            for i in range(len(objects)):
-                extractor.add_communication(id=r3[i]+'-to-'+r4[i],
-                                            name=r3[i]+' to '+r4[i],
+        #adding conicSenor
+        if show_conicSensor:
+            if (alt==None) or (conicSensorAngle==None):
+                return "You have chosen to visualize the conic sensors. Please make sure the following paramenters have been inputted: alt, and conicSensorAngle"
+            else:
+                if specificSats:
+                    for plane in self.planes:  # Loop through each plane
+                        for sat in plane.sats:  # Loop through each satellite in a plane
+                            if sat.satID in specificSats:
+                                extractor.add_conicSensor(id_name="ConicSensor for sat#"+str(sat.satID),
+                                                      satID=sat.satID,
+                                                      alt=alt,
+                                                      sensorAngle=conicSensorAngle)
+                else:
+                    for plane in self.planes:  # Loop through each plane
+                        for sat in plane.sats:  # Loop through each satellite in a plane
+                            extractor.add_conicSensor(id_name="ConicSensor for sat#"+str(sat.satID),
+                                                  satID=sat.satID,
+                                                  alt=alt,
+                                                  sensorAngle=conicSensorAngle)
+
+        #adding groundstations
+        if GS:
+            if (GS_pos==None):
+                return "You have chosen to visualize groundstations. Please make sure the GS_pos parameters have been inputted"
+            for i in GS_pos:
+                extractor.add_ground_station(pos=i)
+            if show_polyline_GS:
+                if (objects==None) or (L_avail_GS==None) or (L_poly_GS==None):
+                    return "You have chosen to visualize the gs-sat links between satellites. Please make sure the following paramenters have been inputted: objects, L_avail_GS, and L_poly_GS"
+                else:
+                    r3=[]
+                    r4=[]
+                    for i in objects:
+                        x = i.split('-')
+                        r3.append(x[0])
+                        r4.append(x[1])
+                    for i in range(len(objects)):
+                        extractor.add_communication(id_name=r3[i]+' to '+r4[i],
                                             reference1=r3[i],
                                             reference2=r4[i],
                                             true_time_intervals=L_avail_GS[i],
                                             time_intervals=L_poly_GS[i],
                                             line_color=[10, 245, 25, 255],
-                                            line_width=2
-                                            )
-        
-        #adding conicSenor
-        if show_conicSensor:
-            if specificSats:
-                for plane in self.planes:  # Loop through each plane
-                    for sat in plane.sats:  # Loop through each satellite in a plane
-                        if sat.satID in specificSats:
-                            extractor.add_conicSensor(id="CS"+str(sat.satID),
-                                                      name="ConicSensor for sat#"+str(sat.satID),
-                                                      satID=sat.satID,
-                                                      alt=alt)
-            else:
-                for plane in self.planes:  # Loop through each plane
-                    for sat in plane.sats:  # Loop through each satellite in a plane
-                        extractor.add_conicSensor(id="CS"+str(sat.satID),
-                                                  name="ConicSensor for sat#"+str(sat.satID),
-                                                  satID=sat.satID,
-                                                  alt=alt,
-                                                  sensorAngle=conicSensorAngle)
+                                            line_width=2)
                 
         if create_file:
             if (fname==None):
                 return "You have chosen to create a czml file. Please make sure the fname parameter has been inputted"     
-            doc = [str(x) for x in extractor.packets]
-            toPrint = ','.join(doc)
-            toPrint = '[' + toPrint + ']'
+            else:
+                doc = [str(x) for x in extractor.packets]
+                toPrint = ','.join(doc)
+                toPrint = '[' + toPrint + ']'
 
-            #To create file with name fname.czml
-            dir = os.getcwd()
-            fileDir = os.path.join(dir, fname + ".czml")
-            f = open(fileDir, "w")
-            f.write(toPrint)
-            f.close()
+                #To create file with name fname.czml
+                dir = os.getcwd()
+                fileDir = os.path.join(dir, fname + ".czml")
+                f = open(fileDir, "w")
+                f.write(toPrint)
+                f.close()
             
         else:
             doc = [str(x) for x in extractor.packets]
