@@ -1687,7 +1687,7 @@ class Satellite(Orbit):
 
     #     return rgtOrbits
 
-    def gen_GOM_2_RGT_sched(self, r_drift, gs, tStep=15*u.s):
+    def gen_GOM_2_RGT_sched(self, r_drift, gs, tStep=15*u.s, verbose=False):
         """
         Generates a schedule to take a satellite in GOM to RGT over the desired
         ground location (gs)
@@ -1726,7 +1726,7 @@ class Satellite(Orbit):
         hohmannPropagateTime = hohmannTime + tStep #add tStep buffer
         
         #Propagate to drift orbit
-        satDriftSim = SimSatellite(satDrift, hohmannPropagateTime.sec * u.s, tStep, verbose=True)
+        satDriftSim = SimSatellite(satDrift, hohmannPropagateTime.sec * u.s, tStep, verbose=verbose)
         satDriftSim.propagate()
         
         driftSat = satDriftSim.satSegments[2]
@@ -2014,12 +2014,17 @@ class SimSatellite():
 
                 if segmentTimeLen.to(u.s).value == 0: #Burn initialized at same time as sim start
                     sat_i = currentSat 
-                    sat_f = sat_i.apply_maneuver(poliMan)
+                    # sat_f = sat_i.apply_maneuver(poliMan)
 
                 else:
                     tDeltas = TimeDelta(np.arange(0,
                                                   segmentTimeLen.to(u.s).value,
                                                   self.tStep.to(u.s).value ) * u.s)
+
+                    nextT = tDeltas[-1]*u.s + self.tStep.to(u.s) #Get starting time for next satellite
+                    t2propagateAtEnd = nextT - segmentTimeLen.to(u.s)
+
+                    import ipdb;ipdb.set_trace()
                     if method == "J2":
                         coords = propagate(
                             currentSat,
@@ -2054,7 +2059,15 @@ class SimSatellite():
                     self.coordSegmentsECI.append(satECISkySeg)
                     self.coordSegmentsECEF.append(satECEFSeg)
                     self.coordSegmentsLLA.append(lla_satSeg)
-                sat_f = sat_i.apply_maneuver(poliMan)
+
+                #Apply maneuver at maneuver time (but don't record in output)
+                sat_maneuvered = sat_i.apply_maneuver(poliMan)
+
+                #Need to propagate to next time step to make sure it matches other
+                #propagated satellite time intervals
+                sat_f = sat_maneuvered.propagate(t2propagateAtEnd,
+                                method=cowell,
+                                f=f )       
 
                 currentSat = sat_f
 
