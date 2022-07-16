@@ -2014,17 +2014,25 @@ class SimSatellite():
 
                 if segmentTimeLen.to(u.s).value == 0: #Burn initialized at same time as sim start
                     sat_i = currentSat 
+                    # if self.satID == 3:
+                    #     import ipdb;ipdb.set_trace()
                     # sat_f = sat_i.apply_maneuver(poliMan)
-
+                    # t2propagateAtEnd = self.tStep
+                    t2propagateAtEnd = 0
                 else:
                     tDeltas = TimeDelta(np.arange(0,
                                                   segmentTimeLen.to(u.s).value,
                                                   self.tStep.to(u.s).value ) * u.s)
 
-                    nextT = tDeltas[-1]*u.s + self.tStep.to(u.s) #Get starting time for next satellite
-                    t2propagateAtEnd = nextT - segmentTimeLen.to(u.s)
+                    # print(f'SatID: {self.satID}')
+                    # print(f'segment Time Length: {segmentTimeLen.to(u.s)}')
+                    # print(f'tDeltas Length:      {len(tDeltas)}')
+                    # print(f'Time Length div tSTep: {(segmentTimeLen/self.tStep).to(u.one)}')
 
-                    import ipdb;ipdb.set_trace()
+                    nextT = tDeltas[-1] + self.tStep.to(u.s) #Get starting time for next satellite
+                    t2propagateAtEnd = nextT - segmentTimeLen.to(u.s)
+                    # if self.satID == 3:
+                    #     import ipdb;ipdb.set_trace()
                     if method == "J2":
                         coords = propagate(
                             currentSat,
@@ -2083,10 +2091,17 @@ class SimSatellite():
             timeEnd = self.initSat.epoch + self.t2propagate
             timeLeft = timeEnd - currentSat.epoch
             assert timeLeft >= 0, "timeLeft is < 0, can't create time Deltas"
+
             if timeLeft.to(u.s).value != 0: #No time left
                 tDeltas = TimeDelta(np.arange(0,
-                                          timeLeft.to(u.s).value,
+                                          timeLeft.to(u.s).value - self.tStep.to(u.s).value/10, #Subtract a bit to avoid numerical errors
                                           self.tStep.to(u.s).value ) * u.s)
+                print(f'SatID:               {self.satID}')
+                print(f'Time Left:           {timeLeft.to(u.s)}')
+                print(f'tDeltas Length:      {len(tDeltas)}')
+                print(f'Time Left div tSTep: {(timeLeft/self.tStep).to(u.one)}')
+                # if self.satID == 11:
+                #     import ipdb;ipdb.set_trace()
                 if method == "J2":
                     coords = propagate(
                         currentSat,
@@ -2102,6 +2117,7 @@ class SimSatellite():
                         currentSat,
                         tDeltas)
                     sat_i = currentSat.propagate(timeLeft)
+
                 timesSegment = currentSat.epoch + tDeltas
                 satECISeg = GCRS(coords.x, 
                                       coords.y, 

@@ -313,7 +313,7 @@ def calc_temp_resolution_ascend_descend(constellation, gs, altDrift = 650*u.km, 
     """
     r_drift = poliastro.constants.R_earth + altDrift
 
-    schedDict = constellation.gen_GOM_2_RGT_scheds(r_drift, gs, verbose)
+    schedDict = constellation.gen_GOM_2_RGT_scheds(r_drift, gs, tStep)
     sats2Maneuver, driftTimes, sched = constellation.get_ascending_descending_per_plane(schedDict) #Assumes one satellite per plane will get there
     walkerSim = sb.SimConstellation(constellation, t2propagate, tStep, verbose = verbose)
     
