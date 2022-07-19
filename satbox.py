@@ -200,39 +200,39 @@ class Constellation():
         return accessList
 
 
-    def propagate(self, time):
-        """
-        Propagates satellites in the constellation to a certain time.
+    # def propagate(self, time):
+    #     """
+    #     Propagates satellites in the constellation to a certain time.
 
-        Args:
-            time(astropy time object): Time to propagate to
-        """
-        planes2const=[]
-        for plane in self.planes:
-            if not plane:  # Continue if empty
-                continue
+    #     Args:
+    #         time(astropy time object): Time to propagate to
+    #     """
+    #     planes2const=[]
+    #     for plane in self.planes:
+    #         if not plane:  # Continue if empty
+    #             continue
 
-            planeSats=[]
-            for satIdx, sat in enumerate(plane.sats):
-                #Save properties that are erased during propagation
-                satID = sat.satID
-                planeID = sat.planeID
-                note = sat.note 
-                task = sat.task
-                manSched = sat.manSched
+    #         planeSats=[]
+    #         for satIdx, sat in enumerate(plane.sats):
+    #             #Save properties that are erased during propagation
+    #             satID = sat.satID
+    #             planeID = sat.planeID
+    #             note = sat.note 
+    #             task = sat.task
+    #             manSched = sat.manSched
 
-                satProp=sat.propagate(time)
+    #             satProp=sat.propagate(time)
 
-                satProp.satID = satID
-                satProp.planeID = planeID
-                satProp.note = note 
-                satProp.task = task
-                satProp.manSched = manSched
+    #             satProp.satID = satID
+    #             satProp.planeID = planeID
+    #             satProp.note = note 
+    #             satProp.task = task
+    #             satProp.manSched = manSched
 
-                planeSats.append(satProp)
-            plane2append=Plane.from_list(planeSats)
-            planes2const.append(plane2append)
-        return Constellation.from_list(planes2const)
+    #             planeSats.append(satProp)
+    #         plane2append=Plane.from_list(planeSats)
+    #         planes2const.append(plane2append)
+    #     return Constellation.from_list(planes2const)
 
     def add_comms_payload(self, commsPL):
         """
@@ -799,7 +799,7 @@ class SimConstellation():
 
         self.propagated = 0 #Check to see if constellation has been propagated
 
-    def propagate(self, method="J2", select_sched_sats=None, verbose=False):
+    def propagate(self, method="J2", select_sched_sats=None, skip_all_sched=False, verbose=False):
         """
         Propagate satellites in a constellation Simulator
 
@@ -830,6 +830,8 @@ class SimConstellation():
                     else:
                         skip_sched = True
 
+                if skip_all_sched: #Case where you don't want any burns anyway
+                    skip_sched=True
                 satPropInit.propagate(skip_sched=skip_sched)
                 planeSats.append(satPropInit)
             plane2append = Plane.from_list(planeSats)
@@ -2024,10 +2026,6 @@ class SimSatellite():
                                                   segmentTimeLen.to(u.s).value,
                                                   self.tStep.to(u.s).value ) * u.s)
 
-                    # print(f'SatID: {self.satID}')
-                    # print(f'segment Time Length: {segmentTimeLen.to(u.s)}')
-                    # print(f'tDeltas Length:      {len(tDeltas)}')
-                    # print(f'Time Length div tSTep: {(segmentTimeLen/self.tStep).to(u.one)}')
 
                     nextT = tDeltas[-1] + self.tStep.to(u.s) #Get starting time for next satellite
                     t2propagateAtEnd = nextT - segmentTimeLen.to(u.s)
@@ -2096,10 +2094,7 @@ class SimSatellite():
                 tDeltas = TimeDelta(np.arange(0,
                                           timeLeft.to(u.s).value - self.tStep.to(u.s).value/10, #Subtract a bit to avoid numerical errors
                                           self.tStep.to(u.s).value ) * u.s)
-                print(f'SatID:               {self.satID}')
-                print(f'Time Left:           {timeLeft.to(u.s)}')
-                print(f'tDeltas Length:      {len(tDeltas)}')
-                print(f'Time Left div tSTep: {(timeLeft/self.tStep).to(u.one)}')
+                
                 # if self.satID == 11:
                 #     import ipdb;ipdb.set_trace()
                 if method == "J2":

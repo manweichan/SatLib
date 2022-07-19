@@ -102,7 +102,7 @@ def plotGroundTrack(lon, lat, style_color = 'k',
 
 
 def addGroundTrack(lon, lat, ax, style_color = 'k', 
-    style_line = '-', style_init = 'r^', style_width=1):
+    style_line = '-', style_init = 'r^', style_width=1, label=None):
     """
     Plots ground tracks on map using cartopy
 
@@ -132,7 +132,8 @@ def addGroundTrack(lon, lat, ax, style_color = 'k',
         color=style_color, 
         linestyle = style_line,
         linewidth = style_width, 
-        transform=ccrs.Geodetic())
+        transform=ccrs.Geodetic(),
+        label=label)
     ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
 
 
@@ -170,11 +171,12 @@ def addGroundLoc(lon, lat, ax, style_color = 'k',
         transform=ccrs.Geodetic(),
         label=label)
     # ax.plot(lon[0], lat[0], style_init, transform=ccrs.Geodetic())
-
+    if label:
+        ax.legend()
 
     return ax
 
-def plotSimConstellationGroundTrack(simConstellation, satellites = []):
+def plotSimConstellationGroundTrack(simConstellation, satellites = [], legend=False):
     """
     Plot ground tracks of a SimConstellation
 
@@ -200,24 +202,85 @@ def plotSimConstellationGroundTrack(simConstellation, satellites = []):
     for plane in propConstellation.planes:
         for sat in plane.sats:
             c = next(color)
+            plotLabel = True
             for segment in sat.coordSegmentsLLA:
+                # import ipdb; ipdb.set_trace()
                 lon = segment.lon
                 lat = segment.lat
                 if sat.initSat.satID in satellites or len(satellites) == 0:
                     linestyle_cycler = cycle(['-','--',':','-.'])
                     linewidth_cycler = cycle([1,2,3,4])
                     if firstRun == 1:
+                        if plotLabel:
+                            label=f'Sat {sat.satID}'
+                            plotLabel = False
+                        else:
+                            label=None
                         fig, ax = plotGroundTrack(lon, lat, 
                             style_color=c, 
                             style_line=next(linestyle_cycler),
-                            style_width=next(linewidth_cycler))
+                            style_width=next(linewidth_cycler),
+                            label=label)
                         firstRun = 0
                     else:
+                        if plotLabel:
+                            label=f'Sat {sat.satID}'
+                            plotLabel = False
+                        else:
+                            label=None
                         ax = addGroundTrack(lon, lat, ax, 
                             style_color=c, 
                             style_line=next(linestyle_cycler),
-                            style_width=next(linewidth_cycler))
+                            style_width=next(linewidth_cycler),
+                            label=label)
+    if legend:
+        ax.legend()
     return fig, ax
+
+def addSimConstellationGroundTrack(simConstellation, ax, satellites = [], legend=False):
+    """
+    Plot ground tracks of a SimConstellation
+
+    Parameters
+    ----------
+    simConstellation: ~satbox.SimConstellation
+        Constellation to plot
+    satellites: list
+        List of individual satellites to plot. Empty list plots all satellites
+
+
+    """
+    assert simConstellation.propagated==1, "Run propagate() on class first"
+    propConstellation = simConstellation.constellation
+
+    #Get number of satellites
+    nSats = len(simConstellation.initConstellation.get_sats())
+
+    color = iter(plt.cm.jet(np.linspace(0,1,nSats)))
+    
+    for plane in propConstellation.planes:
+        for sat in plane.sats:
+            c = next(color)
+            plotLabel = True
+            for segment in sat.coordSegmentsLLA:
+                lon = segment.lon
+                lat = segment.lat
+                if sat.initSat.satID in satellites or len(satellites) == 0:
+                    if plotLabel:
+                        label=f'Sat {sat.satID}'
+                        plotLabel = False
+                    else:
+                        label=None
+                    linestyle_cycler = cycle(['-','--',':','-.'])
+                    linewidth_cycler = cycle([1,2,3,4])
+                    ax = addGroundTrack(lon, lat, ax, 
+                        style_color=c, 
+                        style_line=next(linestyle_cycler),
+                        style_width=next(linewidth_cycler),
+                        label=label)
+    if legend:
+        ax.legend()
+    return ax
 
 def writeCZMLFile_constellation(constellation, dirPath, periods = 1, sample_points = 80, singleSat = False,
 	groundtrack = False, orbitPath = True):
@@ -260,3 +323,30 @@ def writeCZMLFile_constellation(constellation, dirPath, periods = 1, sample_poin
 	f = open(dirPath, "w")
 	f.write(toPrint)
 	f.close()
+
+def plot_dijkstra(contacts, path, to_plot=-1):
+    """
+    Plot dijkstra contacts
+
+    contacts: ~dict
+        Two fields "contacts" and "time" which are also dictionaries of boolean arrays of contacts between nodes
+    path: ~list
+        List of nodes for dijkstra routing
+    to_plot: ~int
+        Index of last element you want to plot (if you want to cut graph shorter)
+    """
+    fig,axs = plt.subplots(len(path)-1)
+    for n, ax in enumerate(axs):
+        source = path[n]
+        destination = path[n+1]
+        
+        key = f'{source}-{destination}'
+        
+        los = contacts['contacts'][key]
+        time = contacts['time'][key]
+        timePlot = [t.datetime for t in time]
+        
+        ax.plot(timePlot[0:to_plot], los[0:to_plot], label=key)
+        ax.set(ylabel=f'{key}')
+    fig.autofmt_xdate()
+    return fig, ax
