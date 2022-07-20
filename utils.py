@@ -213,7 +213,7 @@ def get_isl_feasibility(dataDict, distanceConstraint = None, slewRateConstraint 
         pairData['dopplerMask'] = dopplerMask
         pairData['islFeasible'] = np.logical_and.reduce((los, distanceMask, slewMask, dopplerMask))
 
-def calc_temp_resolution(constellation, gs, altDrift = 650*u.km, constraint_type = 'nadir', constraint_angle = 25*u.deg,
+def calc_temp_resolution(constellation, gs, altChange = 100*u.km, constraint_type = 'nadir', constraint_angle = 25*u.deg,
                          t2propagate = 5*u.day, tStep = 15*u.s, verbose=True):
     """
     Calculate the temporal resolution of a walker constellation and ground station
@@ -224,8 +224,8 @@ def calc_temp_resolution(constellation, gs, altDrift = 650*u.km, constraint_type
         Constellation to run analysis on
     gs: ~satbox.groundLoc class
         Ground location to target for observing
-    altDrift: ~astropy.unit.Quantity
-        Altitude of reconfigurable drift orbit
+    altChange: ~astropy.unit.Quantity
+        Altitude change to get to drift orbit
     constraint_type: ~string | "nadir" or "elevation"
             constrain angles with either a "nadir" (usually analogous to sensor FOV) or "elevation" (minimum elevation angle from ground station) constraint
     constraint_angle: ~astropy.unit.Quantity
@@ -246,9 +246,9 @@ def calc_temp_resolution(constellation, gs, altDrift = 650*u.km, constraint_type
         walkerSim - propagated walker constellation (satbox.SimConstellation)
         accessObj - access object (satbox.DataAccessConstellation)
     """
-    r_drift = poliastro.constants.R_earth + altDrift
+    # r_drift = poliastro.constants.R_earth + altDrift
 
-    schedDict = constellation.gen_GOM_2_RGT_scheds(r_drift, gs)
+    schedDict = constellation.gen_GOM_2_RGT_scheds(altChange, gs)
     sats2Maneuver, driftTimes, sched = constellation.get_lowest_drift_time_per_plane(schedDict) #Assumes one satellite per plane will get there
     
     walkerSim = sb.SimConstellation(constellation, t2propagate, tStep, verbose = verbose)
@@ -279,7 +279,7 @@ def calc_temp_resolution(constellation, gs, altDrift = 650*u.km, constraint_type
     
     return output
 
-def calc_temp_resolution_ascend_descend(constellation, gs, altDrift = 650*u.km, constraint_type = 'nadir', constraint_angle = 25*u.deg,
+def calc_temp_resolution_ascend_descend(constellation, gs, altChange = 100*u.km, constraint_type = 'nadir', constraint_angle = 25*u.deg,
                          t2propagate = 5*u.day, tStep = 15*u.s, verbose=True):
     """
     Calculate the temporal resolution of a walker constellation and ground target
@@ -291,8 +291,8 @@ def calc_temp_resolution_ascend_descend(constellation, gs, altDrift = 650*u.km, 
         Constellation to run analysis on
     gs: ~satbox.groundLoc class
         Ground location to target for observing
-    altDrift: ~astropy.unit.Quantity
-        Altitude of reconfigurable drift orbit
+    altChange: ~astropy.unit.Quantity
+        Altitude change to get to drift orbit
     constraint_type: ~string | "nadir" or "elevation"
             constrain angles with either a "nadir" (usually analogous to sensor FOV) or "elevation" (minimum elevation angle from ground station) constraint
     constraint_angle: ~astropy.unit.Quantity
@@ -313,9 +313,9 @@ def calc_temp_resolution_ascend_descend(constellation, gs, altDrift = 650*u.km, 
         walkerSim - propagated walker constellation (satbox.SimConstellation)
         accessObj - access object (satbox.DataAccessConstellation)
     """
-    r_drift = poliastro.constants.R_earth + altDrift
+    # r_drift = poliastro.constants.R_earth + altDrift
 
-    schedDict = constellation.gen_GOM_2_RGT_scheds(r_drift, gs, tStep)
+    schedDict = constellation.gen_GOM_2_RGT_scheds(altChange, gs, tStep)
     sats2Maneuver, driftTimes, sched = constellation.get_ascending_descending_per_plane(schedDict) #Assumes one satellite per plane will get there
     walkerSim = sb.SimConstellation(constellation, t2propagate, tStep, verbose = verbose)
     
@@ -614,7 +614,7 @@ def print_dijkstra_result(previous_nodes, shortest_path, start_node, target_node
 
 def get_fastest_downlink(constellation, groundStations, groundTarget,
                          recon=True, isl=True,
-                         altDrift=650*u.km, 
+                         altChange=100*u.km, 
                          constraint_type_gs='elevation', 
                          constraint_angle_gs=25*u.deg, 
                          constraint_type_sense='nadir',
@@ -640,8 +640,8 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
         If true, reconfigures orbits
     isl: ~bool
         If true, uses ISLs to determine data routing
-    altDrift: ~astropy.unit.Quantity
-        Altitude of reconfigurable drift orbit
+    altChange: ~astropy.unit.Quantity
+        Altitude change to get to drift orbit
     constraint_type_gs: ~string | "nadir" or "elevation"
             constraint angles type for ground station pass
     constraint_angle_gs: ~astropy.unit.Quantity
@@ -676,10 +676,10 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     groundStationNodes = [str(g.groundID) for g in groundStations]
 
     ##########  Generate Recon Schedule  ##########
-    r_drift = poliastro.constants.R_earth + altDrift
+    # r_drift = poliastro.constants.R_earth + altDrift
     if verbose:
         print("Step 1 of 5: Generating Schedule")
-    schedDict = constellation.gen_GOM_2_RGT_scheds(r_drift, groundTarget)
+    schedDict = constellation.gen_GOM_2_RGT_scheds(altChange, groundTarget)
 
     ##########  Propagating  ##########
     if verbose:

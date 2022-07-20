@@ -393,7 +393,7 @@ class Constellation():
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
-    def gen_GOM_2_RGT_scheds(self, r_drift, gs, tStep=15*u.s):
+    def gen_GOM_2_RGT_scheds(self, altChange, gs, tStep=15*u.s):
         """
         Generates schedules to take each satellite in the constellation to the
         desired RGT track. This function doesn't decide which satellites are
@@ -403,8 +403,8 @@ class Constellation():
         ----------
         self: satbox.Constellation
             Constellation in global observation mode
-        r_drift: ~astropy.unit.Quantity
-            Radius of drift orbit (assuming circular)
+        altChange: ~astropy.unit.Quantity
+            Altitude change to get to drift orbit
         gs: satbox.GroundLoc
             Ground location that RGT should pass
         tSTep: ~astropy.unit.Quantity
@@ -421,7 +421,7 @@ class Constellation():
         schedDict = {}
 
         for sat in sats:
-            sched = sat.gen_GOM_2_RGT_sched(r_drift, gs, tStep)
+            sched = sat.gen_GOM_2_RGT_sched(altChange, gs, tStep)
             satID = sat.satID
             planeID = sat.planeID
 
@@ -1689,7 +1689,7 @@ class Satellite(Orbit):
 
     #     return rgtOrbits
 
-    def gen_GOM_2_RGT_sched(self, r_drift, gs, tStep=15*u.s, verbose=False):
+    def gen_GOM_2_RGT_sched(self, altChange, gs, tStep=15*u.s, k_r=15, k_d=1, verbose=False):
         """
         Generates a schedule to take a satellite in GOM to RGT over the desired
         ground location (gs)
@@ -1698,16 +1698,32 @@ class Satellite(Orbit):
         ----------
         self: satbox.Satellite
             Satellite in global observation mode
-        r_drift: ~astropy.unit.Quantity
-            Radius of drift orbit (assuming circular)
+        altChange: ~astropy.unit.Quantity
+            Altitude change to get to drift orbit
         gs: satbox.GroundLoc
             Ground location that RGT should pass
-            
+        tStep: ~astropy.unit.Quantity
+            Time step for propagation
+        k_r: int
+            Number of revolutions until repeat ground track
+        k_d: int 
+            Number of days to repeat ground track
+        verbose: bool
+            Print statements if true
+
         Returns
         -------
         sched: satbox.ManeuverSchedule
             Schedule that will take self to desired RGT orbit
         """
+
+        #Find drift altitude of RGT orbits
+        a_out, alt_out = om.getRGTOrbit(k_r, k_d, self.ecc, self.inc)
+
+        if self.alt >= alt_out:
+            r_drift = self.a + altChange
+        elif self.alt < alt_out:
+            r_drift = self.a - altChange
         
         # Create drift satellite
         sched = ManeuverSchedule()
