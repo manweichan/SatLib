@@ -618,7 +618,7 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
                          constraint_type_gs='elevation', 
                          constraint_angle_gs=25*u.deg, 
                          constraint_type_sense='nadir',
-                         constraint_angle_sense=25*u.deg,
+                         constraint_angle_sense=20*u.deg,
                          t2propagate=3*u.day,
                          tStep=15*u.s, 
                          distanceThreshold=1000*u.km,
@@ -685,11 +685,13 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     if verbose:
         print("Step 2 of 5: Propagating Satellites")
 
-    sats2Maneuver, driftTimes, sched = constellation.get_ascending_descending_per_plane(schedDict) #Assumes one satellite per plane will get there
+    sats2Maneuver, driftTimes, sched = constellation.get_ascending_descending_per_plane(schedDict) 
     if not recon:
         select_sched_sats = None
+        skip_all_sched = True
     else:
         select_sched_sats = sats2Maneuver
+        skip_all_sched = False
     walkerSim = sb.SimConstellation(constellation, t2propagate, tStep, verbose = False)
     walkerSim.propagate(select_sched_sats = select_sched_sats, verbose=False)
 
@@ -805,6 +807,8 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
             walkerGraph = TimeVaryingGraph(newContactGraph, nodesNoISL)
 
         for intervals in passTimes[sat]['intervals']:
+            if not any(intervals): #skip if no passes
+                continue
             passKey = f'pass {passNum}'
             startTime = intervals[1] #End of pass
             previous_nodes, shortest_path = time_varying_dijkstra_algorithm(graph=walkerGraph, start_node=sat, start_time=startTime, verbose=True)
@@ -843,6 +847,100 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     }
 
     return outputDict
+
+def calc_metrics(dijkstraData):
+    """
+    Calculates Age of Information
+    
+    Parameters
+    ----------
+    dijkstraData: dict
+        Output of utils.get_fastest_downlink
+        
+    Returns
+    -------
+    AoI: ~astropy.unit.Quantity
+        average age of information
+    srt: ~astropy.unit.Quantity
+        system response time
+    passTimeSum: ~astropy.unit.Quantity
+        total sum of pass time over target
+    """
+    downlinks_all = dijkstraData.get('downlinks_all')
+    passTimes = dijkstraData.get('passTimes')
+    timeStream = dijkstraData.get('contacts').get('time')
+
+    tStreamKeys = list(timeStream.keys())
+    t0 = timeStream[tStreamKeys[0]][0] #Get start of sim
+    tf = timeStream[tStreamKeys[0]][-1] #Get end time of sim
+
+    downlinks_all_flat = {}
+    #Flatten downlinks data dictionary
+    for satKey in downlinks_all:
+        satDict = downlinks_all.get(satKey)
+        for passKey in satDict:
+            passDict = satDict.get(passKey)
+            for gsKey in passDict:
+                dlTime = passDict.get(gsKey)
+                newKey = satKey + '|' + passKey# + '|' + gsKey
+                downlinks_all_flat[newKey] = dlTime
+
+    downlinks_all_sorted_raw = dict(sorted(downlinks_all_flat.items(), key=lambda item: item[1]))
+    #Remove edge cases
+    downlinks_all_sorted = {}
+    for key in downlinks_all_sorted_raw:
+        if downlinks_all_sorted_raw[key] <= tf:
+            downlinks_all_sorted[key] = downlinks_all_sorted_raw[key]
+        else:
+            continue    
+
+    passTimeDict = {}
+    passTimeSum = 0
+    #Flatten passTimes
+    for key in downlinks_all_sorted:
+        satPassGS = key.split('|')
+        sat = satPassGS[0].split()[1]
+        passNum = satPassGS[1].split()[1]
+
+        passTime = passTimes[sat].get('intervals')[int(passNum)][1]
+
+        passTimeLength = passTimes[sat].get('length')[int(passNum)]
+
+        passTimeSum += passTimeLength
+
+        finalKey = f'sat {sat}|pass {passNum}'
+
+        passTimeDict[finalKey] = passTime
+
+    # Calculate age of information
+    keys = list(downlinks_all_sorted.keys())
+    startIdx = 1
+
+    frac = 0
+
+    # Calculate AoI
+    T = 3*u.day
+    for idx in range(1, len(keys)):
+        key_i = keys[idx]
+        key_im1 = keys[idx-1]
+
+        t21 = (downlinks_all_sorted[key_i] - passTimeDict[key_im1]).sec**2
+        t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
+
+        frac += (t21 - t11)/2 *u.s*u.s
+
+
+    AoI = (frac/T).decompose().to(u.min)
+    srt = (downlinks_all_sorted[keys[0]] - t0).sec #In seconds
+    srtMin = srt/60
+
+    outputMetrics = {
+                        'AoI': AoI,
+                        'srt': srtMin,
+                        'passTimeSum': passTimeSum,
+    }
+
+    return outputMetrics
 
 def get_potential_isl_keys(satID, keys, excludeList = None):
     """

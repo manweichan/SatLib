@@ -833,7 +833,8 @@ class SimConstellation():
                             print(f"Not skipping schedule for {planeKey} {satStr}")
                     else:
                         skip_sched = True
-
+                else:
+                    skip_sched=True
                 if skip_all_sched: #Case where you don't want any burns anyway
                     skip_sched=True
                 satPropInit.propagate(skip_sched=skip_sched)
