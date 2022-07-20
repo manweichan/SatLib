@@ -358,8 +358,10 @@ class Constellation():
         """
         satIDNew = 0
         for plane in self.planes:
+            planeID = plane.planeID
             for sat in plane.sats:
                 sat.satID = satIDNew
+                sat.planeID = planeID
                 satIDNew += 1
 
 
@@ -419,7 +421,6 @@ class Constellation():
         sats = self.get_sats()
 
         schedDict = {}
-
         for sat in sats:
             sched = sat.gen_GOM_2_RGT_sched(altChange, gs, tStep)
             satID = sat.satID
@@ -579,8 +580,11 @@ class Constellation():
             #Last thing needed is to change the schedule of the selected satellite
             if backupTracker:
                 planeIdx = int(planeKey.split()[-1])
-                sats = self.planes[planeIdx].sats
 
+                for p in self.planes:
+                    if p.planeID == planeIdx:
+                        sats = p.sats
+                # sats = self.planes[planeIdx].sats
                 satIdx = int(saveSat.split()[-1])
 
                 #Get satellite to switch schedule
@@ -1469,7 +1473,6 @@ class Satellite(Orbit):
             print(f'Arcsin angle {asin} rounding to -1')
             asin = -1 * u.one
         delLam = np.arcsin(asin) #Longitudinal offset
-        # import ipdb;ipdb.set_trace()
 
         theta_GMST = raan + delLam - lon #ascending sidereal angle of pass
 
@@ -1660,7 +1663,6 @@ class Satellite(Orbit):
 
     #     for idx, sch in enumerate(scheduleItms):
     #         raans, anoms = self.__desired_raan_from_pass_time(sch.time, groundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
-    #         import ipdb; ipdb.set_trace()
     #         if sch.passType == 'a': #Ascending argument of latitude
     #             omega = anoms[0]
     #             raan = raans[0]
@@ -1716,7 +1718,6 @@ class Satellite(Orbit):
         sched: satbox.ManeuverSchedule
             Schedule that will take self to desired RGT orbit
         """
-
         #Find drift altitude of RGT orbits
         a_out, alt_out = om.getRGTOrbit(k_r, k_d, self.ecc, self.inc)
 
@@ -2032,8 +2033,7 @@ class SimSatellite():
 
                 if segmentTimeLen.to(u.s).value == 0: #Burn initialized at same time as sim start
                     sat_i = currentSat 
-                    # if self.satID == 3:
-                    #     import ipdb;ipdb.set_trace()
+
                     # sat_f = sat_i.apply_maneuver(poliMan)
                     # t2propagateAtEnd = self.tStep
                     t2propagateAtEnd = 0
@@ -2045,8 +2045,7 @@ class SimSatellite():
 
                     nextT = tDeltas[-1] + self.tStep.to(u.s) #Get starting time for next satellite
                     t2propagateAtEnd = nextT - segmentTimeLen.to(u.s)
-                    # if self.satID == 3:
-                    #     import ipdb;ipdb.set_trace()
+
                     if method == "J2":
                         coords = propagate(
                             currentSat,
@@ -2111,8 +2110,7 @@ class SimSatellite():
                                           timeLeft.to(u.s).value - self.tStep.to(u.s).value/10, #Subtract a bit to avoid numerical errors
                                           self.tStep.to(u.s).value ) * u.s)
                 
-                # if self.satID == 11:
-                #     import ipdb;ipdb.set_trace()
+
                 if method == "J2":
                     coords = propagate(
                         currentSat,
@@ -2313,10 +2311,10 @@ class ManeuverSchedule():
         
         #Add to burn scheduler
 
-        # import ipdb; ipdb.set_trace()
+
         man1_hoh = ManeuverObject(orb.epoch, delv1.to(u.km/u.s))
         man2_hoh = ManeuverObject(orb.epoch + t_hohmann, delv2.to(u.km/u.s))
-        # import ipdb; ipdb.set_trace()
+
 
         self.add_maneuver(man1_hoh)
         self.add_maneuver(man2_hoh)
@@ -2614,7 +2612,6 @@ class DataAccessSat():
         else:
             assert False, "constraint_type not recognized"
 
-        # import ipdb;ipdb.set_trace()
         accessIntervals = utils.get_start_stop_intervals(accessMask, self.sat.timesAll)
 
 
