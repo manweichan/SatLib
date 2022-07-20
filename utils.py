@@ -787,8 +787,22 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
         shortest_path_all[satKey] = {}
         
         if not isl: #No satellite nodes except for sensing satellite
-            nodesNoISL = groundStationNodes.append(str(sat))
-            walkerGraph = TimeVaryingGraph(contacts, nodesNoISL)
+            nodesNoISL = copy.deepcopy(groundStationNodes)
+            nodesNoISL.append(str(sat)) #Just add satellite 
+            allContactKeys = list(contacts['contacts'].keys())
+            keys2keep = []
+            for k in allContactKeys:
+                keySplit = k.split('-')
+                source = keySplit[0]
+                destination = keySplit[1]
+                if source in nodesNoISL and destination in nodesNoISL:
+                    keys2keep.append(k)
+            newContacts = { my_key: contacts['contacts'][my_key] for my_key in keys2keep}
+            newTimes = { my_key: contacts['time'][my_key] for my_key in keys2keep}
+            newContactGraph = {}
+            newContactGraph['contacts'] = newContacts
+            newContactGraph['time'] = newTimes
+            walkerGraph = TimeVaryingGraph(newContactGraph, nodesNoISL)
 
         for intervals in passTimes[sat]['intervals']:
             passKey = f'pass {passNum}'
