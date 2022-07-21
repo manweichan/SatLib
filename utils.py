@@ -547,9 +547,9 @@ def time_varying_dijkstra_algorithm(graph, start_node, start_time, verbose=False
     previous_nodes = {}
     
     # We'll use max_value to initialize the "infinity" value of the unvisited nodes   
-    max_value = 100 #Set max value to a century from now
+    max_value = 100 * u.yr #Set max value to a century from now
     for node in unvisited_nodes:
-        shortest_path[node] = start_time + max_value * u.yr #Maximum time in years added to start_time
+        shortest_path[node] = start_time + max_value  #Maximum time in years added to start_time
     # However, we initialize the starting node's value with 0   
     shortest_path[start_node] = start_time
     
@@ -848,7 +848,7 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
 
     return outputDict
 
-def calc_metrics(dijkstraData):
+def calc_metrics(dijkstraData, T=3*u.day):
     """
     Calculates Age of Information
     
@@ -856,6 +856,8 @@ def calc_metrics(dijkstraData):
     ----------
     dijkstraData: dict
         Output of utils.get_fastest_downlink
+    T: ~astropy.unit.Quantity
+        Time of entire simulation (to calculate average)
         
     Returns
     -------
@@ -919,7 +921,7 @@ def calc_metrics(dijkstraData):
     frac = 0
 
     # Calculate AoI
-    T = 3*u.day
+
     for idx in range(1, len(keys)):
         key_i = keys[idx]
         key_im1 = keys[idx-1]
@@ -932,7 +934,7 @@ def calc_metrics(dijkstraData):
 
     AoI = (frac/T).decompose().to(u.min)
     srt = (downlinks_all_sorted[keys[0]] - t0).sec #In seconds
-    srtMin = srt/60
+    srtMin = srt/60 * u.min
 
     outputMetrics = {
                         'AoI': AoI,

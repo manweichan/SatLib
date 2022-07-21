@@ -336,6 +336,7 @@ def plot_dijkstra(contacts, path, to_plot=-1):
         Index of last element you want to plot (if you want to cut graph shorter)
     """
     fig,axs = plt.subplots(len(path)-1)
+    axs[0].set_title("Nodes: " + " -> ".join(path))
     for n, ax in enumerate(axs):
         source = path[n]
         destination = path[n+1]
@@ -348,5 +349,6 @@ def plot_dijkstra(contacts, path, to_plot=-1):
         
         ax.plot(timePlot[0:to_plot], los[0:to_plot], label=key)
         ax.set(ylabel=f'{key}')
+        ax.set_yticks([0,1])
     fig.autofmt_xdate()
     return fig, ax
