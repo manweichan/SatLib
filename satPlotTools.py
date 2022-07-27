@@ -341,7 +341,7 @@ def plot_dijkstra(contacts, path, to_plot=-1):
         source = path[n]
         destination = path[n+1]
         
-        key = f'{source}-{destination}'
+        key = f'sat {source}-{destination}'
         
         los = contacts['contacts'][key]
         time = contacts['time'][key]
