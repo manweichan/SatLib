@@ -1942,6 +1942,11 @@ class SimSatellite():
         self.task = satellite.task
         self.propagated = 0 #check if propagated
         self.epoch = satellite.epoch
+        self.ecc = satellite.ecc
+        self.inc = satellite.inc
+        self.a = satellite.a
+        self.alt = satellite.alt 
+        
 
         #Times in UTC (default)
         self.times = satellite.epoch + self.timeDeltas
@@ -1953,6 +1958,7 @@ class SimSatellite():
         self.coordSegmentsECI = []
         self.coordSegmentsECEF = []
         self.coordSegmentsLLA = []
+
 
     def propagate(self, method="J2", skip_sched=False):
         """
