@@ -872,7 +872,7 @@ class SimConstellation():
         """
         Gets relative velocities between satellites in the constellation
 
-        Needs to run get_rv_from_propagate first to get position/velocity
+        Needs to run self.propagate first to get position/velocity
         values first
 
         Args:
@@ -1941,6 +1941,7 @@ class SimSatellite():
         self.note = satellite.note 
         self.task = satellite.task
         self.propagated = 0 #check if propagated
+        self.epoch = satellite.epoch
 
         #Times in UTC (default)
         self.times = satellite.epoch + self.timeDeltas

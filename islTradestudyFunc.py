@@ -73,6 +73,7 @@ def graphNumSats(alt, disThres, varyAlt=False, varyDisThres=False, yLim=None, xL
     yLim (list): list of y limits
     xLim (list): list of x limits
     """
+    plt.figure()
     if (varyAlt==True and varyDisThres==True) or (varyAlt==False and varyDisThres==False):
         return 'ERROR!!! Please select a parameter to vary by setting either varyAlt or varyDisThres to True.'
     maxDisThres = np.max(disThres)
