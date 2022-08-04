@@ -1946,7 +1946,7 @@ class SimSatellite():
         self.inc = satellite.inc
         self.a = satellite.a
         self.alt = satellite.alt 
-        
+
 
         #Times in UTC (default)
         self.times = satellite.epoch + self.timeDeltas
