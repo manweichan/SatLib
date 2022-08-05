@@ -612,23 +612,18 @@ def print_dijkstra_result(previous_nodes, shortest_path, start_node, target_node
 
     return pathStr
 
-def get_fastest_downlink(constellation, groundStations, groundTarget,
-                         recon=True, isl=True,
-                         altChange=100*u.km, 
+def prep_dijkstra(constellation, groundStations, groundTarget,
+                         recon=True,
+                         altChange=100*u.km,
                          constraint_type_gs='elevation', 
-                         constraint_angle_gs=25*u.deg, 
+                         constraint_angle_gs=25*u.deg,
                          constraint_type_sense='nadir',
                          constraint_angle_sense=20*u.deg,
                          t2propagate=3*u.day,
-                         tStep=15*u.s, 
-                         distanceThreshold=1000*u.km,
-                         slewThreshold=3*np.pi/180/u.s, 
-                         islTimeThreshold=2.5*u.min,
-                         downlinkTimeThreshold=30*u.s,
+                         tStep=15*u.s,
                          verbose=False):
     """
-    Gets the route for fastest downlink for a reconfigurable constellation 
-    to a set of ground stations
+    Propagates satellites and creates schedules in preparation for Dijkstra routing
 
     Parameters
     ----------
@@ -656,14 +651,6 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
         Amount of time to Propagate starting from satellite.epoch
     tStep: ~astropy.unit.Quantity
         Time step used in the propagation
-    distanceThreshold: ~astropy.unit.Quantity
-        Distance at which one can close an intersatellite link between satellites
-    slewThreshold: ~astropy.unit.Quantity (1/u.s) in radians
-        Intersatellite links cannot close links at slew rates greater than this
-    islTimeTreshold: ~astropy.unit.Quantity
-        ISL contacts must be longer than this to transmit the message in full
-    downlinkTimeThreshold: ~astropy.unit.Quantity
-        Ground contact must be longer than this to transmit the images in full
     verbose: Boolean
         Prints out debug statements if True
 
@@ -671,12 +658,11 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     -------
     outputDict: ~dict
         Dictionary with keys
-        downlinks_all      - Time of downlinks. Structure[sat][pass#][groundStation]
-        paths_all          - The path through the nodes for all downlinks Structure[sat][pass#]
-        previous_nodes_all - The previous node that leads to fastest route. Structure[sat][pass#][node]
-        shortest_path_all  - The shortest path to each of the nodes. Structure[source][pass#][destination_node]
-        passTimes          - pass times for satellite of groundTarget. Structure[sat][intervals/length]
-        contacts           - True/False arrays of when contacts are available (useful for plotting)
+        groundStationNodes   - List of ground station IDx
+        sats2Maneuver        - List of satellites to be reconfigured
+        relOutput            - Relative position and velocity data between satellites in constellation
+        accessObjectGS       - Access objects for access with ground stations
+        accessObjectTarget   - Access objects for access with ground target
     """
     ## Get groundStationNodes
     groundStationNodes = [str(g.groundID) for g in groundStations]
@@ -691,7 +677,7 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     if verbose:
         print("Step 2 of 5: Propagating Satellites")
 
-    sats2Maneuver, driftTimes, sched = constellation.get_ascending_descending_per_plane(schedDict) 
+    sats2Maneuver = constellation.get_ascending_descending_per_plane(schedDict)[0]
     if not recon:
         select_sched_sats = None
         skip_all_sched = True
@@ -715,6 +701,62 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     accessObjectTarget = sb.DataAccessConstellation(walkerSim, groundTarget)
     accessObjectTarget.calc_access(constraint_type_sense, constraint_angle_sense)
 
+    outputDict = {
+                    'groundStationNodes': groundStationNodes,
+                    'sats2Maneuver':     sats2Maneuver,
+                    'relOutput': relOutput,
+                    'accessObjectGS': accessObjectGS,
+                    'accessObjectTarget': accessObjectTarget,
+    }
+
+    return outputDict
+
+def run_dijkstra_routing(prep_dijkstra_output,
+                         isl=True,
+                         distanceThreshold=1000*u.km,
+                         slewThreshold=3*np.pi/180/u.s, 
+                         islTimeThreshold=2.5*u.min,
+                         downlinkTimeThreshold=30*u.s,
+                         verbose=False):
+    """
+    Run the dijkstra routing given the data prepared in prep_dijkstra
+
+    Parameters
+    ----------
+    prep_dijkstra_output: dict
+        Output of prep_dijkstra()
+    isl: ~bool
+        If true, uses ISLs to determine data routing
+    distanceThreshold: ~astropy.unit.Quantity
+        Distance at which one can close an intersatellite link between satellites
+    slewThreshold: ~astropy.unit.Quantity (1/u.s) in radians
+        Intersatellite links cannot close links at slew rates greater than this
+    islTimeTreshold: ~astropy.unit.Quantity
+        ISL contacts must be longer than this to transmit the message in full
+    downlinkTimeThreshold: ~astropy.unit.Quantity
+        Ground contact must be longer than this to transmit the images in full
+    verbose: Boolean
+        Prints out debug statements if True
+
+    Returns
+    -------
+    outputDict: ~dict
+        Dictionary with keys
+        downlinks_all      - Time of downlinks. Structure[sat][pass#][groundStation]
+        paths_all          - The path through the nodes for all downlinks Structure[sat][pass#]
+        previous_nodes_all - The previous node that leads to fastest route. Structure[sat][pass#][node]
+        shortest_path_all  - The shortest path to each of the nodes. Structure[source][pass#][destination_node]
+        passTimes          - pass times for satellite of groundTarget. Structure[sat][intervals/length]
+        contacts           - True/False arrays of when contacts are available (useful for plotting)
+
+    """
+
+    #Extract values from pref_dijkstra_output
+    groundStationNodes = prep_dijkstra_output.get('groundStationNodes')
+    sats2Maneuver = prep_dijkstra_output.get('sats2Maneuver')
+    relOutput = prep_dijkstra_output.get('relOutput')
+    accessObjectGS = prep_dijkstra_output.get('accessObjectGS')
+    accessObjectTarget = prep_dijkstra_output.get('accessObjectTarget')
 
     ########## Dijkstra ##########
     if verbose:
@@ -898,6 +940,310 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     }
 
     return outputDict
+
+def get_fastest_downlink(constellation, groundStations, groundTarget,
+                         recon=True, isl=True,
+                         altChange=100*u.km, 
+                         constraint_type_gs='elevation', 
+                         constraint_angle_gs=25*u.deg, 
+                         constraint_type_sense='nadir',
+                         constraint_angle_sense=20*u.deg,
+                         t2propagate=3*u.day,
+                         tStep=15*u.s, 
+                         distanceThreshold=1000*u.km,
+                         slewThreshold=3*np.pi/180/u.s, 
+                         islTimeThreshold=2.5*u.min,
+                         downlinkTimeThreshold=30*u.s,
+                         verbose=False):
+    """
+    Gets the route for fastest downlink for a reconfigurable constellation 
+    to a set of ground stations
+
+    Parameters
+    ----------
+    constellation: ~satbox.Constellation class
+        Constellation to run analysis on
+    groundStations: ~list
+        List of satbox.groundLoc stations for data downlink
+    groundTarget: ~satbox.groundLoc
+        Target location for Earth observation
+    recon: ~bool
+        If true, reconfigures orbits
+    isl: ~bool
+        If true, uses ISLs to determine data routing
+    altChange: ~astropy.unit.Quantity
+        Altitude change to get to drift orbit
+    constraint_type_gs: ~string | "nadir" or "elevation"
+            constraint angles type for ground station pass
+    constraint_angle_gs: ~astropy.unit.Quantity
+            angle used as the access threshold to determine access calculation for ground station
+    constraint_type_sense: ~string | "nadir" or "elevation"
+            constraint angles type for remote sensing pass
+    constraint_angle_sense: ~astropy.unit.Quantity
+            angle used as the access threshold to determine access calculation for ground station
+    t2propagate: ~astropy.unit.Quantity
+        Amount of time to Propagate starting from satellite.epoch
+    tStep: ~astropy.unit.Quantity
+        Time step used in the propagation
+    distanceThreshold: ~astropy.unit.Quantity
+        Distance at which one can close an intersatellite link between satellites
+    slewThreshold: ~astropy.unit.Quantity (1/u.s) in radians
+        Intersatellite links cannot close links at slew rates greater than this
+    islTimeTreshold: ~astropy.unit.Quantity
+        ISL contacts must be longer than this to transmit the message in full
+    downlinkTimeThreshold: ~astropy.unit.Quantity
+        Ground contact must be longer than this to transmit the images in full
+    verbose: Boolean
+        Prints out debug statements if True
+
+    Returns
+    -------
+    outputDict: ~dict
+        Dictionary with keys
+        downlinks_all      - Time of downlinks. Structure[sat][pass#][groundStation]
+        paths_all          - The path through the nodes for all downlinks Structure[sat][pass#]
+        previous_nodes_all - The previous node that leads to fastest route. Structure[sat][pass#][node]
+        shortest_path_all  - The shortest path to each of the nodes. Structure[source][pass#][destination_node]
+        passTimes          - pass times for satellite of groundTarget. Structure[sat][intervals/length]
+        contacts           - True/False arrays of when contacts are available (useful for plotting)
+    """
+
+    prepOutput = prep_dijkstra(constellation, groundStations, groundTarget, recon=True,
+                         altChange=altChange,
+                         constraint_type_gs=constraint_type_gs, 
+                         constraint_angle_gs=constraint_angle_gs,
+                         constraint_type_sense=constraint_type_sense,
+                         constraint_angle_sense=constraint_angle_sense,
+                         t2propagate=t2propagate,
+                         tStep=tStep,
+                         verbose=verbose)
+    dijkstraOutput = run_dijkstra_routing(prepOutput, isl=isl,
+                         distanceThreshold=distanceThreshold,
+                         slewThreshold=slewThreshold, 
+                         islTimeThreshold=islTimeThreshold,
+                         downlinkTimeThreshold=downlinkTimeThreshold,
+                         verbose=verbose)
+    return dijkstraOutput
+    # ## Get groundStationNodes
+    # groundStationNodes = [str(g.groundID) for g in groundStations]
+
+    # ##########  Generate Recon Schedule  ##########
+    # # r_drift = poliastro.constants.R_earth + altDrift
+    # if verbose:
+    #     print("Step 1 of 5: Generating Schedule")
+    # schedDict = constellation.gen_GOM_2_RGT_scheds(altChange, groundTarget)
+
+    # ##########  Propagating  ##########
+    # if verbose:
+    #     print("Step 2 of 5: Propagating Satellites")
+
+    # sats2Maneuver, driftTimes, sched = constellation.get_ascending_descending_per_plane(schedDict) 
+    # if not recon:
+    #     select_sched_sats = None
+    #     skip_all_sched = True
+    # else:
+    #     select_sched_sats = sats2Maneuver
+    #     skip_all_sched = False
+    # walkerSim = sb.SimConstellation(constellation, t2propagate, tStep, verbose = False)
+    # walkerSim.propagate(select_sched_sats = select_sched_sats, verbose=False)
+
+    # ##########  Relative Position Data  ##########
+    # if verbose:
+    #     print("Step 3 of 5: Calculating Relative Data")
+    # relOutput = walkerSim.get_relative_velocity_analysis()
+
+    # ##########  Access  ##########
+    # if verbose:
+    #     print("Step 4 of 5: Calculating Access to groundStations")
+    # accessObjectGS = sb.DataAccessConstellation(walkerSim, groundStations)
+    # accessObjectGS.calc_access(constraint_type_gs, constraint_angle_gs)
+
+    # accessObjectTarget = sb.DataAccessConstellation(walkerSim, groundTarget)
+    # accessObjectTarget.calc_access(constraint_type_sense, constraint_angle_sense)
+
+
+    # ########## Dijkstra ##########
+    # if verbose:
+    #     print("Step 5 of 5: Run Dijkstra")
+    # contacts = {}
+    # contacts['contacts'] = {}
+    # contacts['time'] = {}
+    # satData = relOutput.get('satData')
+
+    # if isl: #Only calculate sat2sat contacts if ISL available
+    #     for key in satData:
+    #         satPairData = satData.get(key)
+    #         LOS = satPairData.get('LOS')
+    #         positionData = satPairData.get('relPosition').get('relPosNorm')
+    #         positionThresholdMask = positionData < distanceThreshold
+    #         slewRate = satPairData.get('relVel').get('slewRate')
+    #         slewRateMask = slewRate < slewThreshold
+            
+    #         LOSPosMask = np.logical_and(LOS, positionThresholdMask)
+    #         contactMask = np.logical_and(LOSPosMask, slewRateMask)
+            
+    #         times = satPairData.get('times')
+    #         ssIntervals = get_start_stop_intervals(contactMask, times) #start_stop_intervals
+
+    #         if any(ssIntervals[0]): #Make sure there are intervals
+    #             ssIntsVals = [(s[1]-s[0]).to(u.min) for s in ssIntervals]
+
+    #             #Convert to numpy array
+    #             ssIntsNp = [s.to(u.min).value for s in ssIntsVals] * u.min
+
+    #             #Find where it is less than time threshold
+    #             ints2CutIdx = ssIntsNp < islTimeThreshold
+    #             ints2Cut = ssIntervals[ints2CutIdx]
+
+    #             for interval in ints2Cut: #Loop through intervals to turn false
+    #                 t0Cut = interval[0]
+    #                 t1Cut = interval[1]
+
+    #                 id0Cut = np.where(times == t0Cut)[0][0]
+    #                 id1Cut = np.where(times == t1Cut)[0][0]
+
+    #                 contactMask[id0Cut+1:id1Cut+1] = False
+
+    #         contacts['contacts'][key] = contactMask
+    #         contacts['time'][key] = times
+        
+    # #Calculate access between ground stations and satellites
+    # for access in accessObjectGS.allAccessData:
+    #     key = f'{access.groundLocID}-{access.satID}' #Ground as source
+    #     key2 = f'{access.satID}-{access.groundLocID}' #Ground as sink
+
+    #     cutMask = copy.deepcopy(access.accessMask)
+
+    #     #Cut out access times that are less than time required to transfer data
+    #     intervalLengths = access.accessIntervalLengths
+
+    #     if any(intervalLengths): #Makes sure there are access intervals
+
+    #         accessIntervals = access.accessIntervals
+
+    #         #Convert to numpy array
+    #         intsLenNp = [s.to(u.min).value for s in intervalLengths] * u.min
+
+    #         #Find where it is less than time threshold
+    #         ints2CutIdx = intsLenNp < downlinkTimeThreshold
+    #         ints2Cut = accessIntervals[ints2CutIdx]
+
+    #         for interval in ints2Cut: #Loop through intervals to turn false
+    #             t0Cut = interval[0]
+    #             t1Cut = interval[1]
+
+    #             id0Cut = np.where(access.time == t0Cut)[0][0]
+    #             id1Cut = np.where(access.time == t1Cut)[0][0]
+    #             # import ipdb;ipdb.set_trace()
+    #             cutMask[id0Cut+1:id1Cut+1] = False
+    #     contacts.get('contacts')[key] = cutMask#access.accessMask
+    #     contacts.get('contacts')[key2] = cutMask#access.accessMask
+    #     contacts.get('time')[key] = access.time
+    #     contacts.get('time')[key2] = access.time
+
+    # # get nodes
+    # nodesGS = []
+    # for key in contacts.get('contacts').keys():
+    #     splitKey = key.split('-')
+    #     source = splitKey[0]
+    #     destination = splitKey[1]
+        
+    #     if source not in nodesGS:
+    #         nodesGS.append(source)
+    #     if destination not in nodesGS:
+    #         nodesGS.append(destination)
+
+    # # Find times of passes for the sensing satellites
+    # # Extract sats to maneuver
+
+    # maneuverSatIDs = []
+    # for planeKey in sats2Maneuver:
+    #     plane = sats2Maneuver[planeKey]
+    #     for satKey in plane:
+    #         satID = satKey.split()[1]
+    #         maneuverSatIDs.append(satID)
+
+    # #Get pass times for sensing satellites
+    # passTimes = {}
+    # for obj in accessObjectTarget.allAccessData:
+    #     satIDStr = str(obj.satID)
+    #     if satIDStr in maneuverSatIDs:
+    #         passTimes[satIDStr] = {}
+    #         passTimes[satIDStr]['intervals'] = obj.accessIntervals
+    #         passTimes[satIDStr]['length'] = obj.accessIntervalLengths
+    
+    # walkerGraph = TimeVaryingGraph(contacts, nodesGS)
+
+    # previous_nodes_all = {}
+    # shortest_path_all = {}
+
+    # for sat in maneuverSatIDs:
+    #     if verbose:
+    #         print(f'Dijkstra for Sat {sat}')
+    #     passNum = 0
+    #     satKey = f'sat {sat}'
+    #     previous_nodes_all[satKey] = {}
+    #     shortest_path_all[satKey] = {}
+        
+    #     if not isl: #No satellite nodes except for sensing satellite
+    #         nodesNoISL = copy.deepcopy(groundStationNodes)
+    #         nodesNoISL.append(str(sat)) #Just add satellite 
+    #         allContactKeys = list(contacts['contacts'].keys())
+    #         keys2keep = []
+    #         for k in allContactKeys:
+    #             keySplit = k.split('-')
+    #             source = keySplit[0]
+    #             destination = keySplit[1]
+    #             if source in nodesNoISL and destination in nodesNoISL:
+    #                 keys2keep.append(k)
+    #         newContacts = { my_key: contacts['contacts'][my_key] for my_key in keys2keep}
+    #         newTimes = { my_key: contacts['time'][my_key] for my_key in keys2keep}
+    #         newContactGraph = {}
+    #         newContactGraph['contacts'] = newContacts
+    #         newContactGraph['time'] = newTimes
+    #         walkerGraph = TimeVaryingGraph(newContactGraph, nodesNoISL)
+
+    #     for intervals in passTimes[sat]['intervals']:
+    #         if not any(intervals): #skip if no passes
+    #             continue
+    #         passKey = f'pass {passNum}'
+    #         startTime = intervals[1] #End of pass
+    #         previous_nodes, shortest_path = time_varying_dijkstra_algorithm(graph=walkerGraph, start_node=sat, start_time=startTime, verbose=True)
+    #         previous_nodes_all[satKey][passKey] = previous_nodes
+    #         shortest_path_all[satKey][passKey] = shortest_path
+    #         passNum += 1
+
+    # downlinks_all = {}
+    # paths_all = {}
+    # for sat in maneuverSatIDs:
+    #     satKey = f'sat {sat}'
+    #     downlinks_all[satKey] = {}
+    #     paths_all[satKey] = {}
+    #     shortest_path_sat = shortest_path_all.get(satKey)
+    #     for passNum in shortest_path_sat:
+    #         passKey = passNum
+    #         passData = shortest_path_sat.get(passNum)
+            
+    #         downlinkOptions = {my_key: passData[my_key] for my_key in groundStationNodes}
+    #         quickestDownlinkKey = min(downlinkOptions, key=downlinkOptions.get)
+    #         downlinks_all[satKey][passKey] = {f'{quickestDownlinkKey}': downlinkOptions.get(quickestDownlinkKey)}
+            
+    #         previousNodesPass = previous_nodes_all.get(satKey).get(passKey)
+            
+    #         if any(previousNodesPass) and quickestDownlinkKey in previousNodesPass.keys(): #Check for empty passes
+    #             path = print_dijkstra_result(previousNodesPass, passData, start_node=sat, target_node=quickestDownlinkKey)
+    #             paths_all[satKey][passKey] = path
+
+    # outputDict = {
+    #                 'downlinks_all': downlinks_all,
+    #                 'paths_all':     paths_all,
+    #                 'shortest_path_all': shortest_path_all,
+    #                 'previous_nodes_all': previous_nodes_all,
+    #                 'passTimes': passTimes,
+    #                 'contacts': contacts,
+    # }
+
+    # return outputDict
 
 def calc_metrics(dijkstraData, T=3*u.day):
     """
