@@ -421,16 +421,27 @@ class Constellation():
         sats = self.get_sats()
 
         schedDict = {}
-        for sat in sats:
-            sched = sat.gen_GOM_2_RGT_sched(altChange, gs, tStep)
-            satID = sat.satID
-            planeID = sat.planeID
 
-            if f"Plane {planeID}" in schedDict:
-                schedDict[f"Plane {planeID}"][f"Sat {satID}"] = sched
-            else:
-                schedDict[f"Plane {planeID}"] = {} #Initialize
-                schedDict[f"Plane {planeID}"][f"Sat {satID}"] = sched
+        for plane in self.planes:
+            if not plane:
+                continue
+            #Check one satellite to see inclination
+            satTest = plane.sats[0]
+            planeID = satTest.planeID
+            if satTest.inc < gs.lat:
+                planeSkip = True
+                schedDict[f"Plane {planeID}"] = "skip"
+                continue
+            for sat in plane.sats:
+                sched = sat.gen_GOM_2_RGT_sched(altChange, gs, tStep)
+                satID = sat.satID
+                planeID = sat.planeID
+
+                if f"Plane {planeID}" in schedDict:
+                    schedDict[f"Plane {planeID}"][f"Sat {satID}"] = sched
+                else:
+                    schedDict[f"Plane {planeID}"] = {} #Initialize
+                    schedDict[f"Plane {planeID}"][f"Sat {satID}"] = sched
 
         return schedDict
 
@@ -505,12 +516,16 @@ class Constellation():
 
         for planeKey in schedDict.keys():
             plane = schedDict[planeKey]
+            if plane == 'skip':
+                continue
 
             assert len(plane) >= 2, "Need more than one satellite per plane"
 
             sats2Maneuver[planeKey] = []
             driftHolder = None
             for satKey in plane.keys():
+                # if plane[satKey] == none: #No schedule
+                #     continue
                 tDrift = plane[satKey].driftTime 
                 # passType = plane[satKey].passType
                 if driftHolder is None: #First satellite in plane is default
@@ -825,7 +840,7 @@ class SimConstellation():
 
                 skip_sched = False #Default you will not skip schedule
                 #Select satellites if applicable
-                if select_sched_sats is not None:
+                if (select_sched_sats is not None) and (planeKey in select_sched_sats):
                     satStr = f'Sat {sat.satID}'
                     if satStr in select_sched_sats[planeKey]:
                         skip_sched = False
