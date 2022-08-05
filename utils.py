@@ -623,6 +623,8 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
                          tStep=15*u.s, 
                          distanceThreshold=1000*u.km,
                          slewThreshold=3*np.pi/180/u.s, 
+                         islTimeThreshold=2.5*u.min,
+                         downlinkTimeThreshold=30*u.s,
                          verbose=False):
     """
     Gets the route for fastest downlink for a reconfigurable constellation 
@@ -658,6 +660,10 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
         Distance at which one can close an intersatellite link between satellites
     slewThreshold: ~astropy.unit.Quantity (1/u.s) in radians
         Intersatellite links cannot close links at slew rates greater than this
+    islTimeTreshold: ~astropy.unit.Quantity
+        ISL contacts must be longer than this to transmit the message in full
+    downlinkTimeThreshold: ~astropy.unit.Quantity
+        Ground contact must be longer than this to transmit the images in full
     verbose: Boolean
         Prints out debug statements if True
 
@@ -729,18 +735,63 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
             
             LOSPosMask = np.logical_and(LOS, positionThresholdMask)
             contactMask = np.logical_and(LOSPosMask, slewRateMask)
-                    
-            times = satPairData.get('times')
             
-            contacts['contacts'][key] = LOS
+            times = satPairData.get('times')
+            ssIntervals = get_start_stop_intervals(contactMask, times) #start_stop_intervals
+
+            if any(ssIntervals[0]): #Make sure there are intervals
+                ssIntsVals = [(s[1]-s[0]).to(u.min) for s in ssIntervals]
+
+                #Convert to numpy array
+                ssIntsNp = [s.to(u.min).value for s in ssIntsVals] * u.min
+
+                #Find where it is less than time threshold
+                ints2CutIdx = ssIntsNp < islTimeThreshold
+                ints2Cut = ssIntervals[ints2CutIdx]
+
+                for interval in ints2Cut: #Loop through intervals to turn false
+                    t0Cut = interval[0]
+                    t1Cut = interval[1]
+
+                    id0Cut = np.where(times == t0Cut)[0][0]
+                    id1Cut = np.where(times == t1Cut)[0][0]
+
+                    contactMask[id0Cut+1:id1Cut+1] = False
+
+            contacts['contacts'][key] = contactMask
             contacts['time'][key] = times
         
     #Calculate access between ground stations and satellites
     for access in accessObjectGS.allAccessData:
         key = f'{access.groundLocID}-{access.satID}' #Ground as source
         key2 = f'{access.satID}-{access.groundLocID}' #Ground as sink
-        contacts.get('contacts')[key] = access.accessMask
-        contacts.get('contacts')[key2] = access.accessMask
+
+        cutMask = copy.deepcopy(access.accessMask)
+
+        #Cut out access times that are less than time required to transfer data
+        intervalLengths = access.accessIntervalLengths
+
+        if any(intervalLengths): #Makes sure there are access intervals
+
+            accessIntervals = access.accessIntervals
+
+            #Convert to numpy array
+            intsLenNp = [s.to(u.min).value for s in intervalLengths] * u.min
+
+            #Find where it is less than time threshold
+            ints2CutIdx = intsLenNp < downlinkTimeThreshold
+            ints2Cut = accessIntervals[ints2CutIdx]
+
+            for interval in ints2Cut: #Loop through intervals to turn false
+                t0Cut = interval[0]
+                t1Cut = interval[1]
+
+                id0Cut = np.where(access.time == t0Cut)[0][0]
+                id1Cut = np.where(access.time == t1Cut)[0][0]
+                # import ipdb;ipdb.set_trace()
+                cutMask[id0Cut+1:id1Cut+1] = False
+        contacts.get('contacts')[key] = cutMask#access.accessMask
+        contacts.get('contacts')[key2] = cutMask#access.accessMask
         contacts.get('time')[key] = access.time
         contacts.get('time')[key2] = access.time
 
@@ -833,7 +884,7 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
             
             previousNodesPass = previous_nodes_all.get(satKey).get(passKey)
             
-            if any(previousNodesPass): #Check for empty passes
+            if any(previousNodesPass) and quickestDownlinkKey in previousNodesPass.keys(): #Check for empty passes
                 path = print_dijkstra_result(previousNodesPass, passData, start_node=sat, target_node=quickestDownlinkKey)
                 paths_all[satKey][passKey] = path
 
