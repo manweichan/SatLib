@@ -547,7 +547,7 @@ def time_varying_dijkstra_algorithm(graph, start_node, start_time, verbose=False
     previous_nodes = {}
     
     # We'll use max_value to initialize the "infinity" value of the unvisited nodes   
-    max_value = 100 * u.yr #Set max value to a century from now
+    max_value = 1 * u.yr #Set max value to 1 year from now
     for node in unvisited_nodes:
         shortest_path[node] = start_time + max_value  #Maximum time in years added to start_time
     # However, we initialize the starting node's value with 0   
@@ -713,7 +713,7 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
 
 def run_dijkstra_routing(prep_dijkstra_output,
                          isl=True,
-                         distanceThreshold=1000*u.km,
+                         distanceThreshold=1250*u.km,
                          slewThreshold=3*np.pi/180/u.s, 
                          islTimeThreshold=2.5*u.min,
                          downlinkTimeThreshold=30*u.s,
@@ -949,7 +949,7 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
                          constraint_angle_sense=20*u.deg,
                          t2propagate=3*u.day,
                          tStep=15*u.s, 
-                         distanceThreshold=1000*u.km,
+                         distanceThreshold=1250*u.km,
                          slewThreshold=3*np.pi/180/u.s, 
                          islTimeThreshold=2.5*u.min,
                          downlinkTimeThreshold=30*u.s,
