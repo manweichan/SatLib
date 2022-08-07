@@ -1520,6 +1520,7 @@ class Satellite(Orbit):
         rgt_r, rgt_alt = om.getRGTOrbit(k_r, k_d, satInit.ecc, satInit.inc)
 
         for timePass in tPass:
+            print(tPass)
             raans_not_used, anoms = self.__desired_raan_from_pass_time(timePass, groundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
 
             ghostSatFutureA = Satellite.circular(Earth, alt = rgt_alt,
