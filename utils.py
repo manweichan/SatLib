@@ -1007,7 +1007,7 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
         contacts           - True/False arrays of when contacts are available (useful for plotting)
     """
 
-    prepOutput = prep_dijkstra(constellation, groundStations, groundTarget, recon=True,
+    prepOutput = prep_dijkstra(constellation, groundStations, groundTarget, recon=recon,
                          altChange=altChange,
                          constraint_type_gs=constraint_type_gs, 
                          constraint_angle_gs=constraint_angle_gs,
@@ -1120,6 +1120,117 @@ def calc_metrics(dijkstraData, T=3*u.day):
     }
 
     return outputMetrics
+
+def create_blacksky_constellation():
+    """
+    Create the black sky constellation and ground stations as defined by the FCC application 2019
+
+    Returns
+    -------
+    blackSkyConstellation: satbox.Constellation
+        Simulated black sky constellation
+    groundStations: satbox.GroundLoc
+        Simulated black sky ground network
+    """
+    #Ground stations from FCC Report pg 7: https://fcc.report/IBFS/SAT-MOD-20190725-00067/1816346.pdf
+    latLon = [(13.5, 144.8 ,'Guam'),
+              (64.8, -147.5,   'Fairbanks'),
+              (78.2, 15.4,   'Svalbard'),
+              (50.3, 8.5, 'Usingen'),
+              (-46.5, 168.4,  'Invercargill'),
+              (42.8, 141.6, 'Chitose'),
+              ]
+
+    #Create ground stations
+    groundStations = []
+    # groundStationNodes = []
+    gsID = 0
+    for latlon in latLon:
+        gs_lat = latlon[0] * u.deg
+        gs_lon = latlon[1] * u.deg
+        gs_name = latlon[2]
+        gs_h = 0 * u.m
+        gNode = 'g'+str(gsID)
+        g_id = gNode
+        # groundStationNodes.append(g_id)
+        gs = sb.GroundLoc(gs_lon, gs_lat, gs_h, groundID=g_id, identifier=gs_name)
+        groundStations.append(gs)
+        gsID += 1
+
+    t2022 = time.Time('2020-01-01')
+    t2022_25 = t2022 + 90*u.day
+    t2022_75 = t2022_25 + 180*u.day
+    Global_5 = sb.Satellite.circular(Earth, alt = 550 * u.km,
+     inc = 45 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022)
+    Global_6 = sb.Satellite.circular(Earth, alt = 550 * u.km,
+     inc = 55 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022)
+    Global_7 = sb.Satellite.circular(Earth, alt = 385 * u.km,
+     inc = 45 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022)
+    Global_8 = sb.Satellite.circular(Earth, alt = 385 * u.km,
+     inc = 55 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022)
+    Global_9 = sb.Satellite.circular(Earth, alt = 600 * u.km,
+     inc = 35 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_25)
+    Global_10 = sb.Satellite.circular(Earth, alt = 600 * u.km,
+     inc = 60 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_25)
+    Global_11 = sb.Satellite.circular(Earth, alt = 385 * u.km,
+     inc = 35 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_25)
+    Global_12 = sb.Satellite.circular(Earth, alt = 385 * u.km,
+     inc = 60 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_25)
+    Global_13 = sb.Satellite.circular(Earth, alt = 600 * u.km,
+     inc = 35 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_75)
+    Global_14 = sb.Satellite.circular(Earth, alt = 600 * u.km,
+     inc = 60 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_75)
+    Global_15 = sb.Satellite.circular(Earth, alt = 385 * u.km,
+     inc = 35 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_75)
+    Global_16 = sb.Satellite.circular(Earth, alt = 385 * u.km,
+     inc = 60 * u.deg, raan = 0 * u.deg, arglat = 0 * u.deg, epoch = t2022_75)
+
+    globalSats = [Global_5, 
+                 Global_6,
+                 Global_7,
+                 Global_8,
+                 Global_9,
+                 Global_10,
+                 Global_11,
+                 Global_12, 
+                 Global_13,
+                 Global_14,
+                 Global_15,
+                 Global_16,
+                 ]
+
+    #Propagate all satellites to 2022
+
+    globalSatsProp = []
+    def accel(t0, state, k):
+        """Constant acceleration aligned with the velocity. """
+        v_vec = state[3:]
+        norm_v = (v_vec * v_vec).sum() ** 0.5
+        return 1e-5 * v_vec / norm_v
+    def j2_f(t0, state, k):
+        du_kep = func_twobody(t0, state, k)
+        ax, ay, az = J2_perturbation(
+            t0, state, k, J2=Earth.J2.value, R=Earth.R.to(u.km).value)
+        du_ad = np.array([0, 0, 0, ax, ay, az])
+        return du_kep + du_ad
+
+    for idx, sat in enumerate(globalSats):
+        print(f'{idx} of {len(globalSats)-1}')
+        satProp = sat.propagate(t2022_75, method=cowell, f=j2_f)
+        globalSatsProp.append(satProp)
+
+    #Stick satellites in planes with same inclination
+    plane45 = sb.Plane([globalSatsProp[0], globalSatsProp[2]], planeID=0)
+    plane55 = sb.Plane([globalSatsProp[1], globalSatsProp[3]], planeID=1)
+    plane35 = sb.Plane([globalSatsProp[4], globalSatsProp[6], globalSatsProp[8], globalSatsProp[10]],planeID=2)
+    plane60 = sb.Plane([globalSatsProp[5], globalSatsProp[7], globalSatsProp[9], globalSatsProp[11]],planeID=3)
+
+    blackSkyPlanes = [plane35, plane45, plane55, plane60]
+        
+    blackSkyConstellation = sb.Constellation(blackSkyPlanes)
+    blackSkyConstellation.reassign_sat_ids()
+
+    return blackSkyConstellation, groundStations
 
 def get_potential_isl_keys(satID, keys, excludeList = None):
     """

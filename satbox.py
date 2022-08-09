@@ -1520,7 +1520,6 @@ class Satellite(Orbit):
         rgt_r, rgt_alt = om.getRGTOrbit(k_r, k_d, satInit.ecc, satInit.inc)
 
         for timePass in tPass:
-            print(tPass)
             raans_not_used, anoms = self.__desired_raan_from_pass_time(timePass, groundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
 
             ghostSatFutureA = Satellite.circular(Earth, alt = rgt_alt,
@@ -2394,12 +2393,12 @@ class ManeuverSchedule():
             orb_i_1st_burn = orb_i.propagate(t_wait)
 
         ## Debug statements ##
-        print(f"T_wait: {t_wait}")
+        # print(f"T_wait: {t_wait}")
         orb_tgt_180 = orb_tgt.propagate(orb_i.epoch + t_wait + t_trans, method=cowell, f=f)
         anomalyDiff = orb_i_1st_burn.arglat.to(u.deg) - orb_tgt_180.arglat.to(u.deg)
-        print(f"Anomaly Diff: {anomalyDiff}")
-        print("T_transfer: ", t_trans)
-        print("a_trans: ", a_trans)
+        # print(f"Anomaly Diff: {anomalyDiff}")
+        # print("T_transfer: ", t_trans)
+        # print("a_trans: ", a_trans)
         ## End Debug statements ##
 
         self.gen_hohmann_schedule(orb_i_1st_burn, orb_tgt_i.a)
