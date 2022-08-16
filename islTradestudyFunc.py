@@ -55,6 +55,8 @@ def graphNumSatsHelperFunc(alt, disThres):
     disThres (int): distance threshold for ISL
     """
     r = 6371 + alt
+    while (disThres/(2*r)) > 1:
+        disThres -= 1
     cent_ang = 2*(math.asin(disThres/(2*r)))
     numSats = math.ceil((2*math.pi)/cent_ang)
     a = math.sqrt((r**2)-((disThres/2)**2))
@@ -76,15 +78,11 @@ def graphNumSats(alt, disThres, varyAlt=False, varyDisThres=False, yLim=None, xL
     plt.figure()
     if (varyAlt==True and varyDisThres==True) or (varyAlt==False and varyDisThres==False):
         return 'ERROR!!! Please select a parameter to vary by setting either varyAlt or varyDisThres to True.'
-    maxDisThres = np.max(disThres)
-    minAlt =  np.min(alt)
-    minR = minAlt + 6371
-    if (maxDisThres/(2*minR)) > 1:
-        return 'ERROR!!! Please increase the minimum altitude or decrease the maximum distance threshold in order to avoid mathematical errors.'
     f =  np.vectorize(graphNumSatsHelperFunc)
+    disThresCopy = disThres.copy()
     if varyAlt:
         for i in alt:
-            numSats, a = f(i, disThres)
+            numSats, a = f(i, disThresCopy)
             #print(f'a for {i}km: {a}')
             for j in range(len(a)):
                 if a[j] < 6371:
@@ -104,7 +102,7 @@ def graphNumSats(alt, disThres, varyAlt=False, varyDisThres=False, yLim=None, xL
             plt.xlim(xLim)
         plt.show()
     else:
-        for i in disThres:
+        for i in disThresCopy:
             numSats, a = f(alt, i)
             #print(f'a for {i}km: {a}')
             for j in range(len(a)):
