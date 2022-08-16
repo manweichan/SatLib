@@ -1047,6 +1047,28 @@ class SimConstellation():
                 outputData['satData'][dictKey]=dictEntry
         return outputData
 
+    def get_delV_usage(self):
+        """
+        Gets the delta V usage in a constellation
+
+        Returns
+        -------
+        outputDict: ~dict
+            Output dictionary with total deltaV and also delV Values for each satellites
+        """
+
+        assert self.propagated==1, "Need to propagate constellation first"
+
+        deltaVValues = [s.deltaVUsage for s in self.constellation.get_sats()]
+        satIDs = [s.satID for s in self.constellation.get_sats()]
+        satKeys = ['sat ' + str(satID) for satID in satIDs]
+
+        delVTotal = sum(deltaVValues)
+
+        outputDict = dict(zip(satKeys, deltaVValues))
+        outputDict['delVTotal'] = delVTotal
+
+        return outputDict
 
 # Plane class
 class Plane():
@@ -2025,6 +2047,7 @@ class SimSatellite():
                     self.timeDeltas,
                     )
                 coordsAll = coords
+            deltaVUsage = 0*u.m/u.s
             satECI = GCRS(coords.x, coords.y, coords.z, representation_type="cartesian", obstime = self.times)
             satECISky = SkyCoord(satECI)
             satECEF = satECISky.transform_to(ITRS)
@@ -2045,15 +2068,18 @@ class SimSatellite():
             #Sort maneuver schedule by time
             schedule.sort(key=lambda x: x.time)
 
-
+            deltaVUsage = 0 * u.m / u.s
             for manIdx, man in enumerate(schedule):
                 assert man.time >= currentSat.epoch, "maneuver time before satellite epoch"
 
                 #Poliastro maneuver object    
                 poliMan = Maneuver.impulse(man.deltaVVec)
 
-                segmentTimeLen = man.time - currentSat.epoch
+                deltaVUse = utils.get_norm(man.deltaVVec)
+                
+                deltaVUsage += deltaVUse
 
+                segmentTimeLen = man.time - currentSat.epoch
 
                 if segmentTimeLen.to(u.s).value == 0: #Burn initialized at same time as sim start
                     sat_i = currentSat 
@@ -2194,6 +2220,9 @@ class SimSatellite():
         self.timesAll = timesAll #all times
 
         self.propagated = 1
+        self.deltaVUsage = deltaVUsage
+
+
 
 
 # Ground location class

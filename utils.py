@@ -663,6 +663,7 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
         relOutput            - Relative position and velocity data between satellites in constellation
         accessObjectGS       - Access objects for access with ground stations
         accessObjectTarget   - Access objects for access with ground target
+        delVUsage            - DeltaV usage values
     """
     ## Get groundStationNodes
     groundStationNodes = [str(g.groundID) for g in groundStations]
@@ -687,6 +688,8 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
     walkerSim = sb.SimConstellation(constellation, t2propagate, tStep, verbose = False)
     walkerSim.propagate(select_sched_sats = select_sched_sats, verbose=False)
 
+    delVUsage = walkerSim.get_delV_usage()
+
     ##########  Relative Position Data  ##########
     if verbose:
         print("Step 3 of 5: Calculating Relative Data")
@@ -707,6 +710,7 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
                     'relOutput': relOutput,
                     'accessObjectGS': accessObjectGS,
                     'accessObjectTarget': accessObjectTarget,
+                    'delVUsage': delVUsage,
     }
 
     return outputDict
@@ -748,6 +752,7 @@ def run_dijkstra_routing(prep_dijkstra_output,
         shortest_path_all  - The shortest path to each of the nodes. Structure[source][pass#][destination_node]
         passTimes          - pass times for satellite of groundTarget. Structure[sat][intervals/length]
         contacts           - True/False arrays of when contacts are available (useful for plotting)
+        delVUsage          - DeltaV usage values
 
     """
 
@@ -757,6 +762,7 @@ def run_dijkstra_routing(prep_dijkstra_output,
     relOutput = prep_dijkstra_output.get('relOutput')
     accessObjectGS = prep_dijkstra_output.get('accessObjectGS')
     accessObjectTarget = prep_dijkstra_output.get('accessObjectTarget')
+    delVUsage = prep_dijkstra_output.get('delVUsage') #Pass through to output
 
     ########## Dijkstra ##########
     if verbose:
@@ -936,6 +942,7 @@ def run_dijkstra_routing(prep_dijkstra_output,
                     'previous_nodes_all': previous_nodes_all,
                     'passTimes': passTimes,
                     'contacts': contacts,
+                    'delVUsage': delVUsage,
     }
 
     return outputDict
