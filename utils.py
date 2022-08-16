@@ -1085,7 +1085,8 @@ def calc_metrics(dijkstraData, T=3*u.day):
 
         passTimeLength = passTimes[sat].get('length')[int(passNum)]
 
-        passTimeSum += passTimeLength
+
+        # passTimeSum += passTimeLength
 
         finalKey = f'sat {sat}|pass {passNum}'
 
@@ -1096,6 +1097,12 @@ def calc_metrics(dijkstraData, T=3*u.day):
     startIdx = 1
 
     frac = 0
+
+    for satPass in passTimes:
+        passLengths = passTimes[satPass]['length']
+        if passLengths:
+            sumPass = sum(passLengths)
+            passTimeSum += sumPass
 
     # Calculate AoI
 
