@@ -1098,6 +1098,7 @@ def calc_metrics(dijkstraData, T=3*u.day):
 
     frac = 0
 
+    # Calculate overall pass time
     for satPass in passTimes:
         passLengths = passTimes[satPass]['length']
         if passLengths:

@@ -2054,6 +2054,7 @@ class SimSatellite():
 
                 segmentTimeLen = man.time - currentSat.epoch
 
+
                 if segmentTimeLen.to(u.s).value == 0: #Burn initialized at same time as sim start
                     sat_i = currentSat 
 
