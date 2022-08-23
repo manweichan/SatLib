@@ -852,7 +852,7 @@ class SimConstellation():
                     skip_sched=True
                 if skip_all_sched: #Case where you don't want any burns anyway
                     skip_sched=True
-                satPropInit.propagate(skip_sched=skip_sched)
+                satPropInit.propagate(method=method, skip_sched=skip_sched)
                 planeSats.append(satPropInit)
             plane2append = Plane.from_list(planeSats)
             planes2const.append(plane2append)
