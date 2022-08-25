@@ -2136,9 +2136,12 @@ class SimSatellite():
 
                 #Need to propagate to next time step to make sure it matches other
                 #propagated satellite time intervals
-                sat_f = sat_maneuvered.propagate(t2propagateAtEnd,
-                                method=cowell,
-                                f=f )       
+                if method == "J2":
+                    sat_f = sat_maneuvered.propagate(t2propagateAtEnd,
+                                    method=cowell,
+                                    f=f )    
+                else:
+                    sat_f = sat_maneuvered.propagate(t2propagateAtEnd)
 
                 currentSat = sat_f
 
