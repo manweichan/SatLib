@@ -1071,17 +1071,17 @@ def calc_metrics(dijkstraData, T=3*u.day):
                 newKey = satKey + '|' + passKey# + '|' + gsKey
                 downlinks_all_flat[newKey] = dlTime
 
-    downlinks_all_sorted_raw = dict(sorted(downlinks_all_flat.items(), key=lambda item: item[1]))
+    downlinks_all_sorted = dict(sorted(downlinks_all_flat.items(), key=lambda item: item[1]))
     #Remove edge cases
     passNoDownlink = False #Notes if there is a pass at the end that isn't downlinked by end of time span in question
-    downlinks_all_sorted = {}
-    for key in downlinks_all_sorted_raw:
-        if downlinks_all_sorted_raw[key] <= tf:
-            downlinks_all_sorted[key] = downlinks_all_sorted_raw[key]
-        elif downlinks_all_sorted_raw[key] > tf:
-            passNoDownlink = True #There is a pass/downlink combo where downlink is beyond length of simulation in question
-        else:
-            continue    
+    # downlinks_all_sorted = {}
+    # for key in downlinks_all_sorted_raw:
+    #     if downlinks_all_sorted_raw[key] <= tf:
+    #         downlinks_all_sorted[key] = downlinks_all_sorted_raw[key]
+    #     elif downlinks_all_sorted_raw[key] > tf:
+    #         passNoDownlink = True #There is a pass/downlink combo where downlink is beyond length of simulation in question
+    #     else:
+    #         continue    
 
     passTimeDict = {}
     passTimeSum = 0
@@ -1103,8 +1103,8 @@ def calc_metrics(dijkstraData, T=3*u.day):
         passTimeDict[finalKey] = passTime
 
     # Calculate age of information
-    # keys = list(downlinks_all_sorted.keys())
-    keys = list(downlinks_all_sorted_raw.keys())
+    keys = list(downlinks_all_sorted.keys())
+    # keys = list(downlinks_all_sorted_raw.keys())
     startIdx = 1
 
     frac = 0
