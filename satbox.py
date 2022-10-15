@@ -24,7 +24,7 @@ import seaborn as sns
 import astropy.units as u
 import astropy
 from astropy.time import Time, TimeDelta
-from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord
+from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord, get_sun
 from CZMLExtractor_MJD import CZMLExtractor_MJD
 # import OpticalLinkBudget.OLBtools as olb
 import utils as utils
@@ -2220,7 +2220,10 @@ class SimSatellite():
         self.coordECI = coordsAll #ECI coordinates
         self.LLA = lla_sat #Lat long alt of satellite
         self.rvECEF = satECEF #ECEF coordinates
-        self.timesAll = timesAll #all times
+
+        # convert to astropy time
+        timesAllAstropy = Time(timesAll)
+        self.timesAll = timesAllAstropy #all times
 
         self.propagated = 1
         self.deltaVUsage = deltaVUsage
@@ -2626,6 +2629,8 @@ class DataAccessSat():
         Calculate access between a satellite and a ground station given a 
         constraint type and constraint angle
 
+        Also includes a daylight lighting restraint output
+
         Warning: Nadir constraint angle is the half-angle associated with the FOV, so a 
         camera with 90 deg of FOV, would be equivalent to a constraint_angle of 45 deg
 
@@ -2635,6 +2640,7 @@ class DataAccessSat():
             constrain angles with either a "nadir" (usually analogous to sensor FOV) or "elevation" (minimum elevation angle from ground station) constraint
         constraint_angle: ~astropy.unit.Quantity
             angle used as the access threshold to determine access calculation
+
         """
 
         satECEF = self.sat.rvECEF.cartesian
@@ -2668,7 +2674,18 @@ class DataAccessSat():
         else:
             assert False, "constraint_type not recognized"
 
+        sunCoords = get_sun(timesAll) #Sun coordinates in GCRS frame (ECI) frame
+        sunCoordsCartesian = sunCoords.cartesian
+        groundGCRSPosVel = self.groundLoc.loc.get_gcrs_posvel(timesAll)[0] #Ground lcoation in GCRS (ECI) frame
+
+        # Get dot product between sun coordinate and ground GCRS position
+        sunGSDot = sunCoordsCartesian.dot(groundGCRSPosVel)
+        sunMask = sunGSDot > 0
+
+        accessMaskLighting = np.logical_and(accessMask, sunMask)
+
         accessIntervals = utils.get_start_stop_intervals(accessMask, self.sat.timesAll)
+        accessIntervalsLighting = utils.get_start_stop_intervals(accessMaskLighting, self.sat.timesAll)
 
 
         # Get access times given access Intervals
@@ -2681,10 +2698,23 @@ class DataAccessSat():
                 intervalLength = stopTime - startTime
                 intervalLengths.append(intervalLength.to(u.s))
 
+        # Get access times given access Intervals w/ lighting constraint
+        intervalLengthsLighting = []
+        if (accessIntervalsLighting[0][0] is not None) and (accessIntervalsLighting[0][1] is not None):
+            for interval in accessIntervalsLighting:
+                startTime = interval[0]
+                stopTime = interval[1]
+
+                intervalLength = stopTime - startTime
+                intervalLengthsLighting.append(intervalLength.to(u.s))
+
 
         self.accessIntervals = accessIntervals
+        self.accessIntervalsLighting = accessIntervalsLighting
         self.accessMask = accessMask
+        self.accessMaskLighting = accessMaskLighting
         self.accessIntervalLengths = intervalLengths
+        self.accessIntervalLengthsLighting = intervalLengthsLighting
         self.accessElevations = ele
         self.time = timesAll
 
