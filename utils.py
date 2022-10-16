@@ -537,7 +537,11 @@ class TimeVaryingGraph(object):
         
         return time2FirstContact
 
-def time_varying_dijkstra_algorithm(graph, start_node, start_time, verbose=False): #Notes for reference from Jain paper "Routing in a delay tolerant network"
+def time_varying_dijkstra_algorithm(graph, start_node, start_time, sim_time = 3*u.day,verbose=False): #Notes for reference from Jain paper "Routing in a delay tolerant network"
+    """
+    sim_time: ~astropy.Quantity.Quantity
+        Simulation time, which defines the maximum cost value in the graph
+    """
     unvisited_nodes = list(graph.get_relay_sats()) # This is Q in Jain
     
     # We'll use this dict to save the cost of visiting each node and update it as we move along the graph   
@@ -547,7 +551,7 @@ def time_varying_dijkstra_algorithm(graph, start_node, start_time, verbose=False
     previous_nodes = {}
     
     # We'll use max_value to initialize the "infinity" value of the unvisited nodes   
-    max_value = 1 * u.yr #Set max value to 1 year from now
+    max_value = sim_time #Set max value for cost
     for node in unvisited_nodes:
         shortest_path[node] = start_time + max_value  #Maximum time in years added to start_time
     # However, we initialize the starting node's value with 0   
@@ -666,6 +670,8 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
         delVUsage            - DeltaV usage values
     """
     ## Get groundStationNodes
+    if not isinstance(groundStations, list):
+        groundStations = [groundStations]
     groundStationNodes = [str(g.groundID) for g in groundStations]
 
     ##########  Generate Recon Schedule  ##########
@@ -721,6 +727,8 @@ def run_dijkstra_routing(prep_dijkstra_output,
                          slewThreshold=3*np.pi/180/u.s, 
                          islTimeThreshold=2.5*u.min,
                          downlinkTimeThreshold=30*u.s,
+                         lightingRestraint = False,
+                         simTime = 3*u.day,
                          verbose=False):
     """
     Run the dijkstra routing given the data prepared in prep_dijkstra
@@ -739,6 +747,8 @@ def run_dijkstra_routing(prep_dijkstra_output,
         ISL contacts must be longer than this to transmit the message in full
     downlinkTimeThreshold: ~astropy.unit.Quantity
         Ground contact must be longer than this to transmit the images in full
+    lightingRestraint: Boolean
+        If true, implements lighting restraint (TODO: This can be optimized in the workflow where we only calculate it once)
     verbose: Boolean
         Prints out debug statements if True
 
@@ -869,9 +879,14 @@ def run_dijkstra_routing(prep_dijkstra_output,
     for obj in accessObjectTarget.allAccessData:
         satIDStr = str(obj.satID)
         if satIDStr in maneuverSatIDs:
-            passTimes[satIDStr] = {}
-            passTimes[satIDStr]['intervals'] = obj.accessIntervals
-            passTimes[satIDStr]['length'] = obj.accessIntervalLengths
+            if lightingRestraint:
+                passTimes[satIDStr] = {}
+                passTimes[satIDStr]['intervals'] = obj.accessIntervalsLighting
+                passTimes[satIDStr]['length'] = obj.accessIntervalLengthsLighting
+            else:
+                passTimes[satIDStr] = {}
+                passTimes[satIDStr]['intervals'] = obj.accessIntervals
+                passTimes[satIDStr]['length'] = obj.accessIntervalLengths
     
     walkerGraph = TimeVaryingGraph(contacts, nodesGS)
 
@@ -909,7 +924,7 @@ def run_dijkstra_routing(prep_dijkstra_output,
                 continue
             passKey = f'pass {passNum}'
             startTime = intervals[1] #End of pass
-            previous_nodes, shortest_path = time_varying_dijkstra_algorithm(graph=walkerGraph, start_node=sat, start_time=startTime, verbose=True)
+            previous_nodes, shortest_path = time_varying_dijkstra_algorithm(graph=walkerGraph, start_node=sat, start_time=startTime, sim_time=simTime, verbose=True)
             previous_nodes_all[satKey][passKey] = previous_nodes
             shortest_path_all[satKey][passKey] = shortest_path
             passNum += 1
@@ -960,6 +975,8 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
                          slewThreshold=3*np.pi/180/u.s, 
                          islTimeThreshold=2.5*u.min,
                          downlinkTimeThreshold=30*u.s,
+                         lightingRestraint=False,
+                         simTime=3*u.day,
                          verbose=False):
     """
     Gets the route for fastest downlink for a reconfigurable constellation 
@@ -999,6 +1016,10 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
         ISL contacts must be longer than this to transmit the message in full
     downlinkTimeThreshold: ~astropy.unit.Quantity
         Ground contact must be longer than this to transmit the images in full
+    lightingRestraint: Boolean
+        If true, implements lighting restraint (TODO: This can be optimized in the workflow where we only calculate it once)
+    simTime: astropy.Quantity.Quantity
+        Simulation time - affects maximum cost of Dijkstra graph
     verbose: Boolean
         Prints out debug statements if True
 
@@ -1028,6 +1049,8 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
                          slewThreshold=slewThreshold, 
                          islTimeThreshold=islTimeThreshold,
                          downlinkTimeThreshold=downlinkTimeThreshold,
+                         lightingRestraint=lightingRestraint,
+                         simTime=simTime,
                          verbose=verbose)
     return dijkstraOutput
     
@@ -1117,7 +1140,6 @@ def calc_metrics(dijkstraData, T=3*u.day):
             passTimeSum += sumPass
 
     # Calculate AoI
-
     for idx in range(1, len(keys)):
         key_i = keys[idx]
         key_im1 = keys[idx-1]
@@ -1130,6 +1152,10 @@ def calc_metrics(dijkstraData, T=3*u.day):
             t11 = (tf - passTimeDict[key_im1]).sec**2
 
         frac += (t21 - t11)/2 *u.s*u.s
+        # print(frac)
+        # if frac > 498081287293420.0 *u.s*u.s:
+        #     import ipdb;ipdb.set_trace()
+
 
 
     AoI = (frac/T).decompose().to(u.min)
