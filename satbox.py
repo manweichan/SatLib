@@ -2676,7 +2676,7 @@ class DataAccessSat():
 
         sunCoords = get_sun(timesAll) #Sun coordinates in GCRS frame (ECI) frame
         sunCoordsCartesian = sunCoords.cartesian
-        groundGCRSPosVel = self.groundLoc.loc.get_gcrs_posvel(timesAll)[0] #Ground lcoation in GCRS (ECI) frame
+        groundGCRSPosVel = self.groundLoc.loc.get_gcrs_posvel(timesAll)[0] #Ground location in GCRS (ECI) frame
 
         # Get dot product between sun coordinate and ground GCRS position
         sunGSDot = sunCoordsCartesian.dot(groundGCRSPosVel)
