@@ -1053,6 +1053,108 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
                          simTime=simTime,
                          verbose=verbose)
     return dijkstraOutput
+
+def get_fastest_downlink_lighting(constellation, groundStations, groundTarget,
+                         recon=True, isl=True,
+                         altChange=100*u.km, 
+                         constraint_type_gs='elevation', 
+                         constraint_angle_gs=25*u.deg, 
+                         constraint_type_sense='nadir',
+                         constraint_angle_sense=20*u.deg,
+                         t2propagate=3*u.day,
+                         tStep=15*u.s, 
+                         distanceThreshold=1250*u.km,
+                         slewThreshold=3*np.pi/180/u.s, 
+                         islTimeThreshold=2.5*u.min,
+                         downlinkTimeThreshold=30*u.s,
+                         simTime=3*u.day,
+                         verbose=False):
+    """
+    Gets the route for fastest downlink for a reconfigurable constellation 
+    to a set of ground stations and do it when lighting constraints are active
+    and inactive
+
+    Parameters
+    ----------
+    constellation: ~satbox.Constellation class
+        Constellation to run analysis on
+    groundStations: ~list
+        List of satbox.groundLoc stations for data downlink
+    groundTarget: ~satbox.groundLoc
+        Target location for Earth observation
+    recon: ~bool
+        If true, reconfigures orbits
+    isl: ~bool
+        If true, uses ISLs to determine data routing
+    altChange: ~astropy.unit.Quantity
+        Altitude change to get to drift orbit
+    constraint_type_gs: ~string | "nadir" or "elevation"
+            constraint angles type for ground station pass
+    constraint_angle_gs: ~astropy.unit.Quantity
+            angle used as the access threshold to determine access calculation for ground station
+    constraint_type_sense: ~string | "nadir" or "elevation"
+            constraint angles type for remote sensing pass
+    constraint_angle_sense: ~astropy.unit.Quantity
+            angle used as the access threshold to determine access calculation for ground station
+    t2propagate: ~astropy.unit.Quantity
+        Amount of time to Propagate starting from satellite.epoch
+    tStep: ~astropy.unit.Quantity
+        Time step used in the propagation
+    distanceThreshold: ~astropy.unit.Quantity
+        Distance at which one can close an intersatellite link between satellites
+    slewThreshold: ~astropy.unit.Quantity (1/u.s) in radians
+        Intersatellite links cannot close links at slew rates greater than this
+    islTimeTreshold: ~astropy.unit.Quantity
+        ISL contacts must be longer than this to transmit the message in full
+    downlinkTimeThreshold: ~astropy.unit.Quantity
+        Ground contact must be longer than this to transmit the images in full
+    simTime: astropy.Quantity.Quantity
+        Simulation time - affects maximum cost of Dijkstra graph
+    verbose: Boolean
+        Prints out debug statements if True
+
+    Returns
+    -------
+    outputDict: ~dict
+        Dictionary with dictionaries for lighting and no-lighting outputs
+            dictionaries with keys
+                downlinks_all      - Time of downlinks. Structure[sat][pass#][groundStation]
+                paths_all          - The path through the nodes for all downlinks Structure[sat][pass#]
+                previous_nodes_all - The previous node that leads to fastest route. Structure[sat][pass#][node]
+                shortest_path_all  - The shortest path to each of the nodes. Structure[source][pass#][destination_node]
+                passTimes          - pass times for satellite of groundTarget. Structure[sat][intervals/length]
+                contacts           - True/False arrays of when contacts are available (useful for plotting)
+    """
+
+    prepOutput = prep_dijkstra(constellation, groundStations, groundTarget, recon=recon,
+                         altChange=altChange,
+                         constraint_type_gs=constraint_type_gs, 
+                         constraint_angle_gs=constraint_angle_gs,
+                         constraint_type_sense=constraint_type_sense,
+                         constraint_angle_sense=constraint_angle_sense,
+                         t2propagate=t2propagate,
+                         tStep=tStep,
+                         verbose=verbose)
+    dijkstraOutputLighting = run_dijkstra_routing(prepOutput, isl=isl,
+                         distanceThreshold=distanceThreshold,
+                         slewThreshold=slewThreshold, 
+                         islTimeThreshold=islTimeThreshold,
+                         downlinkTimeThreshold=downlinkTimeThreshold,
+                         lightingRestraint=True,
+                         simTime=simTime,
+                         verbose=verbose)
+    dijkstraOutputNoLighting = run_dijkstra_routing(prepOutput, isl=isl,
+                         distanceThreshold=distanceThreshold,
+                         slewThreshold=slewThreshold, 
+                         islTimeThreshold=islTimeThreshold,
+                         downlinkTimeThreshold=downlinkTimeThreshold,
+                         lightingRestraint=False,
+                         simTime=simTime,
+                         verbose=verbose)
+    output = {"outputLighting": dijkstraOutputLighting,
+              "outputNoLighting": dijkstraOutputNoLighting   }   
+
+    return output
     
 
 def calc_metrics(dijkstraData, T=3*u.day):
