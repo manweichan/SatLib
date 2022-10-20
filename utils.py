@@ -1255,7 +1255,7 @@ def calc_metrics(dijkstraData, T=3*u.day):
 
         if idx == len(keys)-1: #This is the last pass, take last point as tf
             t21 = (tf - passTimeDict[key_im1]).sec**2
-            t11 = (tf - passTimeDict[key_im1]).sec**2
+            t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
         frac += (t21 - t11)/2 *u.s*u.s
         # print(frac)
