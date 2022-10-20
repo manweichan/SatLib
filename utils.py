@@ -1242,12 +1242,16 @@ def calc_metrics(dijkstraData, T=3*u.day):
             passTimeSum += sumPass
 
     # Calculate AoI
-    for idx in range(1, len(keys)):
+    for idx in range(0, len(keys)):
         key_i = keys[idx]
         key_im1 = keys[idx-1]
 
-        t21 = (downlinks_all_sorted[key_i] - passTimeDict[key_im1]).sec**2
-        t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
+        if idx == 0: #Area under curve for first downlink
+            t21 = (downlinks_all_sorted[key_i] - t0).sec**2
+            t11 = 0
+        else: #Else for later curves need to subtract the overlapping portion
+            t21 = (downlinks_all_sorted[key_i] - passTimeDict[key_im1]).sec**2
+            t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
         if idx == len(keys)-1: #This is the last pass, take last point as tf
             t21 = (tf - passTimeDict[key_im1]).sec**2
