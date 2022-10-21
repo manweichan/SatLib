@@ -1209,7 +1209,7 @@ def calc_metrics(dijkstraData, T=3*u.day):
     #         continue    
 
     passTimeDict = {}
-    passTimeSum = 0
+    passTimeSum = 0 * u.s
     #Flatten passTimes
     for key in downlinks_all_sorted:
         satPassGS = key.split('|')
