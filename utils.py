@@ -1242,31 +1242,30 @@ def calc_metrics(dijkstraData, T=3*u.day):
             passTimeSum += sumPass
 
     # Calculate AoI
-    for idx in range(0, len(keys)):
-        key_i = keys[idx]
-        key_im1 = keys[idx-1]
+    if not keys: #No downlinks, AoI is the length of simulation
+        AoI = T
+        srtMin = T.to(u.min)
+    else:
+        for idx in range(0, len(keys)):
+            key_i = keys[idx]
+            key_im1 = keys[idx-1]
 
-        if idx == 0: #Area under curve for first downlink
-            t21 = (downlinks_all_sorted[key_i] - t0).sec**2
-            t11 = 0
-        else: #Else for later curves need to subtract the overlapping portion
-            t21 = (downlinks_all_sorted[key_i] - passTimeDict[key_im1]).sec**2
-            t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
+            if idx == 0: #Area under curve for first downlink
+                t21 = (downlinks_all_sorted[key_i] - t0).sec**2
+                t11 = 0
+            else: #Else for later curves need to subtract the overlapping portion
+                t21 = (downlinks_all_sorted[key_i] - passTimeDict[key_im1]).sec**2
+                t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
-        if idx == len(keys)-1: #This is the last pass, take last point as tf
-            t21 = (tf - passTimeDict[key_im1]).sec**2
-            t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
+            if idx == len(keys)-1: #This is the last pass, take last point as tf
+                t21 = (tf - passTimeDict[key_im1]).sec**2
+                t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
-        frac += (t21 - t11)/2 *u.s*u.s
-        # print(frac)
-        # if frac > 498081287293420.0 *u.s*u.s:
-        #     import ipdb;ipdb.set_trace()
+            frac += (t21 - t11)/2 *u.s*u.s
+        AoI = (frac/T).decompose().to(u.min)
 
-
-
-    AoI = (frac/T).decompose().to(u.min)
-    srt = (downlinks_all_sorted[keys[0]] - t0).sec #In seconds
-    srtMin = srt/60 * u.min
+        srt = (downlinks_all_sorted[keys[0]] - t0).sec #In seconds
+        srtMin = srt/60 * u.min
 
     outputMetrics = {
                         'AoI': AoI,
