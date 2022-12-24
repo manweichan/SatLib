@@ -3,6 +3,8 @@ import operator
 import copy
 import collections
 
+from time import perf_counter
+
 # import cartopy.crs as ccrs
 import numpy as np
 import poliastro
@@ -668,6 +670,9 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
         accessObjectGS       - Access objects for access with ground stations
         accessObjectTarget   - Access objects for access with ground target
         delVUsage            - DeltaV usage values
+        t0Sched              - Time at beginning of schedule computations
+        tfSched              - Time at end of schedule computations
+        t0Routing            - Time at beginning of routing computations
     """
     ## Get groundStationNodes
     if not isinstance(groundStations, list):
@@ -678,12 +683,18 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
     # r_drift = poliastro.constants.R_earth + altDrift
     if verbose:
         print("Step 1 of 5: Generating Schedule")
+
+    t0_sched = perf_counter()
     schedDict = constellation.gen_GOM_2_RGT_scheds(altChange, groundTarget)
+    tf_sched = perf_counter()
+
+    t_sched = tf_sched - t0_sched
 
     ##########  Propagating  ##########
     if verbose:
         print("Step 2 of 5: Propagating Satellites")
 
+    t0_routing = perf_counter()
     sats2Maneuver = constellation.get_ascending_descending_per_plane(schedDict)[0]
     if not recon:
         select_sched_sats = None
@@ -717,6 +728,9 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
                     'accessObjectGS': accessObjectGS,
                     'accessObjectTarget': accessObjectTarget,
                     'delVUsage': delVUsage,
+                    't0Sched': t0_sched,
+                    'tfSched': tf_sched,
+                    't0Routing': t0_routing,
     }
 
     return outputDict
@@ -763,6 +777,7 @@ def run_dijkstra_routing(prep_dijkstra_output,
         passTimes          - pass times for satellite of groundTarget. Structure[sat][intervals/length]
         contacts           - True/False arrays of when contacts are available (useful for plotting)
         delVUsage          - DeltaV usage values
+        tfRouting          - Time at end of routing calculations
 
     """
 
@@ -773,6 +788,9 @@ def run_dijkstra_routing(prep_dijkstra_output,
     accessObjectGS = prep_dijkstra_output.get('accessObjectGS')
     accessObjectTarget = prep_dijkstra_output.get('accessObjectTarget')
     delVUsage = prep_dijkstra_output.get('delVUsage') #Pass through to output
+    t0_sched = prep_dijkstra_output.get('t0Sched')
+    tf_sched = prep_dijkstra_output.get('tfSched')
+    t0_routing = prep_dijkstra_output.get('t0Routing')
 
     ########## Dijkstra ##########
     if verbose:
@@ -950,6 +968,18 @@ def run_dijkstra_routing(prep_dijkstra_output,
                 path = print_dijkstra_result(previousNodesPass, passData, start_node=sat, target_node=quickestDownlinkKey)
                 paths_all[satKey][passKey] = path
 
+    tf_routing = perf_counter()
+
+    t_sched_total = tf_sched - t0_sched
+    t_routing_total = tf_routing - t0_routing
+    t_perf_total = tf_routing - t0_sched
+
+    times_perf = {
+                't_sched' : t_sched_total,
+                't_route' : t_routing_total,
+                't_total' : t_perf_total,
+    }
+
     outputDict = {
                     'downlinks_all': downlinks_all,
                     'paths_all':     paths_all,
@@ -958,6 +988,8 @@ def run_dijkstra_routing(prep_dijkstra_output,
                     'passTimes': passTimes,
                     'contacts': contacts,
                     'delVUsage': delVUsage,
+                    'tfRouting': tf_routing,
+                    'timesPerf': times_perf,
     }
 
     return outputDict
@@ -1143,16 +1175,15 @@ def get_fastest_downlink_lighting(constellation, groundStations, groundTarget,
                          lightingRestraint=True,
                          simTime=simTime,
                          verbose=verbose)
-    dijkstraOutputNoLighting = run_dijkstra_routing(prepOutput, isl=isl,
-                         distanceThreshold=distanceThreshold,
-                         slewThreshold=slewThreshold, 
-                         islTimeThreshold=islTimeThreshold,
-                         downlinkTimeThreshold=downlinkTimeThreshold,
-                         lightingRestraint=False,
-                         simTime=simTime,
-                         verbose=verbose)
-    output = {"outputLighting": dijkstraOutputLighting,
-              "outputNoLighting": dijkstraOutputNoLighting   }   
+    # dijkstraOutputNoLighting = run_dijkstra_routing(prepOutput, isl=isl,
+    #                      distanceThreshold=distanceThreshold,
+    #                      slewThreshold=slewThreshold, 
+    #                      islTimeThreshold=islTimeThreshold,
+    #                      downlinkTimeThreshold=downlinkTimeThreshold,
+    #                      lightingRestraint=False,
+    #                      simTime=simTime,
+    #                      verbose=verbose)
+    output = {"outputLighting": dijkstraOutputLighting}   
 
     return output
     
