@@ -1417,6 +1417,151 @@ def create_blacksky_constellation():
 
     return blackSkyConstellation, groundStations
 
+def satCosts(totalSats, firstSatCost, recurringSatsCost):
+    """
+    Define cost of designing and manufacturing satellites
+    
+    Parameters
+    ----------
+    totalSats: int
+        total number of satellites
+    firstSatCost: float
+        cost to design and build first satellite
+    recurringSatsCost: float
+        cost to construct subsequent identical satellites
+    """
+    
+    totalCost = firstSatCost + recurringSatsCost * (totalSats-1)
+    return totalCost
+
+def launchCost_f9(totalSats, 
+                  totalPlanes, 
+                  satellitesPerLaunch=36, 
+                  costPerLaunch=67, 
+                  driftMonths = 4, 
+                  a_start = 350*u.km + constants.R_earth,
+                  a_end = 550*u.km + constants.R_earth,
+                  ecc = 0*u.one,
+                  inc = 60*u.deg,
+                  verbose = False):
+    """
+    First take at launch costs assuming f9 launch
+    NOTE: DOESN'T TAKE INTO ACCOUNT MOOG COMET COSTS
+    
+    Parameters
+    ----------
+    totalSats: int
+        total sats to launch
+    totalPlanes: int
+        total number of planes in constellation
+    satMass: float
+        mass of each satellite
+    satellitesPerLaunch: int
+        number of satellites per launch. Default is Falcon 9 at 36
+    costPerLaunch: float
+        Cost per launch (default is millions for Falcon 9)
+    driftMonths: int
+        How many months to drift for RAAN separation
+    a_start: ~astropy.Quantity
+        semi-major axis of insertion (where rocket drops off)
+    a_end: ~astropy.Quantity
+        semi-major axis of final orbit
+    ecc: ~float
+        eccentrity of orbits
+    inc: ~astropy.Quantity
+        inclination of orbits
+    """
+    #Add in check for satellites per launch
+    satsPerPlane = totalSats/totalPlanes
+    if satsPerPlane > satellitesPerLaunch:
+        multiplier = np.ceil(satsPerPlane / satellitesPerLaunch)
+#         print("Too many satellites per launch... revise code")
+#         print("Sats per plane: ", satsPerPlane)
+    else:
+        multiplier = 1
+    startPrecRate = om.precRate_RAAN(a_start, ecc, inc)
+    endPrecRate = om.precRate_RAAN(a_end, ecc, inc)
+
+    delPrecRate = startPrecRate - endPrecRate
+
+    driftByMonth = (delPrecRate * 30*u.day).decompose() * 180 / np.pi #in deg
+    
+    degDrifted = np.abs(driftByMonth * driftMonths) * u.deg
+
+    planeSeparation = 360*u.deg / totalPlanes
+
+    planesPerLaunch = np.floor(degDrifted/planeSeparation).value
+    if verbose:
+        print("----------")
+        print("planeSeparation: ", planeSeparation)
+        print("Planes: ", plane)
+        print("Planes per Launch: ", planesPerLaunch)
+    if planesPerLaunch == 0:
+        planesPerLaunch = 1
+    if verbose:
+        print("Final planes per launch: ", planesPerLaunch)
+
+    totalLaunches = np.ceil(totalPlanes/planesPerLaunch) * multiplier
+    if verbose:
+        print("total Launches: ", totalLaunches)    
+    totalCost = totalLaunches * costPerLaunch
+    return totalCost, totalLaunches
+
+def launchCostRL(totalSats, totalPlanes, satellitesPerLaunch=2, costPerLaunch=7.5, RI=False):
+    """
+    Launch cost for RL
+    
+    Parameters
+    ----------
+    totalSats: int
+        total sats to launch
+    totalPlanes: int
+        total number of planes in constellation
+    satellitesPerLaunch: int
+        number of satellites per launch. Default is Falcon 9 at 36
+    costPerLaunch: float
+        Cost per launch (default is millions for Electron)
+    RI: Bool
+        Set to true if using Recon and ISL, to make sure only 1 satellite per Launch (due to size constraint)
+    """
+    
+    if RI == True:
+        satellitesPerLaunch = 1
+    satellitesPerPlane = totalSats / totalPlanes
+    launchesPerPlane = np.ceil(satellitesPerPlane)
+    launches = launchesPerPlane * totalPlanes
+    
+    totalCost = launches * costPerLaunch
+    return totalCost, launches
+
+def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
+    '''
+    Method to take two equally-sized lists and return just the elements which lie 
+    on the Pareto frontier, sorted into order.
+    Default behaviour is to find the maximum for both X and Y, but the option is
+    available to specify maxX = False or maxY = False to find the minimum for either
+    or both of the parameters.
+
+    # From https://oco-carbon.com/metrics/find-pareto-frontiers-in-python/
+
+    '''
+    # Sort the list in either ascending or descending order of X
+    myList = sorted([[Xs[i], Ys[i]] for i in range(len(Xs))], reverse=maxX)
+    # Start the Pareto frontier with the first value in the sorted list
+    p_front = [myList[0]]    
+    # Loop through the sorted list
+    for pair in myList[1:]:
+        if maxY: 
+            if pair[1] >= p_front[-1][1]: # Look for higher values of Y…
+                p_front.append(pair) # … and add them to the Pareto frontier
+        else:
+            if pair[1] <= p_front[-1][1]: # Look for lower values of Y…
+                p_front.append(pair) # … and add them to the Pareto frontier
+    # Turn resulting pairs back into a list of Xs and Ys
+    p_frontX = [pair[0] for pair in p_front]
+    p_frontY = [pair[1] for pair in p_front]
+    return p_frontX, p_frontY
+
 def get_potential_isl_keys(satID, keys, excludeList = None):
     """
     Get keys that incorporate the satID in the name
