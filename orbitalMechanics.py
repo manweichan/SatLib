@@ -148,7 +148,7 @@ def delV_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
     v1 = circ2elip_Hohmann(a1, a2)
     v2 = elip2circ_Hohmann(a1, a2)
     delV = v1 + v2
-    return delV
+    return delV.decompose()
 
 
 def t_Hohmann(a1, a2, muPlanet=poliastro.constants.GM_earth):
@@ -208,7 +208,7 @@ def delV_HohmannPlaneChange(a1, a2, theta, muPlanet=poliastro.constants.GM_earth
     v2 = np.sqrt(muPlanet * (2/rIncChange - 1/a))
     delV_PlaneChange = np.sqrt(v1**2 + v2**2 - 2 * v1 * v2 * np.cos(theta))
     delV_Total = delV_NoPlaneChange + delV_PlaneChange
-    return delV_Total
+    return delV_Total.decompose()
 
 #Plan is to make a graph (x: altitude, y: deltaV)
 def highAltIncManeuver(rStart, rIncChange, rEnd, deli):
