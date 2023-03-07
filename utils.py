@@ -15,6 +15,7 @@ from astropy.coordinates import (
     EarthLocation)
 from astropy import time
 import astropy.units as u
+from poliastro import constants
 from poliastro.twobody.propagation import propagate
 from poliastro.twobody.propagation import cowell
 from poliastro.core.perturbations import J2_perturbation
@@ -25,6 +26,8 @@ from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 
 import satbox as sb
+import orbitalMechanics as om
+
 
 def find_non_dominated_time_deltaV(flatArray):
     """
@@ -1434,11 +1437,35 @@ def satCosts(totalSats, firstSatCost, recurringSatsCost):
     totalCost = firstSatCost + recurringSatsCost * (totalSats-1)
     return totalCost
 
+def launchCost_f9_kg(totalMass,
+                  costPerKgLeo=2938.6):
+    """
+    Get launch cost of falcon 9 using cost per kilogram metric
+
+    Parameters
+    ----------
+    totalMass: float
+        total mass sent to orbit (kg)
+    costPerKgLeo: float
+        Cost per kg, default derived from $67M launch and 22,800 kg capacity to LEO https://www.spacex.com/media/Capabilities&Services.pdf
+
+    Returns
+    -------
+    totalCost: float
+        total cost in millions of dollars
+    """
+
+    totalCostDollar = totalMass * costPerKgLeo
+    totalCost = totalCostDollar * 1e-6
+    return totalCost
+
+
+
 def launchCost_f9(totalSats, 
                   totalPlanes, 
                   satellitesPerLaunch=36, 
                   costPerLaunch=67, 
-                  driftMonths = 4, 
+                  driftMonths = 6, 
                   a_start = 350*u.km + constants.R_earth,
                   a_end = 550*u.km + constants.R_earth,
                   ecc = 0*u.one,
@@ -1494,7 +1521,7 @@ def launchCost_f9(totalSats,
     if verbose:
         print("----------")
         print("planeSeparation: ", planeSeparation)
-        print("Planes: ", plane)
+        print("Planes: ", totalPlanes)
         print("Planes per Launch: ", planesPerLaunch)
     if planesPerLaunch == 0:
         planesPerLaunch = 1
@@ -1528,7 +1555,8 @@ def launchCostRL(totalSats, totalPlanes, satellitesPerLaunch=2, costPerLaunch=7.
     if RI == True:
         satellitesPerLaunch = 1
     satellitesPerPlane = totalSats / totalPlanes
-    launchesPerPlane = np.ceil(satellitesPerPlane)
+    # launchesPerPlane = np.ceil(satellitesPerPlane/satellitesPerLaunch)
+    launchesPerPlane = satellitesPerPlane
     launches = launchesPerPlane * totalPlanes
     
     totalCost = launches * costPerLaunch
