@@ -542,10 +542,15 @@ class TimeVaryingGraph(object):
         
         return time2FirstContact
 
-def time_varying_dijkstra_algorithm(graph, start_node, start_time, sim_time = 3*u.day,verbose=False): #Notes for reference from Jain paper "Routing in a delay tolerant network"
+def time_varying_dijkstra_algorithm(graph, start_node, start_time, sim_time = 3*u.day, verbose=False): #Notes for reference from Jain paper "Routing in a delay tolerant network"
     """
+    start_node: string
+        This is the string SatID that conducts the pass to retrieve the remote sensing data
+    start_time: ~astropy.Quantity.Quantity
+        This is time when imaging data first enters the satellite constellation
     sim_time: ~astropy.Quantity.Quantity
         Simulation time, which defines the maximum cost value in the graph
+
     """
     unvisited_nodes = list(graph.get_relay_sats()) # This is Q in Jain
     
