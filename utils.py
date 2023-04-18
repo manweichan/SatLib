@@ -542,15 +542,17 @@ class TimeVaryingGraph(object):
         
         return time2FirstContact
 
-def time_varying_dijkstra_algorithm(graph, start_node, start_time, sim_time = 3*u.day, verbose=False): #Notes for reference from Jain paper "Routing in a delay tolerant network"
+def time_varying_dijkstra_algorithm(graph, start_node, start_time, sim_start_time, sim_time = 3*u.day, verbose=False): #Notes for reference from Jain paper "Routing in a delay tolerant network"
     """
+    graph: TimeVaryingGraph object
     start_node: string
         This is the string SatID that conducts the pass to retrieve the remote sensing data
     start_time: ~astropy.Quantity.Quantity
         This is time when imaging data first enters the satellite constellation
     sim_time: ~astropy.Quantity.Quantity
         Simulation time, which defines the maximum cost value in the graph
-
+    sim_start_time: ~astropy.time.core.Time
+        Simulation start time
     """
     unvisited_nodes = list(graph.get_relay_sats()) # This is Q in Jain
     
@@ -563,7 +565,7 @@ def time_varying_dijkstra_algorithm(graph, start_node, start_time, sim_time = 3*
     # We'll use max_value to initialize the "infinity" value of the unvisited nodes   
     max_value = sim_time #Set max value for cost
     for node in unvisited_nodes:
-        shortest_path[node] = start_time + max_value  #Maximum time in years added to start_time
+        shortest_path[node] = sim_start_time + max_value  #Maximum time in years added to start_time
     # However, we initialize the starting node's value with 0   
     shortest_path[start_node] = start_time
     
@@ -744,6 +746,7 @@ def prep_dijkstra(constellation, groundStations, groundTarget,
     return outputDict
 
 def run_dijkstra_routing(prep_dijkstra_output,
+                         simStartTime,
                          isl=True,
                          distanceThreshold=1250*u.km,
                          slewThreshold=3*np.pi/180/u.s, 
@@ -759,6 +762,8 @@ def run_dijkstra_routing(prep_dijkstra_output,
     ----------
     prep_dijkstra_output: dict
         Output of prep_dijkstra()
+    simStartTime: ~astropy.time.core.Time
+        Start time of the simulation
     isl: ~bool
         If true, uses ISLs to determine data routing
     distanceThreshold: ~astropy.unit.Quantity
@@ -950,7 +955,12 @@ def run_dijkstra_routing(prep_dijkstra_output,
                 continue
             passKey = f'pass {passNum}'
             startTime = intervals[1] #End of pass
-            previous_nodes, shortest_path = time_varying_dijkstra_algorithm(graph=walkerGraph, start_node=sat, start_time=startTime, sim_time=simTime, verbose=True)
+            previous_nodes, shortest_path = time_varying_dijkstra_algorithm(graph=walkerGraph, 
+                                                                            start_node=sat, 
+                                                                            start_time=startTime, 
+                                                                            sim_time=simTime, 
+                                                                            sim_start_time=simStartTime,
+                                                                            verbose=True)
             previous_nodes_all[satKey][passKey] = previous_nodes
             shortest_path_all[satKey][passKey] = shortest_path
             passNum += 1
@@ -1003,6 +1013,7 @@ def run_dijkstra_routing(prep_dijkstra_output,
     return outputDict
 
 def get_fastest_downlink(constellation, groundStations, groundTarget,
+                         simStartTime,
                          recon=True, isl=True,
                          altChange=100*u.km, 
                          constraint_type_gs='elevation', 
@@ -1030,6 +1041,8 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
         List of satbox.groundLoc stations for data downlink
     groundTarget: ~satbox.groundLoc
         Target location for Earth observation
+    simStartTime: ~astropy.time.core.Time
+        Start time of the simulation
     recon: ~bool
         If true, reconfigures orbits
     isl: ~bool
@@ -1084,7 +1097,9 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
                          t2propagate=t2propagate,
                          tStep=tStep,
                          verbose=verbose)
-    dijkstraOutput = run_dijkstra_routing(prepOutput, isl=isl,
+    dijkstraOutput = run_dijkstra_routing(prepOutput, 
+                         simStartTime,
+                         isl=isl,
                          distanceThreshold=distanceThreshold,
                          slewThreshold=slewThreshold, 
                          islTimeThreshold=islTimeThreshold,
@@ -1095,7 +1110,9 @@ def get_fastest_downlink(constellation, groundStations, groundTarget,
     return dijkstraOutput
 
 def get_fastest_downlink_lighting(constellation, groundStations, groundTarget,
-                         recon=True, isl=True,
+                         simStartTime,
+                         recon=True, 
+                         isl=True,
                          altChange=100*u.km, 
                          constraint_type_gs='elevation', 
                          constraint_angle_gs=25*u.deg, 
@@ -1122,6 +1139,8 @@ def get_fastest_downlink_lighting(constellation, groundStations, groundTarget,
         List of satbox.groundLoc stations for data downlink
     groundTarget: ~satbox.groundLoc
         Target location for Earth observation
+    simStartTime: ~astropy.time.core.Time
+        Start time of the simulation
     recon: ~bool
         If true, reconfigures orbits
     isl: ~bool
@@ -1175,7 +1194,9 @@ def get_fastest_downlink_lighting(constellation, groundStations, groundTarget,
                          t2propagate=t2propagate,
                          tStep=tStep,
                          verbose=verbose)
-    dijkstraOutputLighting = run_dijkstra_routing(prepOutput, isl=isl,
+    dijkstraOutputLighting = run_dijkstra_routing(prepOutput, 
+                         simStartTime,
+                         isl=isl,
                          distanceThreshold=distanceThreshold,
                          slewThreshold=slewThreshold, 
                          islTimeThreshold=islTimeThreshold,
@@ -1296,7 +1317,16 @@ def calc_metrics(dijkstraData, T=3*u.day):
                 t21 = (downlinks_all_sorted[key_i] - passTimeDict[key_im1]).sec**2
                 t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
-            if idx == len(keys)-1: #This is the last pass, take last point as tf
+            if idx == len(keys)-1 and len(keys) == 1: #This is the last pass, take last point as tf, but this is the special case with only 1 downlink
+                t21_0 = t21
+                t11_0 = t11
+
+                frac += (t21_0 - t11_0)/2 *u.s*u.s
+
+                t21 = (tf - passTimeDict[key_im1]).sec**2
+                t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
+            
+            elif idx == len(keys)-1: #This is the last pass, take last point as tf
                 t21 = (tf - passTimeDict[key_im1]).sec**2
                 t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
