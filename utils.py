@@ -1317,7 +1317,7 @@ def calc_metrics(dijkstraData, T=3*u.day):
                 t21 = (downlinks_all_sorted[key_i] - passTimeDict[key_im1]).sec**2
                 t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
-            if idx == len(keys)-1 and len(keys) == 1: #This is the last pass, take last point as tf, but this is the special case with only 1 downlink
+            if idx == len(keys)-1: #This is the last pass, take last point as tf, but this is the special case with only 1 downlink
                 t21_0 = t21
                 t11_0 = t11
 
@@ -1326,9 +1326,9 @@ def calc_metrics(dijkstraData, T=3*u.day):
                 t21 = (tf - passTimeDict[key_im1]).sec**2
                 t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
             
-            elif idx == len(keys)-1: #This is the last pass, take last point as tf
-                t21 = (tf - passTimeDict[key_im1]).sec**2
-                t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
+            # elif idx == len(keys)-1: #This is the last pass, take last point as tf
+            #     t21 = (tf - passTimeDict[key_im1]).sec**2
+            #     t11 = (downlinks_all_sorted[key_im1] - passTimeDict[key_im1]).sec**2
 
             frac += (t21 - t11)/2 *u.s*u.s
         AoI = (frac/T).decompose().to(u.min)
