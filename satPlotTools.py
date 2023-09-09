@@ -16,7 +16,6 @@ from poliastro.czml.extract_czml import CZMLExtractor
 
 
 import matplotlib.pyplot as plt
-# from cycler import cycler
 from itertools import cycle
 import copy
 
