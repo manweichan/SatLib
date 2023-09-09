@@ -16266,48 +16266,8 @@
         }
     }
 },{
-    "id": "GS0",
-    "availability": "2000-01-01T12:00:00Z/2000-01-03T12:00:00Z",
-    "position": {
-        "cartesian": [
-            1545471.5980825804,
-            -4488375.4262904655,
-            4245603.55366508
-        ]
-    },
-    "billboard": {
-        "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACvSURBVDhPrZDRDcMgDAU9GqN0lIzijw6SUbJJygUeNQgSqepJTyHG91LVVpwDdfxM3T9TSl1EXZvDwii471fivK73cBFFQNTT/d2KoGpfGOpSIkhUpgUMxq9DFEsWv4IXhlyCnhBFnZcFEEuYqbiUlNwWgMTdrZ3JbQFoEVG53rd8ztG9aPJMnBUQf/VFraBJeWnLS0RfjbKyLJA8FkT5seDYS1Qwyv8t0B/5C2ZmH2/eTGNNBgMmAAAAAElFTkSuQmCC",
-        "show": true
-    },
-    "label": {
-        "show": true,
-        "font": "11pt Lucida Console",
-        "style": "FILL",
-        "outlineWidth": 1.0
-    }
-},{
-    "id": "GS1",
-    "availability": "2000-01-01T12:00:00Z/2000-01-03T12:00:00Z",
-    "position": {
-        "cartesian": [
-            415543.83517710835,
-            -5942553.7019019425,
-            2271394.866333425
-        ]
-    },
-    "billboard": {
-        "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACvSURBVDhPrZDRDcMgDAU9GqN0lIzijw6SUbJJygUeNQgSqepJTyHG91LVVpwDdfxM3T9TSl1EXZvDwii471fivK73cBFFQNTT/d2KoGpfGOpSIkhUpgUMxq9DFEsWv4IXhlyCnhBFnZcFEEuYqbiUlNwWgMTdrZ3JbQFoEVG53rd8ztG9aPJMnBUQf/VFraBJeWnLS0RfjbKyLJA8FkT5seDYS1Qwyv8t0B/5C2ZmH2/eTGNNBgMmAAAAAElFTkSuQmCC",
-        "show": true
-    },
-    "label": {
-        "show": true,
-        "font": "11pt Lucida Console",
-        "style": "FILL",
-        "outlineWidth": 1.0
-    }
-},{
     "id": "0-to-3",
-    "name": "0to3",
+    "name": "0 to 3",
     "availability": [
         "2000-01-05T00:23:00.000Z/2000-01-05T00:24:00.000Z",
         "2000-01-05T01:11:00.000Z/2000-01-05T01:13:00.000Z",
@@ -16729,7 +16689,7 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
@@ -16745,7 +16705,7 @@
     }
 },{
     "id": "1-to-2",
-    "name": "1to2",
+    "name": "1 to 2",
     "availability": [
         "2000-01-05T00:23:00.000Z/2000-01-05T00:24:00.000Z",
         "2000-01-05T01:11:00.000Z/2000-01-05T01:13:00.000Z",
@@ -17167,7 +17127,7 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
@@ -17182,8 +17142,48 @@
         }
     }
 },{
+    "id": "GS0",
+    "availability": "2000-01-01T12:00:00Z/2000-01-03T12:00:00Z",
+    "position": {
+        "cartesian": [
+            1545471.5980825804,
+            -4488375.4262904655,
+            4245603.55366508
+        ]
+    },
+    "billboard": {
+        "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACvSURBVDhPrZDRDcMgDAU9GqN0lIzijw6SUbJJygUeNQgSqepJTyHG91LVVpwDdfxM3T9TSl1EXZvDwii471fivK73cBFFQNTT/d2KoGpfGOpSIkhUpgUMxq9DFEsWv4IXhlyCnhBFnZcFEEuYqbiUlNwWgMTdrZ3JbQFoEVG53rd8ztG9aPJMnBUQf/VFraBJeWnLS0RfjbKyLJA8FkT5seDYS1Qwyv8t0B/5C2ZmH2/eTGNNBgMmAAAAAElFTkSuQmCC",
+        "show": true
+    },
+    "label": {
+        "show": true,
+        "font": "11pt Lucida Console",
+        "style": "FILL",
+        "outlineWidth": 1.0
+    }
+},{
+    "id": "GS1",
+    "availability": "2000-01-01T12:00:00Z/2000-01-03T12:00:00Z",
+    "position": {
+        "cartesian": [
+            415543.83517710835,
+            -5942553.7019019425,
+            2271394.866333425
+        ]
+    },
+    "billboard": {
+        "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACvSURBVDhPrZDRDcMgDAU9GqN0lIzijw6SUbJJygUeNQgSqepJTyHG91LVVpwDdfxM3T9TSl1EXZvDwii471fivK73cBFFQNTT/d2KoGpfGOpSIkhUpgUMxq9DFEsWv4IXhlyCnhBFnZcFEEuYqbiUlNwWgMTdrZ3JbQFoEVG53rd8ztG9aPJMnBUQf/VFraBJeWnLS0RfjbKyLJA8FkT5seDYS1Qwyv8t0B/5C2ZmH2/eTGNNBgMmAAAAAElFTkSuQmCC",
+        "show": true
+    },
+    "label": {
+        "show": true,
+        "font": "11pt Lucida Console",
+        "style": "FILL",
+        "outlineWidth": 1.0
+    }
+},{
     "id": "0-to-GS0",
-    "name": "0toGS0",
+    "name": "0 to GS0",
     "availability": [
         "2000-01-01T23:25:00.000Z/2000-01-01T23:31:00.000Z",
         "2000-01-02T01:06:00.000Z/2000-01-02T01:10:00.000Z",
@@ -17344,14 +17344,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
@@ -17360,7 +17360,7 @@
     }
 },{
     "id": "0-to-GS1",
-    "name": "0toGS1",
+    "name": "0 to GS1",
     "availability": [
         "2000-01-01T23:18:00.000Z/2000-01-01T23:24:00.000Z",
         "2000-01-02T09:33:00.000Z/2000-01-02T09:38:00.000Z",
@@ -17467,14 +17467,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
@@ -17483,7 +17483,7 @@
     }
 },{
     "id": "1-to-GS0",
-    "name": "1toGS0",
+    "name": "1 to GS0",
     "availability": [
         "2000-01-02T00:15:00.000Z/2000-01-02T00:21:00.000Z",
         "2000-01-02T07:00:00.000Z/2000-01-02T07:06:00.000Z",
@@ -17644,14 +17644,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
@@ -17660,7 +17660,7 @@
     }
 },{
     "id": "1-to-GS1",
-    "name": "1toGS1",
+    "name": "1 to GS1",
     "availability": [
         "2000-01-02T00:08:00.000Z/2000-01-02T00:13:00.000Z",
         "2000-01-02T10:23:00.000Z/2000-01-02T10:28:00.000Z",
@@ -17776,14 +17776,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
@@ -17792,7 +17792,7 @@
     }
 },{
     "id": "2-to-GS0",
-    "name": "2toGS0",
+    "name": "2 to GS0",
     "availability": [
         "2000-01-01T13:28:00.000Z/2000-01-01T13:30:00.000Z",
         "2000-01-01T18:33:00.000Z/2000-01-01T18:36:00.000Z",
@@ -17971,14 +17971,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
@@ -17987,7 +17987,7 @@
     }
 },{
     "id": "2-to-GS1",
-    "name": "2toGS1",
+    "name": "2 to GS1",
     "availability": [
         "2000-01-01T21:55:00.000Z/2000-01-01T22:01:00.000Z",
         "2000-01-02T11:52:00.000Z/2000-01-02T11:58:00.000Z",
@@ -18103,14 +18103,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
@@ -18119,7 +18119,7 @@
     }
 },{
     "id": "3-to-GS0",
-    "name": "3toGS0",
+    "name": "3 to GS0",
     "availability": [
         "2000-01-01T12:35:00.000Z/2000-01-01T12:41:00.000Z",
         "2000-01-01T19:22:00.000Z/2000-01-01T19:28:00.000Z",
@@ -18271,14 +18271,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
@@ -18287,7 +18287,7 @@
     }
 },{
     "id": "3-to-GS1",
-    "name": "3toGS1",
+    "name": "3 to GS1",
     "availability": [
         "2000-01-01T12:29:00.000Z/2000-01-01T12:34:00.000Z",
         "2000-01-01T21:07:00.000Z/2000-01-01T21:08:00.000Z",
@@ -18412,14 +18412,14 @@
             }
         ],
         "arcType": "NONE",
-        "width": 1,
+        "width": 2,
         "material": {
             "solidColor": {
                 "color": {
                     "rgba": [
-                        0,
-                        255,
-                        255,
+                        10,
+                        245,
+                        25,
                         255
                     ]
                 }
