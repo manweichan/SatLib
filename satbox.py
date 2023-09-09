@@ -614,8 +614,26 @@ class Constellation():
         return sats2Maneuver, driftTimes, scheds
 
 
-    def generate_czml_file(self, prop_duration, sample_points, 
-                            fname=None, satellites=None, objects=None, L_avail_ISL=None,L_poly_ISL=None, L_avail_GS=None, L_poly_GS=None, GS_pos=None, alt=None, conicSensorAngle=None, GS=False, scene3d=True, specificSats=False, show_polyline_ISL=False, show_polyline_GS=False, show_conicSensor=False, create_file=False):
+    def generate_czml_file(self, 
+                            prop_duration, 
+                            sample_points, 
+                            fname=None, 
+                            satellites=None, 
+                            objects=None, 
+                            L_avail_ISL=None,
+                            L_poly_ISL=None, 
+                            L_avail_GS=None, 
+                            L_poly_GS=None, 
+                            GS_pos=None, 
+                            alt=None, 
+                            conicSensorAngle=None, 
+                            GS=False, 
+                            scene3d=True, 
+                            specificSats=False, 
+                            show_polyline_ISL=False, 
+                            show_polyline_GS=False, 
+                            show_conicSensor=False, 
+                            create_file=False):
         """
         Generates CZML file for the constellation for plotting
 
@@ -2733,6 +2751,7 @@ class DataAccessSat():
             return
 
         allTimes = self.sat.timesAll
+        # allTimes = self.sat.time
         if isinstance(allTimes, np.ndarray):
             timePlot = [t.datetime for t in allTimes]
         else: 
@@ -2867,6 +2886,7 @@ class DataAccessConstellation():
             if isinstance(self.groundLoc, list):
                 for groundLoc in self.groundLoc:
                     dataAccess = DataAccessSat(sat, groundLoc)
+                    times = dataAccess.sat.times
                     dataAccess.calc_access(constraint_type, constraint_angle)
                     allAccessData.append(dataAccess)
             else:
@@ -2875,6 +2895,7 @@ class DataAccessConstellation():
                 allAccessData.append(dataAccess)
 
         self.allAccessData = allAccessData
+        self.times = times
 
         #Remove propagated data to reduce size of object
         self.constellation = self.constellation.initConstellation
@@ -2903,7 +2924,9 @@ class DataAccessConstellation():
             percCoverage = sum(totalAccess) / len(totalAccess) * 100
 
         #Choose time scale to be first satellite
-        allTimes = self.allAccessData[0].sat.timesAll
+        # allTimes = self.allAccessData[0].sat.timesAll
+        allTimes = self.times
+
         if isinstance(allTimes, np.ndarray):
             timePlot = [t.datetime for t in allTimes]
         else: 
@@ -2912,7 +2935,7 @@ class DataAccessConstellation():
         fig, ax = plt.subplots()
         ax.plot(timePlot, totalAccess, plot_style)
         ax.set_xlabel('Date Time')
-        ax.set_yticks([])
+        ax.set_yticks([0,1])
         fig.autofmt_xdate()
         fig.suptitle(f'Total access for Ground Location(s): {gLocs}\n'
                         f'Coverage Percentage: {percCoverage:.1f} %')
@@ -2936,7 +2959,8 @@ class DataAccessConstellation():
         fig.supylabel('Access')
 
         for accessIdx, access in enumerate(self.allAccessData):
-            allTimes = self.allAccessData[accessIdx].sat.timesAll
+            # allTimes = self.allAccessData[accessIdx].sat.timesAll
+            allTimes = self.times
             if isinstance(allTimes, np.ndarray):
                 timePlot = [t.datetime for t in allTimes]
             else: 
@@ -2989,7 +3013,8 @@ class DataAccessConstellation():
             if access.satID not in sats or access.groundLocID not in gLocs:
                 pass
             else:
-                allTimes = self.allAccessData[accessIdx].sat.timesAll
+                # allTimes = self.allAccessData[accessIdx].sat.timesAll
+                allTimes = self.times
                 if isinstance(allTimes, np.ndarray):
                     timePlot = [t.datetime for t in allTimes]
                 else: 
