@@ -10,7 +10,6 @@ from poliastro.twobody.propagation import propagate, func_twobody
 from poliastro.twobody.propagation import cowell
 from poliastro.core.perturbations import J2_perturbation
 from poliastro.util import norm
-# from poliastro.frames.equatorial import GCRS
 from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 from poliastro.plotting.static import StaticOrbitPlotter
@@ -18,7 +17,6 @@ from poliastro.plotting import OrbitPlotter3D, OrbitPlotter2D
 from poliastro.twobody.events import(
     NodeCrossEvent,
 )
-# import cartopy.crs as ccrs
 
 import seaborn as sns
 import astropy.units as u
@@ -26,13 +24,8 @@ import astropy
 from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation, GCRS, ITRS, CartesianRepresentation, SkyCoord, get_sun
 from CZMLExtractor_MJD import CZMLExtractor_MJD
-# import OpticalLinkBudget.OLBtools as olb
 import utils as utils
-import orbitalMechanics as om
-import comms as com
 from copy import deepcopy
-
-import dill
 
 # Constellation Class
 
@@ -199,40 +192,6 @@ class Constellation():
         # accessData = DataAccessConstellation(accessList)
         return accessList
 
-
-    # def propagate(self, time):
-    #     """
-    #     Propagates satellites in the constellation to a certain time.
-
-    #     Args:
-    #         time(astropy time object): Time to propagate to
-    #     """
-    #     planes2const=[]
-    #     for plane in self.planes:
-    #         if not plane:  # Continue if empty
-    #             continue
-
-    #         planeSats=[]
-    #         for satIdx, sat in enumerate(plane.sats):
-    #             #Save properties that are erased during propagation
-    #             satID = sat.satID
-    #             planeID = sat.planeID
-    #             note = sat.note 
-    #             task = sat.task
-    #             manSched = sat.manSched
-
-    #             satProp=sat.propagate(time)
-
-    #             satProp.satID = satID
-    #             satProp.planeID = planeID
-    #             satProp.note = note 
-    #             satProp.task = task
-    #             satProp.manSched = manSched
-
-    #             planeSats.append(satProp)
-    #         plane2append=Plane.from_list(planeSats)
-    #         planes2const.append(plane2append)
-    #     return Constellation.from_list(planes2const)
 
     def add_comms_payload(self, commsPL):
         """
@@ -766,37 +725,6 @@ class Constellation():
             toPrint = '[' + toPrint + ']'
 
             return toPrint
-
-
-        #Manwei's code
-        '''
-        testL = [str(x) for x in extractor.packets]
-        toPrint = ','.join(testL)
-        toPrint = '[' + toPrint + ']'
-        cwd = os.getcwd()
-
-        czmlDir = os.path.join(cwd, "czmlFiles")
-
-        # Check if directory is available
-        # czmlDirExist = os.path.isdir(czmlDir)
-        os.makedirs(czmlDir, exist_ok=True)
-
-        fileDir = os.path.join(cwd, czmlDir, fname + ".czml")
-        f = open(fileDir, "w")
-        f.write(toPrint)
-        f.close()
-
-    def dill_write(self, fname_prefix):
-        """
-        Writes current constellation to a pickle file using the dill library
-
-        Args:
-            fname_prefix (string) : file name string, excluding the .pkl
-        """
-        fname = fname_prefix + '.pkl'
-        with open(fname, 'wb') as f:
-            dill.dump(self, f)
-        '''
 
 
 class SimConstellation():
@@ -1567,14 +1495,9 @@ class Satellite(Orbit):
             ghostSatFutureD = Satellite.circular(Earth, alt = rgt_alt,
                  inc = satInit.inc, raan = raanD, arglat = anoms[1], epoch = timePass)
 
-            # ghostSatFutureA.satID = self.satID #tag with satID
-            # ghostSatFutureD.satID = self.satID #tag with satID
 
             ghostSatFutureA.note = 'a' #Tag with ascending or descending
             ghostSatFutureD.note = 'd' #Tag with ascending or descending
-
-            # ##Tag satellite with maneuver number
-            # ghostSatFuture.manID = idx
 
             ## Tag ghost satellites with sat and plane IDs
             ghostSatFutureA.satID = self.satID
@@ -1587,165 +1510,6 @@ class Satellite(Orbit):
 
         return rgtOrbits
 
-    # def get_rgt(self, groundLoc, days=7 , tInitSim=None, task=None, k_r=15, k_d=1,
-    #                              refVernalEquinox=astropy.time.Time("2021-03-20T0:00:00", format = 'isot', scale = 'utc')):
-    #     """
-    #     Given an orbit and ground site, gets the desired repeat ground track orbit 
-    #     Loosely based on Legge's thesis section 3.1.2
-
-    #     Parameters
-    #     ----------
-    #     groundLoc: satbox.GroundLoc  
-    #         This is the ground location that you want to get a pass from
-    #     days int: int 
-    #         Amount of days ahead for the scheduler to plan for
-    #     tInitSim: ~astropy.time.Time
-    #         Time to initialize planner
-    #     task: string 
-    #         The assigned task for the desired satellite. Options: 'Image', 'ISL', 'Downlink'
-    #     k_r: int
-    #         Number of revolutions until repeat ground track
-    #     k_d: int
-    #         Number of days to to repeat ground track
-    #     refVernalEquinox: ~astropy.time.Time 
-    #         Date of vernal equinox. Default is for 2021
-
-    #     Returns
-    #     ----------
-    #     rgtOrbits: (array of satbox.Satellite objects): 
-    #         Orbit of satellite at ground pass (potential position aka ghost position)
-
-    #     Todo:
-    #         Account for RAAN drift due to J2 perturbation
-    #     """
-
-    #     assert isinstance(groundLoc, GroundLoc), ('groundLoc argument must' 
-    #                                               ' be a satbox.GroundLoc object')
-    #     assert isinstance(days, int), ('days argument must' 
-    #                                               ' be an integer')
-
-    #     if tInitSim is None:
-    #         tInit = self.epoch
-    #         satInit = self  
-    #     else:
-    #         assert isinstance(tInitSim, astropy.units.quantity.Quantity), ('tInitSim '
-    #                                              'must be an astropy.units.quantity.Quantity')
-    #         tInit = tInitSim
-    #         satInit = self.propagate(tInitSim)
-
-        
-    #     tInitMJDRaw = tInit.mjd
-    #     tInitMJD = int(tInitMJDRaw)
-
-    #     dayArray = np.arange(0, days + 1)
-    #     days2InvestigateMJD = list(tInitMJD + dayArray) #Which days to plan over
-    #     days = [Time(dayMJD, format='mjd', scale='utc')
-    #                         for dayMJD in days2InvestigateMJD]
-        
-    #     # #Get geocentric coordinates of ground station
-    #     # gsGeocentric = groundLoc.loc.to_geocentric()
-
-    #     # #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
-    #     # gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
-    #     # r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
-    #     # p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
-    #     # gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
-
-    #     ## Extract relevant orbit and ground station parameters
-    #     i = satInit.inc
-    #     lon = groundLoc.lon
-    #     lat = groundLoc.lat
-    #     # lat = gsLatGeocentric
-    #     raan = satInit.raan
-
-    #     #Angle check
-    #     asin = np.tan(lat) / np.tan(i)
-    #     if asin > 1:
-    #         print(f'Arcsin angle {asin} rounding to 1')
-    #         asin = 1  * u.one
-    #     elif asin < -1:
-    #         print(f'Arcsin angle {asin} rounding to -1')
-    #         asin = -1 * u.one
-    #     delLam = np.arcsin(asin) #Longitudinal offset
-    #     theta_GMST_a = raan + delLam - lon #ascending sidereal angle of pass
-    #     theta_GMST_d = raan - delLam - lon - np.pi * u.rad #descending sidereal angle of pass
-
-    #     ## Create quicker calculation of descending raan
-    #     raanA = raan
-    #     raanD = theta_GMST_a + delLam + lon + np.pi * u.rad # pegs both raans to this GMST time
-
-    #     delDDates = [day - refVernalEquinox for day in days] #Gets difference in time from vernal equinox
-    #     delDDateDecimalYrList = [delDates.to_value('year') for delDates in delDDates] #Gets decimal year value of date difference
-    #     delDDateDecimalYr = np.array(delDDateDecimalYrList)
-    
-    #     #Get solar time values for ascending and descending pass
-    #     theta_GMT_a_raw = theta_GMST_a - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
-    #     theta_GMT_d_raw = theta_GMST_d - 2*np.pi * delDDateDecimalYr * u.rad + np.pi * u.rad
-
-    #     theta_GMT_a = np.mod(theta_GMT_a_raw, 360 * u.deg)
-    #     theta_GMT_d = np.mod(theta_GMT_d_raw, 360 * u.deg)
-
-    #     angleToHrs_a = astropy.coordinates.Angle(theta_GMT_a).hour
-    #     angleToHrs_d = astropy.coordinates.Angle(theta_GMT_d).hour
-        
-    #     tPass_a = []
-    #     tPass_d = []
-    #     for d_idx, day in enumerate(days):
-    #         timePass_a = day + angleToHrs_a[d_idx] * u.hr
-    #         timePass_d = day + angleToHrs_d[d_idx] * u.hr
-    #         if timePass_a > self.epoch: #Make sure time is in the future
-    #             tPass_a.append(timePass_a)
-    #         if timePass_d > self.epoch:
-    #             tPass_d.append(timePass_d)
-    #     timesRaw = [tPass_a, tPass_d]
-
-    #     note_a = f"Potential ascending pass times for Satellite: {self.satID}"
-    #     note_d = f"Potential descending pass times for Satellite: {self.satID}"
-    #     scheduleItms_a = [PointingObject(tPass) for tPass in tPass_a]
-    #     for schItm in scheduleItms_a:
-    #         schItm.note = note_a
-    #         schItm.passType = 'a'
-        
-    #     scheduleItms_d = [PointingObject(tPass) for tPass in tPass_d]
-    #     for schItm in scheduleItms_d:
-    #         schItm.note = note_d
-    #         schItm.passType = 'd'
-        
-    #     scheduleItms = scheduleItms_a + scheduleItms_d
-        
-    #     rgtOrbits = []
-
-    #     rgt_r, rgt_alt = om.getRGTOrbit(k_r, k_d, satInit.ecc, satInit.inc)
-
-    #     for idx, sch in enumerate(scheduleItms):
-    #         raans, anoms = self.__desired_raan_from_pass_time(sch.time, groundLoc) ##Only need one time to find anomaly since all passes should be the same geometrically
-    #         if sch.passType == 'a': #Ascending argument of latitude
-    #             omega = anoms[0]
-    #             raan = raans[0]
-    #         elif sch.passType == 'd': #Descending argument of latitude
-    #             omega = anoms[1]
-    #             raan = raans[1]
-            
-    #         #Get desired satellite that will make pass of ground location
-    #         ghostSatFuture = Satellite.circular(Earth, alt = rgt_alt,
-    #              inc = satInit.inc, raan = raan, arglat = omega, epoch = sch.time)
-    #         ghostSatFuture.satID = self.satID #tag with satID
-    #         ghostSatFuture.note = sch.passType #Tag with ascending or descending
-            
-    #         ##Tag satellite with maneuver number
-    #         ghostSatFuture.manID = idx
-
-    #         ## Tag ghost satellites with sat and plane IDs
-    #         ghostSatFuture.satID = self.satID
-    #         ghostSatFuture.satID = self.planeID
-
-    #         #Include RGT Constant as an attribute
-    #         # ghostSatFuture.rgtConstant = k_r * raan + k_d * omega 
-    #         # ghostSatFuture.equatorCrossings = wrapAngles
-    #         rgtOrbits.append(ghostSatFuture)
-    
-
-    #     return rgtOrbits
 
     def gen_GOM_2_RGT_sched(self, altChange, gs, tStep=15*u.s, k_r=15, k_d=1, verbose=False):
         """
@@ -1861,8 +1625,6 @@ class Satellite(Orbit):
             groundLoc.lat = groundLoc.lat * u.deg
         if not isinstance(groundLoc.lon, astropy.units.quantity.Quantity):
             groundLoc.lon = groundLoc.lon * u.deg
-#         if not isinstance(i, astropy.units.quantity.Quantity):
-#             i = i * u.rad
         tPass.location = groundLoc.loc #Make sure location is tied to time object
         theta_GMST = tPass.sidereal_time('mean', 'greenwich') #Greenwich mean sidereal time
         
@@ -1870,7 +1632,6 @@ class Satellite(Orbit):
         gsGeocentric = groundLoc.loc.to_geocentric()
 
         # #Convert to angles see this website: https://www.oc.nps.edu/oc2902w/coord/coordcvt.pdf
-        # gsLonGeocentric = np.arctan2(gsGeocentric[1], gsGeocentric[0])
         r = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2 + gsGeocentric[2]**2)
         p = np.sqrt(gsGeocentric[0]**2 + gsGeocentric[1]**2)
         gsLatGeocentric = np.arctan2(gsGeocentric[2], p)
@@ -2446,14 +2207,9 @@ class ManeuverSchedule():
         else:
             orb_i_1st_burn = orb_i.propagate(t_wait)
 
-        ## Debug statements ##
-        # print(f"T_wait: {t_wait}")
         orb_tgt_180 = orb_tgt.propagate(orb_i.epoch + t_wait + t_trans, method=cowell, f=f)
         anomalyDiff = orb_i_1st_burn.arglat.to(u.deg) - orb_tgt_180.arglat.to(u.deg)
-        # print(f"Anomaly Diff: {anomalyDiff}")
-        # print("T_transfer: ", t_trans)
-        # print("a_trans: ", a_trans)
-        ## End Debug statements ##
+
 
         self.gen_hohmann_schedule(orb_i_1st_burn, orb_tgt_i.a)
 
@@ -2767,73 +2523,6 @@ class DataAccessSat():
         fig.autofmt_xdate()
         fig.show()
 
-
-    # def process_data_ground_range(self, method="vector", re=constants.R_earth, fastRun=True):
-    #     """
-    #     Process access data using ground range method. Will be deprecated soon.
-    #     """
-
-    #     satCoords = self.sat.rvECI
-    #     tofs = self.sat.rvTimeDeltas
-    #     absTime= self.sat.epoch + tofs  # absolute time from time deltas
-
-    #     satECI = GCRS(satCoords.x, satCoords.y, satCoords.z, representation_type="cartesian", obstime = absTime)
-    #     satECISky = SkyCoord(satECI)
-    #     satECEF = satECISky.transform_to(ITRS)
-    #     # Turn coordinates into an EarthLocation object
-    #     satEL = EarthLocation.from_geocentric(satECEF.x, satECEF.y, satECEF.z)
-
-    #     # Convert to LLA
-    #     lla_sat= satEL.to_geodetic()  # to LLA
-
-    #     # Calculate ground range (great circle arc) between the satellite nadir
-    #     # point and the ground location
-    #     groundRanges = utils.ground_range_spherical(lla_sat.lat, lla_sat.lon, self.groundLoc.lat, self.groundLoc.lon)
-
-    #     # Calculate the max ground range given the satellite sensor FOV
-    #     if fastRun:
-    #         sat_h_ave = lla_sat.height.mean()
-    #         lam_min_all, lam_max_all = min_and_max_ground_range(sat_h_ave, self.sat.remoteSensor[0].fov, 0*u.deg, re)
-
-    #         access_mask = groundRanges < abs(lam_max_all)
-    #     else:
-    #         lam_min_all = []
-    #         lam_max_all = []
-    #         for height in lla_sat.height:
-    #             lam_min, lam_max = min_and_max_ground_range(height, self.sat.remoteSensor[0].fov, 0*u.deg, re)
-    #             lam_min_all.append(lam_min)
-    #             lam_max_all.append(lam_max)
-
-    #     accessIntervals = utils.get_start_stop_intervals(access_mask, absTime)
-    #     self.accessIntervals = accessIntervals
-    #     self.accessMask = access_mask
-    #     self.lam_max = lam_max_all
-    #     self.groundRanges = groundRanges
-
-    # def plot_access(self, absolute_time=True):
-    #     """
-    #     plots access
-
-    #     Args:
-    #         absolute_time (Bool) : If true, plots time in UTC, else plots in relative time (i.e. from sim start)
-    #     """
-    #     if not hasattr(self, 'accessIntervals'):
-    #         print("data not processed yet\n"
-    #               "running self.process_data()")
-    #         self.process_data()
-
-    #     if absolute_time:
-    #         timePlot = self.sat.rvTimes.datetime
-    #     else:
-    #         timePlot = self.sat.rvTimeDeltas.to_value('sec')
-
-    #     fig, ax = plt.subplots()
-    #     fig.suptitle(f'Access for Satellite {self.satID}\n and GS {self.groundLocID}')
-    #     ax.plot(timePlot, self.accessMask)
-    #     ax.set_xlabel('Date Time')
-    #     ax.set_ylabel('1 if access')
-    #     fig.autofmt_xdate()
-    #     fig.show()
 
 class DataAccessConstellation():
     """
