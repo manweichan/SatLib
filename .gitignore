@@ -4,3 +4,4 @@ __pycache__/*
 *sublime-workspace
 deprecated/*
 .ipynb_checkpoints/*
+OpticalLinkBudget/*
