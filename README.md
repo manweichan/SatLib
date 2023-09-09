@@ -53,3 +53,4 @@ Open satbox_ex.ipynb
 ## Other notebooks to look at include
 ###  satbox_czml_ex.ipynb - Example notebook of how to create czml files for Cesium
 ###  RGT_maneuver_ex.ipynb - Exmple notebook of how to reconfigure satellites into repeat ground track orbits over a target site
+###  constellation_performance.ipynb - Example notebook of how to extract constellation performance from metrics: Age of information, system response time, and total pass time
