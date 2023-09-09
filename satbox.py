@@ -1,6 +1,8 @@
 import os
 from matplotlib.style import available
 import numpy as np
+import orbitalMechanics as om
+import comms as com
 from poliastro import constants
 from poliastro.earth import Orbit
 from poliastro.earth.sensors import min_and_max_ground_range, ground_range_diff_at_azimuth
@@ -2580,6 +2582,7 @@ class DataAccessConstellation():
                     allAccessData.append(dataAccess)
             else:
                 dataAccess = DataAccessSat(sat, self.groundLoc)
+                times = dataAccess.sat.times
                 dataAccess.calc_access(constraint_type, constraint_angle)
                 allAccessData.append(dataAccess)
 
