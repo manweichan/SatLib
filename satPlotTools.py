@@ -18,6 +18,7 @@ from poliastro.czml.extract_czml import CZMLExtractor
 import matplotlib.pyplot as plt
 # from cycler import cycler
 from itertools import cycle
+import copy
 
 def getLonLat(orb, timeInts, pts, J2 = True):
     """
@@ -336,12 +337,18 @@ def plot_dijkstra(contacts, path, to_plot=-1):
         Index of last element you want to plot (if you want to cut graph shorter)
     """
     fig,axs = plt.subplots(len(path)-1)
-    axs[0].set_title("Nodes: " + " -> ".join(path))
+    pathTitle = copy.copy(path)
+    groundStationStr = [pathTitle.pop(-1)]
+    path2PlotStr = ['sat ' + item for item in pathTitle]
+
+    path2PlotPlt = path2PlotStr + groundStationStr
+    axs[0].set_title("Nodes: " + " -> ".join(path2PlotPlt))
     for n, ax in enumerate(axs):
         source = path[n]
         destination = path[n+1]
         
-        key = f'sat {source}-{destination}'
+        # key = f'sat {source}-{destination}'
+        key = f'{source}-{destination}'
         
         los = contacts['contacts'][key]
         time = contacts['time'][key]
