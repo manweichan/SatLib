@@ -49,3 +49,7 @@ Once the libraries are installed, open up a jupyter notebook with the command:
 Open satbox_ex.ipynb
 
 ## Run the notebook!
+
+## Other notebooks to look at include
+###  satbox_czml_ex.ipynb - Example notebook of how to create czml files for Cesium
+###  RGT_maneuver_ex.ipynb - Exmple notebook of how to reconfigure satellites into repeat ground track orbits over a target site
