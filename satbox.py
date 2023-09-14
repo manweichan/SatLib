@@ -5,7 +5,6 @@ import orbitalMechanics as om
 import comms as com
 from poliastro import constants
 from poliastro.earth import Orbit
-from poliastro.earth.sensors import min_and_max_ground_range, ground_range_diff_at_azimuth
 from poliastro.bodies import Earth
 from poliastro.maneuver import Maneuver
 from poliastro.twobody.propagation import propagate, func_twobody
