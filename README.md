@@ -28,7 +28,7 @@ Example: `python3 -m venv satelliteExample`, which you type in the terminal
 ## Install the relevant packages using:
 `pip install -r requirements.txt`
 
-#### Alternatively, install each library individually
+#### Alternatively, install each library individually (Make sure correct version numbers are installed by looking at requirements.txt)
 `pip install notebook`
 
 `pip install numpy`
